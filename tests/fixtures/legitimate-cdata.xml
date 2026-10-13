@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+  <question type="category">
+    <category><text>$course$/top/Informatik/Webtechnologien</text></category>
+  </question>
+  <question type="multichoice">
+    <name><text>HTML5 Doctype Frage</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Was bedeutet die Deklaration <code><!DOCTYPE html></code> am Beginn einer Webseite?</p>]]></text>
+    </questiontext>
+    <single>true</single>
+    <answer fraction="100">
+      <text><![CDATA[Es legt den Dokumenttyp als HTML5 fest.]]></text>
+    </answer>
+    <answer fraction="0">
+      <text><![CDATA[Es bindet ein DTD-Schema ein.]]></text>
+    </answer>
+  </question>
+</quiz>

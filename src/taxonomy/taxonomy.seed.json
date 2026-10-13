@@ -1,0 +1,526 @@
+{
+  "version": "1.0.0",
+  "framework": "CH-EDK-RLP",
+  "description": "Rahmenlehrplan für die gymnasialen Maturitätsschulen (EDK / MAR)",
+  "grade_levels": [
+    {
+      "code": "GYM1",
+      "school_year": 9,
+      "harmos_year": 11,
+      "label_de": "9. Schuljahr (GYM 1)",
+      "label_en": "Grade 9 (GYM 1)",
+      "description_de": "1. Gymnasialjahr Kurzgymnasium bzw. 3. Gymnasialjahr Langgymnasium"
+    },
+    {
+      "code": "GYM2",
+      "school_year": 10,
+      "harmos_year": 12,
+      "label_de": "10. Schuljahr (GYM 2)",
+      "label_en": "Grade 10 (GYM 2)",
+      "description_de": "2. Gymnasialjahr; Beginn Schwerpunktfachunterricht"
+    },
+    {
+      "code": "GYM3",
+      "school_year": 11,
+      "harmos_year": 13,
+      "label_de": "11. Schuljahr (GYM 3)",
+      "label_en": "Grade 11 (GYM 3)",
+      "description_de": "3. Gymnasialjahr; Beginn Ergänzungsfachunterricht"
+    },
+    {
+      "code": "GYM4",
+      "school_year": 12,
+      "harmos_year": 14,
+      "label_de": "12. Schuljahr (GYM 4 / Maturitätsjahr)",
+      "label_en": "Grade 12 (GYM 4 / Graduation Year)",
+      "description_de": "Abschlussklasse; Vorbereitung und Durchführung der Maturitätsprüfungen"
+    }
+  ],
+  "course_levels": [
+    {
+      "code": "GF",
+      "name_de": "Grundlagenfach",
+      "name_en": "Foundation Course",
+      "description_de": "Obligatorisches Fach für alle Schülerinnen und Schüler"
+    },
+    {
+      "code": "SF",
+      "name_de": "Schwerpunktfach",
+      "name_en": "Major Specialization Course",
+      "description_de": "Profilbestimmendes Vertiefungsfach"
+    },
+    {
+      "code": "EF",
+      "name_de": "Ergänzungsfach",
+      "name_en": "Minor Supplementary Course",
+      "description_de": "Wahlweises Ergänzungsfach in den oberen Jahrgängen"
+    },
+    {
+      "code": "FF",
+      "name_de": "Freifach / Wahlfach",
+      "name_en": "Elective / Enrichment Course",
+      "description_de": "Fakultatives Förder- oder Interessensfach"
+    }
+  ],
+  "cantons": [
+    { "code": "CH-EDK-RLP", "name_de": "Überkantonal / EDK", "curriculum_name": "EDK Rahmenlehrplan" },
+    { "code": "ZH", "name_de": "Zürich", "curriculum_name": "Lehrplan für das Gymnasium Kanton Zürich (LPZ)" },
+    { "code": "BE", "name_de": "Bern", "curriculum_name": "Gymnasialer Lehrplan Kanton Bern" },
+    { "code": "BS", "name_de": "Basel-Stadt", "curriculum_name": "Gymnasiallehrplan Basel-Stadt" },
+    { "code": "BL", "name_de": "Basel-Landschaft", "curriculum_name": "Lehrplan Gymnasium Baselland" },
+    { "code": "LU", "name_de": "Luzern", "curriculum_name": "Gymnasialer Lehrplan Luzern" },
+    { "code": "SG", "name_de": "St. Gallen", "curriculum_name": "Lehrplan Kantonsschulen St. Gallen" },
+    { "code": "AG", "name_de": "Aargau", "curriculum_name": "Aargauischer Lehrplan Maturitätsschulen" },
+    { "code": "SO", "name_de": "Solothurn", "curriculum_name": "Lehrplan Kantonsschulen Solothurn" },
+    { "code": "TG", "name_de": "Thurgau", "curriculum_name": "Lehrplan Thurgauer Mittelschulen" },
+    { "code": "GR", "name_de": "Graubünden", "curriculum_name": "Bündner Lehrplan Mittelschulen" },
+    { "code": "SH", "name_de": "Schaffhausen", "curriculum_name": "Lehrplan Kantonsschule Schaffhausen" },
+    { "code": "ZG", "name_de": "Zug", "curriculum_name": "Lehrplan Kantonsschule Zug" },
+    { "code": "SZ", "name_de": "Schwyz", "curriculum_name": "Lehrplan Mittelschulen Schwyz" },
+    { "code": "UR", "name_de": "Uri", "curriculum_name": "Lehrplan Kollegium Altdorf" },
+    { "code": "OW", "name_de": "Obwalden", "curriculum_name": "Lehrplan Kantonsschule Obwalden" },
+    { "code": "NW", "name_de": "Nidwalden", "curriculum_name": "Lehrplan Kollegium Stans" },
+    { "code": "GL", "name_de": "Glarus", "curriculum_name": "Lehrplan Kantonsschule Glarus" },
+    { "code": "AI", "name_de": "Appenzell Innerrhoden", "curriculum_name": "Lehrplan Gymnasium Appenzell" },
+    { "code": "AR", "name_de": "Appenzell Ausserrhoden", "curriculum_name": "Lehrplan Kantonsschule Trogen" },
+    { "code": "VS", "name_de": "Wallis (Oberwallis)", "curriculum_name": "Lehrplan Kollegium Brig" },
+    { "code": "FR", "name_de": "Freiburg (deutsch)", "curriculum_name": "Lehrplan Kollegium St. Michael" }
+  ],
+  "licenses": [
+    { "code": "CC-BY-4.0", "name": "Creative Commons Namensnennung 4.0 International", "open": true },
+    { "code": "CC-BY-SA-4.0", "name": "Creative Commons Namensnennung - Weitergabe unter gleichen Bedingungen 4.0", "open": true },
+    { "code": "CC0-1.0", "name": "CC0 1.0 Universell (Public Domain)", "open": true },
+    { "code": "CC-BY-NC-4.0", "name": "Creative Commons Namensnennung - Nicht-kommerziell 4.0", "open": false }
+  ],
+  "subjects": [
+    {
+      "id": "informatik",
+      "code": "INF",
+      "name_de": "Informatik",
+      "name_fr": "Informatique",
+      "name_en": "Computer Science",
+      "allowed_course_levels": ["GF", "SF", "EF", "FF"],
+      "default_grades": ["GYM1", "GYM2", "GYM3", "GYM4"],
+      "topics": [
+        {
+          "id": "programmierung",
+          "name_de": "Programmierung & Algorithmen",
+          "name_en": "Programming & Algorithms",
+          "subtopics": ["Variablen & Datentypen", "Kontrollstrukturen", "Funktionen & Rekursion", "Objektorientierung", "Such- & Sortieralgorithmen"]
+        },
+        {
+          "id": "datenstrukturen",
+          "name_de": "Datenstrukturen",
+          "name_en": "Data Structures",
+          "subtopics": ["Arrays & Listen", "Stacks & Queues", "Bäume", "Graphen", "Hashtabellen"]
+        },
+        {
+          "id": "netzwerke_sicherheit",
+          "name_de": "Netzwerke & IT-Sicherheit",
+          "name_en": "Networks & Security",
+          "subtopics": ["TCP/IP & Routing", "DNS & Web-Protokolle", "Kryptographie", "Authentifizierung & Schutzziele"]
+        },
+        {
+          "id": "datenbanken",
+          "name_de": "Datenbanken & Informationssysteme",
+          "name_en": "Databases & Information Systems",
+          "subtopics": ["Relationales Modell", "SQL Abfragen", "Normalisierung", "ER-Modellierung"]
+        },
+        {
+          "id": "theoretische_informatik",
+          "name_de": "Theoretische Informatik",
+          "name_en": "Theoretical Computer Science",
+          "subtopics": ["Endliche Automaten", "Grammatiken", "Berechenbarkeit & Turingmaschinen", "Komplexitätstheorie O(n)"]
+        }
+      ]
+    },
+    {
+      "id": "mathematik",
+      "code": "MAT",
+      "name_de": "Mathematik",
+      "name_fr": "Mathématiques",
+      "name_en": "Mathematics",
+      "allowed_course_levels": ["GF", "SF", "EF", "FF"],
+      "default_grades": ["GYM1", "GYM2", "GYM3", "GYM4"],
+      "topics": [
+        {
+          "id": "algebra",
+          "name_de": "Algebra & Gleichungslehre",
+          "name_en": "Algebra & Equations",
+          "subtopics": ["Termumformungen", "Lineare & quadratische Gleichungen", "Polynome", "Gleichungssysteme"]
+        },
+        {
+          "id": "analysis",
+          "name_de": "Analysis",
+          "name_en": "Calculus",
+          "subtopics": ["Funktionenlehre", "Grenzwerte & Stetigkeit", "Differentialrechnung", "Integralrechnung", "Kurvendiskussion"]
+        },
+        {
+          "id": "vektorgeometrie",
+          "name_de": "Vektorgeometrie & Lineare Algebra",
+          "name_en": "Vector Geometry & Linear Algebra",
+          "subtopics": ["Vektorrechnung im R2/R3", "Skalar- & Vektorprodukt", "Geraden & Ebenen", "Matrizen"]
+        },
+        {
+          "id": "stochastik",
+          "name_de": "Stochastik",
+          "name_en": "Probability & Statistics",
+          "subtopics": ["Kombinatorik", "Wahrscheinlichkeitsrechnung", "Zufallsvariablen", "Binomialverteilung", "Hypothesentests"]
+        }
+      ]
+    },
+    {
+      "id": "physik",
+      "code": "PHY",
+      "name_de": "Physik",
+      "name_fr": "Physique",
+      "name_en": "Physics",
+      "allowed_course_levels": ["GF", "SF", "EF", "FF"],
+      "default_grades": ["GYM2", "GYM3", "GYM4"],
+      "topics": [
+        {
+          "id": "mechanik",
+          "name_de": "Klassische Mechanik",
+          "name_en": "Classical Mechanics",
+          "subtopics": ["Kinematik", "Dynamik & Newtonsche Gesetze", "Arbeit, Energie & Leistung", "Impulserhaltung", "Kreisbewegungen"]
+        },
+        {
+          "id": "elektrodynamik",
+          "name_de": "Elektrizitätslehre & Magnetismus",
+          "name_en": "Electromagnetism",
+          "subtopics": ["Elektrisches Feld & Coulomb-Gesetz", "Stromkreise & Ohmsches Gesetz", "Magnetfelder", "Induktion"]
+        },
+        {
+          "id": "thermodynamik",
+          "name_de": "Thermodynamik",
+          "name_en": "Thermodynamics",
+          "subtopics": ["Temperatur & Wärme", "Ideale Gasgesetze", "Hauptsätze der Thermodynamik"]
+        },
+        {
+          "id": "wellen_optik",
+          "name_de": "Schwingungen, Wellen & Optik",
+          "name_en": "Waves & Optics",
+          "subtopics": ["Harmonische Schwingungen", "Wellenphänomene & Interferenz", "Geometrische Optik", "Wellenoptik"]
+        },
+        {
+          "id": "moderne_physik",
+          "name_de": "Moderne Physik",
+          "name_en": "Modern Physics",
+          "subtopics": ["Quantenphysik", "Photoelektrischer Effekt", "Atommodelle", "Kernphysik & Radioaktivität"]
+        }
+      ]
+    },
+    {
+      "id": "biologie",
+      "code": "BIO",
+      "name_de": "Biologie",
+      "name_fr": "Biologie",
+      "name_en": "Biology",
+      "allowed_course_levels": ["GF", "SF", "EF", "FF"],
+      "default_grades": ["GYM1", "GYM2", "GYM3", "GYM4"],
+      "topics": [
+        {
+          "id": "zellbiologie",
+          "name_de": "Zellbiologie & Stoffwechsel",
+          "name_en": "Cell Biology & Metabolism",
+          "subtopics": ["Zellaufbau & Organellen", "Membrantransport", "Enzymatik", "Zellatmung & Fotosynthese"]
+        },
+        {
+          "id": "genetik",
+          "name_de": "Genetik & Molekularbiologie",
+          "name_en": "Genetics & Molecular Biology",
+          "subtopics": ["DNA-Replikation", "Proteinbiosynthese", "Mendelsche Regeln", "Gentechnik & Mutationen"]
+        },
+        {
+          "id": "evolution",
+          "name_de": "Evolution & Ökologie",
+          "name_en": "Evolution & Ecology",
+          "subtopics": ["Evolutionstheorien", "Artbildung", "Ökosysteme", "Populationsdynamik"]
+        },
+        {
+          "id": "physiologie",
+          "name_de": "Humanbiologie & Neurobiologie",
+          "name_en": "Physiology & Neurobiology",
+          "subtopics": ["Nervensystem & Synapsen", "Immunsystem", "Hormonsystem", "Sinnesorgane"]
+        }
+      ]
+    },
+    {
+      "id": "chemie",
+      "code": "CHE",
+      "name_de": "Chemie",
+      "name_fr": "Chimie",
+      "name_en": "Chemistry",
+      "allowed_course_levels": ["GF", "SF", "EF", "FF"],
+      "default_grades": ["GYM2", "GYM3", "GYM4"],
+      "topics": [
+        {
+          "id": "atombau_bindung",
+          "name_de": "Atombau & Chemische Bindung",
+          "name_en": "Atomic Structure & Bonding",
+          "subtopics": ["Periodensystem", "Kovalente Bindung & Lewis-Formeln", "Ionenbindung", "Zwischenmolekulare Kräfte"]
+        },
+        {
+          "id": "stoichiometrie",
+          "name_de": "Stöchiometrie & Reaktionen",
+          "name_en": "Stoichiometry & Reactions",
+          "subtopics": ["Molare Masse & Konzentration", "Reaktionsgleichungen", "Thermodynamik & Kinetik", "Chemisches Gleichgewicht"]
+        },
+        {
+          "id": "saeure_base_redox",
+          "name_de": "Säure-Base- & Redoxreaktionen",
+          "name_en": "Acid-Base & Redox Reactions",
+          "subtopics": ["pH-Wert Berechnungen", "Pufferlösungen", "Oxidationszahlen", "Galvanische Elemente & Elektrolyse"]
+        },
+        {
+          "id": "organik",
+          "name_de": "Organische Chemie",
+          "name_en": "Organic Chemistry",
+          "subtopics": ["Kohlenwasserstoffe", "Funktionelle Gruppen", "Reaktionsmechanismen", "Naturstoffe & Polymere"]
+        }
+      ]
+    },
+    {
+      "id": "deutsch",
+      "code": "DEU",
+      "name_de": "Deutsch",
+      "name_fr": "Allemand",
+      "name_en": "German",
+      "allowed_course_levels": ["GF", "FF"],
+      "default_grades": ["GYM1", "GYM2", "GYM3", "GYM4"],
+      "topics": [
+        {
+          "id": "literatur",
+          "name_de": "Literaturgeschichte & Textanalyse",
+          "name_en": "Literature & Text Analysis",
+          "subtopics": ["Epochen der deutschen Literatur", "Dramenanalyse", "Epische Texte & Romane", "Lyrikanalyse"]
+        },
+        {
+          "id": "sprache_medien",
+          "name_de": "Sprachreflexion, Grammatik & Medien",
+          "name_en": "Language & Media",
+          "subtopics": ["Rhetorik & Argumentation", "Satzbau & Syntax", "Textsorten & Essayistik", "Medienkompetenz"]
+        }
+      ]
+    },
+    {
+      "id": "franzoesisch",
+      "code": "FRA",
+      "name_de": "Französisch",
+      "name_fr": "Français",
+      "name_en": "French",
+      "allowed_course_levels": ["GF", "SF", "EF", "FF"],
+      "default_grades": ["GYM1", "GYM2", "GYM3", "GYM4"],
+      "topics": [
+        {
+          "id": "grammaire",
+          "name_de": "Grammatik & Sprachkompetenz",
+          "name_en": "Grammar & Proficiency",
+          "subtopics": ["Subjonctif & Conditionnel", "Pronoms & Accord", "Temps du passé", "Expression écrite"]
+        },
+        {
+          "id": "litterature_culture",
+          "name_de": "Literatur & Frankophonie",
+          "name_en": "Literature & Francophone Culture",
+          "subtopics": ["Littérature classique & moderne", "Civilisation française & francophone", "Analyse de texte"]
+        }
+      ]
+    },
+    {
+      "id": "englisch",
+      "code": "ENG",
+      "name_de": "Englisch",
+      "name_fr": "Anglais",
+      "name_en": "English",
+      "allowed_course_levels": ["GF", "SF", "EF", "FF"],
+      "default_grades": ["GYM1", "GYM2", "GYM3", "GYM4"],
+      "topics": [
+        {
+          "id": "language_grammar",
+          "name_de": "Sprache & Grammatik",
+          "name_en": "Language & Grammar",
+          "subtopics": ["Advanced Verb Forms", "Conditionals & Inversion", "Academic Writing & Essay Structure"]
+        },
+        {
+          "id": "literature_cultural_studies",
+          "name_de": "Literatur & Kulturwissenschaft",
+          "name_en": "Literature & Cultural Studies",
+          "subtopics": ["Shakespeare & Drama", "Modern Fiction & Poetry", "Postcolonial Literature", "Media & Global Issues"]
+        }
+      ]
+    },
+    {
+      "id": "geschichte",
+      "code": "GES",
+      "name_de": "Geschichte",
+      "name_fr": "Histoire",
+      "name_en": "History",
+      "allowed_course_levels": ["GF", "EF", "FF"],
+      "default_grades": ["GYM1", "GYM2", "GYM3", "GYM4"],
+      "topics": [
+        {
+          "id": "antike_mittelalter",
+          "name_de": "Antike & Mittelalter",
+          "name_en": "Antiquity & Middle Ages",
+          "subtopics": ["Griechische Polis & Römisches Reich", "Feudalismus & Kirche", "Entstehung der Schweizer Eidgenossenschaft"]
+        },
+        {
+          "id": "fruehe_neuzeit",
+          "name_de": "Frühe Neuzeit & Revolutionen",
+          "name_en": "Early Modern Era & Revolutions",
+          "subtopics": ["Reformation", "Aufklärung", "Französische Revolution", "Industrialisierung"]
+        },
+        {
+          "id": "neuere_zeitgeschichte",
+          "name_de": "Neueste Geschichte & Zeitgeschichte",
+          "name_en": "Modern & Contemporary History",
+          "subtopics": ["Erster Weltkrieg & Zwischenkriegszeit", "Nationalsozialismus & Zweiter Weltkrieg", "Kalter Krieg", "Schweizer Bundesstaat 1848 bis Gegenwart"]
+        }
+      ]
+    },
+    {
+      "id": "geografie",
+      "code": "GEO",
+      "name_de": "Geografie",
+      "name_fr": "Géographie",
+      "name_en": "Geography",
+      "allowed_course_levels": ["GF", "EF", "FF"],
+      "default_grades": ["GYM1", "GYM2", "GYM3", "GYM4"],
+      "topics": [
+        {
+          "id": "physische_geografie",
+          "name_de": "Physische Geografie",
+          "name_en": "Physical Geography",
+          "subtopics": ["Geomorphologie & Plattentektonik", "Klimatologie & Wetter", "Hydrologie & Glaziologie", "Böden & Vegetation"]
+        },
+        {
+          "id": "humangeografie",
+          "name_de": "Humangeografie & Nachhaltigkeit",
+          "name_en": "Human Geography & Sustainability",
+          "subtopics": ["Bevölkerungsgeografie", "Stadtentwicklung & Raumplanung", "Wirtschaftsgeografie & Globalisierung", "Klimawandel & Ressourcennutzung"]
+        }
+      ]
+    },
+    {
+      "id": "bildnerisches_gestalten",
+      "code": "BG",
+      "name_de": "Bildnerisches Gestalten",
+      "name_fr": "Arts visuels",
+      "name_en": "Visual Arts",
+      "allowed_course_levels": ["GF", "SF", "EF", "FF"],
+      "default_grades": ["GYM1", "GYM2", "GYM3", "GYM4"],
+      "topics": [
+        {
+          "id": "kunstgeschichte",
+          "name_de": "Kunstgeschichte & Bildbetrachtung",
+          "name_en": "Art History & Analysis",
+          "subtopics": ["Epochen von Renaissance bis Moderne", "Zeitgenössische Kunst", "Bildanalyse & Ikonografie"]
+        },
+        {
+          "id": "gestaltungspraxis",
+          "name_de": "Gestaltungstheorie & Praxis",
+          "name_en": "Design Theory & Practice",
+          "subtopics": ["Farbenlehre & Komposition", "Perspektive & Raumdarstellung", "Grafik, Fotografie & digitale Medien"]
+        }
+      ]
+    },
+    {
+      "id": "musik",
+      "code": "MUS",
+      "name_de": "Musik",
+      "name_fr": "Musique",
+      "name_en": "Music",
+      "allowed_course_levels": ["GF", "SF", "EF", "FF"],
+      "default_grades": ["GYM1", "GYM2", "GYM3", "GYM4"],
+      "topics": [
+        {
+          "id": "musiktheorie",
+          "name_de": "Musiktheorie & Gehörbildung",
+          "name_en": "Music Theory & Ear Training",
+          "subtopics": ["Harmonielehre & Akkorde", "Rhythmik & Metrik", "Notationskunde & Partituranalyse"]
+        },
+        {
+          "id": "musikgeschichte",
+          "name_de": "Musikgeschichte & Werkanalyse",
+          "name_en": "Music History & Analysis",
+          "subtopics": ["Barock, Klassik & Romantik", "20. Jahrhundert & Neue Musik", "Jazz, Pop & World Music"]
+        }
+      ]
+    },
+    {
+      "id": "wirtschaft_und_recht",
+      "code": "WR",
+      "name_de": "Wirtschaft und Recht",
+      "name_fr": "Économie et droit",
+      "name_en": "Economics and Law",
+      "allowed_course_levels": ["GF", "SF", "EF", "FF"],
+      "default_grades": ["GYM1", "GYM2", "GYM3", "GYM4"],
+      "topics": [
+        {
+          "id": "betriebswirtschaft",
+          "name_de": "Betriebswirtschaftslehre (BWL)",
+          "name_en": "Business Administration",
+          "subtopics": ["Unternehmensmodell & Strategie", "Finanzbuchhaltung & Bilanzanalyse", "Marketing & Personal", "Kostenrechnung"]
+        },
+        {
+          "id": "volkswirtschaft",
+          "name_de": "Volkswirtschaftslehre (VWL)",
+          "name_en": "Economics",
+          "subtopics": ["Marktmodell & Preisbildung", "Konjunktur & Geldpolitik", "Wirtschaftspolitik & Steuern", "Aussenwirtschaft & Währungen"]
+        },
+        {
+          "id": "recht",
+          "name_de": "Rechtskunde",
+          "name_en": "Law",
+          "subtopics": ["Zivilgesetzbuch (ZGB) & Personenrecht", "Obligationenrecht (OR) & Vertragslehre", "Strafrecht & Prozessrecht", "Staatsrecht & Verfassung"]
+        }
+      ]
+    },
+    {
+      "id": "philosophie",
+      "code": "PHI",
+      "name_de": "Philosophie",
+      "name_fr": "Philosophie",
+      "name_en": "Philosophy",
+      "allowed_course_levels": ["GF", "EF", "FF"],
+      "default_grades": ["GYM3", "GYM4"],
+      "topics": [
+        {
+          "id": "erkenntnistheorie_ethik",
+          "name_de": "Erkenntnistheorie & Ethik",
+          "name_en": "Epistemology & Ethics",
+          "subtopics": ["Wahrheitsbegriff & Skepsis", "Normative Ethik (Utilitarismus, Pflichtethik)", "Angewandte Ethik (Bioethik, Technikethik)"]
+        },
+        {
+          "id": "politische_philosophie",
+          "name_de": "Politische Philosophie & Anthropologie",
+          "name_en": "Political Philosophy & Anthropology",
+          "subtopics": ["Staatsphilosophie & Gerechtigkeitstheorien", "Freiheit & Determinismus", "Menschenbilder"]
+        }
+      ]
+    },
+    {
+      "id": "paedagogik_psychologie",
+      "code": "PP",
+      "name_de": "Pädagogik / Psychologie",
+      "name_fr": "Pédagogie / Psychologie",
+      "name_en": "Education & Psychology",
+      "allowed_course_levels": ["EF", "FF"],
+      "default_grades": ["GYM3", "GYM4"],
+      "topics": [
+        {
+          "id": "psychologie_grundlagen",
+          "name_de": "Grundlagen der Psychologie",
+          "name_en": "Foundations of Psychology",
+          "subtopics": ["Kognition, Wahrnehmung & Gedächtnis", "Entwicklungspsychologie", "Sozialpsychologie & Gruppenprozesse", "Klinische Psychologie & Diagnostik"]
+        },
+        {
+          "id": "paedagogik_bildung",
+          "name_de": "Pädagogik & Erziehungswissenschaft",
+          "name_en": "Educational Science",
+          "subtopics": ["Erziehungsstile & Erziehungsziele", "Lern- & Motivationstheorien", "Bildungssysteme & Sozialisation"]
+        }
+      ]
+    }
+  ]
+}

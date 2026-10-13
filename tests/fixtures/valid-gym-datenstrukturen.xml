@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+  <question type="category">
+    <category>
+      <text>$course$/top/Default for Course/Informatik/Datenstrukturen</text>
+    </category>
+    <info format="html">
+      <text><![CDATA[<p>Aufgabensammlung zu Bäumen und Graphen.</p>]]></text>
+    </info>
+  </question>
+
+  <question type="multichoice">
+    <name>
+      <text>Binäre Suchbäume Traversierung</text>
+    </name>
+    <questiontext format="html">
+      <text><![CDATA[<p>In welcher Reihenfolge werden die Knoten eines binären Suchbaums bei einer Inorder-Traversierung besucht?</p>]]></text>
+    </questiontext>
+    <single>true</single>
+    <shuffleanswers>true</shuffleanswers>
+    <answernumbering>abc</answernumbering>
+    <answer fraction="100" format="html">
+      <text><![CDATA[<p>Aufsteigend sortiert nach Schlüsseln</p>]]></text>
+      <feedback format="html"><text><![CDATA[<p>Korrekt!</p>]]></text></feedback>
+    </answer>
+    <answer fraction="0" format="html">
+      <text><![CDATA[<p>Absteigend sortiert nach Schlüsseln</p>]]></text>
+      <feedback format="html"><text><![CDATA[<p>Falsch.</p>]]></text></feedback>
+    </answer>
+    <answer fraction="0" format="html">
+      <text><![CDATA[<p>Wurzel zuerst, dann linkes und rechtes Kind</p>]]></text>
+      <feedback format="html"><text><![CDATA[<p>Falsch, das wäre Preorder.</p>]]></text></feedback>
+    </answer>
+  </question>
+
+  <question type="truefalse">
+    <name>
+      <text>Vollständiger Binärbaum Definition</text>
+    </name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Ein binärer Baum der Höhe h hat maximal 2^h - 1 Knoten.</p>]]></text>
+    </questiontext>
+    <answer fraction="100" format="moodle_auto_format">
+      <text>true</text>
+    </answer>
+    <answer fraction="0" format="moodle_auto_format">
+      <text>false</text>
+    </answer>
+  </question>
+
+  <question type="shortanswer">
+    <name>
+      <text>Laufzeit Binäre Suche</text>
+    </name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Wie lautet die Zeitkomplexität der binären Suche im Worst Case in O-Notation?</p>]]></text>
+    </questiontext>
+    <answer fraction="100" format="moodle_auto_format">
+      <text>O(log n)</text>
+    </answer>
+    <answer fraction="100" format="moodle_auto_format">
+      <text>O(log(n))</text>
+    </answer>
+  </question>
+
+  <question type="numerical">
+    <name>
+      <text>Maximale Knotenanzahl Tiefe 3</text>
+    </name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Wie viele Knoten besitzt ein voller Binärbaum der Tiefe 3 (Wurzel auf Tiefe 0)?</p>]]></text>
+    </questiontext>
+    <answer fraction="100">
+      <text>15</text>
+      <tolerance>0</tolerance>
+    </answer>
+  </question>
+
+  <question type="matching">
+    <name>
+      <text>Traversierungsarten Zuordnung</text>
+    </name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Ordnen Sie die Traversierungsart der Besuchsreihenfolge zu.</p>]]></text>
+    </questiontext>
+    <subquestion format="html">
+      <text><![CDATA[<p>Inorder</p>]]></text>
+      <answer><text>Links, Wurzel, Rechts</text></answer>
+    </subquestion>
+    <subquestion format="html">
+      <text><![CDATA[<p>Preorder</p>]]></text>
+      <answer><text>Wurzel, Links, Rechts</text></answer>
+    </subquestion>
+    <subquestion format="html">
+      <text><![CDATA[<p>Postorder</p>]]></text>
+      <answer><text>Links, Rechts, Wurzel</text></answer>
+    </subquestion>
+  </question>
+
+  <question type="multianswer">
+    <name>
+      <text>Cloze Baum Eigenschaften</text>
+    </name>
+    <questiontext format="html">
+      <text><![CDATA[<p>In einem AVL-Baum unterscheidet sich die Höhe der beiden Teilbäume um höchstens {1:NUMERICAL:=1:0}.</p>]]></text>
+    </questiontext>
+  </question>
+
+  <question type="essay">
+    <name>
+      <text>Vergleich Breitensuche Tiefensuche</text>
+    </name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Vergleichen Sie die Speicherplatzkomplexität von Breitensuche und Tiefensuche auf einem unendlichen Graphen.</p>]]></text>
+    </questiontext>
+    <responseformat>editor</responseformat>
+    <defaultgrade>5</defaultgrade>
+  </question>
+</quiz>
