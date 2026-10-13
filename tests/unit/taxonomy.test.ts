@@ -46,4 +46,25 @@ describe('TaxonomyService Unit Tests', () => {
     expect(invalidCanton.valid).toBe(false);
     expect(invalidCanton.errors[0]).toContain('Unbekannter Kanton');
   });
+
+  it('contains Italienisch and Latein with full course levels', () => {
+    const ita = service.getSubjectByIdOrName('Italienisch');
+    expect(ita).toBeDefined();
+    expect(ita?.code).toBe('ITA');
+    expect(ita?.allowed_course_levels).toEqual(['GF', 'SF', 'EF', 'FF']);
+
+    const lat = service.getSubjectByIdOrName('Latein');
+    expect(lat).toBeDefined();
+    expect(lat?.code).toBe('LAT');
+    expect(lat?.allowed_course_levels).toEqual(['GF', 'SF', 'EF', 'FF']);
+  });
+
+  it('normalizes & and und when resolving subject names', () => {
+    const wr1 = service.getSubjectByIdOrName('Wirtschaft und Recht');
+    const wr2 = service.getSubjectByIdOrName('Wirtschaft & Recht');
+    expect(wr1).toBeDefined();
+    expect(wr2).toBeDefined();
+    expect(wr1?.id).toBe('wirtschaft_und_recht');
+    expect(wr2?.id).toBe('wirtschaft_und_recht');
+  });
 });

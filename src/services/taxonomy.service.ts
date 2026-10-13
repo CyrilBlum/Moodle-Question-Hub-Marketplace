@@ -39,13 +39,22 @@ export class TaxonomyService {
   }
 
   public getSubjectByIdOrName(query: string): Subject | undefined {
-    const normalized = query.trim().toLowerCase();
-    return this.catalog.subjects.find(
-      s => s.id.toLowerCase() === normalized ||
-           s.name_de.toLowerCase() === normalized ||
-           s.code.toLowerCase() === normalized ||
-           s.name_en.toLowerCase() === normalized
-    );
+    const normalize = (str: string) =>
+      str.trim().toLowerCase().replace(/&/g, 'und').replace(/\s+/g, ' ');
+    const normalizedQuery = normalize(query);
+
+    return this.catalog.subjects.find(s => {
+      const sId = normalize(s.id);
+      const sNameDe = normalize(s.name_de);
+      const sCode = normalize(s.code);
+      const sNameEn = normalize(s.name_en);
+      return (
+        sId === normalizedQuery ||
+        sNameDe === normalizedQuery ||
+        sCode === normalizedQuery ||
+        sNameEn === normalizedQuery
+      );
+    });
   }
 
   public getCantons(): Canton[] {

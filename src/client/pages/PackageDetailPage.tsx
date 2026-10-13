@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Download, Copy, Check, Eye, Layers, ShieldCheck, Calendar, BookOpen, ArrowLeft } from 'lucide-react';
 import { api } from '../api/client';
+import { sanitizeQuestionHtml } from '../utils/sanitize';
 
 export const PackageDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -249,7 +250,7 @@ export const PackageDetailPage: React.FC = () => {
                 {/* Question HTML with Base64 embedded images */}
                 <div
                   className="prose prose-sm max-w-none text-slate-800 text-sm"
-                  dangerouslySetInnerHTML={{ __html: q.questiontextHtml }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeQuestionHtml(q.questiontextHtml) }}
                 />
 
                 {/* Answer choices if options exist */}
@@ -265,7 +266,7 @@ export const PackageDetailPage: React.FC = () => {
                           className="flex items-center space-x-2 p-2 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-700"
                         >
                           <div className="w-3.5 h-3.5 rounded-full border border-slate-400 shrink-0"></div>
-                          <div dangerouslySetInnerHTML={{ __html: opt.textHtml }} />
+                          <div dangerouslySetInnerHTML={{ __html: sanitizeQuestionHtml(opt.textHtml) }} />
                         </div>
                       ))}
                     </div>

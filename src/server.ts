@@ -65,6 +65,7 @@ export async function buildServer(): Promise<FastifyInstance> {
       await apiV1.register(taxonomyRoutes);
       await apiV1.register(authRoutes);
       await apiV1.register(tokenRoutes);
+      await apiV1.register(oauthRoutes, { prefix: '/oauth' });
     },
     { prefix: '/api/v1' }
   );

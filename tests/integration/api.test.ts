@@ -407,4 +407,46 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
     expect(tokenBody.token_type).toBe('Bearer');
     expect(tokenBody.user).toBeDefined();
   });
+
+  it('executes PKCE OAuth flow via /api/v1/oauth alias endpoints', async () => {
+    const verifier = 'alias_test_verifier_string_at_least_43_chars_long_1234567890';
+    const challenge = CryptoService.base64UrlEncode(
+      require('crypto').createHash('sha256').update(verifier).digest()
+    );
+
+    // Step 1: GET /api/v1/oauth/authorize
+    const authRes = await app.inject({
+      method: 'GET',
+      url: `/api/v1/oauth/authorize?client_id=moodle-plugin-client&redirect_uri=${encodeURIComponent(
+        'https://moodle-one.in-form-atik.ch/question/bank/questionhub/callback.php'
+      )}&response_type=code&code_challenge=${challenge}&code_challenge_method=S256`,
+      headers: {
+        authorization: `Bearer ${teacherJwtToken}`,
+        accept: 'application/json',
+      },
+    });
+
+    expect(authRes.statusCode).toBe(200);
+    const authBody = JSON.parse(authRes.body);
+    expect(authBody.code).toBeDefined();
+
+    // Step 2: POST /api/v1/oauth/token
+    const tokenRes = await app.inject({
+      method: 'POST',
+      url: '/api/v1/oauth/token',
+      payload: {
+        grant_type: 'authorization_code',
+        code: authBody.code,
+        client_id: 'moodle-plugin-client',
+        redirect_uri: 'https://moodle-one.in-form-atik.ch/question/bank/questionhub/callback.php',
+        code_verifier: verifier,
+      },
+    });
+
+    expect(tokenRes.statusCode).toBe(200);
+    const tokenBody = JSON.parse(tokenRes.body);
+    expect(tokenBody.access_token).toBeDefined();
+    expect(tokenBody.token_type).toBe('Bearer');
+    expect(tokenBody.user).toBeDefined();
+  });
 });

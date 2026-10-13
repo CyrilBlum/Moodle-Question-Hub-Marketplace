@@ -477,48 +477,80 @@
       ]
     },
     {
-      "id": "philosophie",
-      "code": "PHI",
-      "name_de": "Philosophie",
-      "name_fr": "Philosophie",
-      "name_en": "Philosophy",
-      "allowed_course_levels": ["GF", "EF", "FF"],
-      "default_grades": ["GYM3", "GYM4"],
+      "id": "italienisch",
+      "code": "ITA",
+      "name_de": "Italienisch",
+      "name_fr": "Italien",
+      "name_en": "Italian",
+      "allowed_course_levels": ["GF", "SF", "EF", "FF"],
+      "default_grades": ["GYM1", "GYM2", "GYM3", "GYM4"],
       "topics": [
         {
-          "id": "erkenntnistheorie_ethik",
-          "name_de": "Erkenntnistheorie & Ethik",
-          "name_en": "Epistemology & Ethics",
-          "subtopics": ["Wahrheitsbegriff & Skepsis", "Normative Ethik (Utilitarismus, Pflichtethik)", "Angewandte Ethik (Bioethik, Technikethik)"]
+          "id": "lingua_grammatica",
+          "name_de": "Grammatik & Sprachkompetenz",
+          "name_en": "Grammar & Language Proficiency",
+          "subtopics": [
+            "Tempi verbali & Modi (Passato prossimo, Imperfetto, Passato remoto)",
+            "Congiuntivo & Periodo ipotetico",
+            "Pronomi diretti, indiretti & combinati",
+            "Espressione scritta & Lessico"
+          ]
         },
         {
-          "id": "politische_philosophie",
-          "name_de": "Politische Philosophie & Anthropologie",
-          "name_en": "Political Philosophy & Anthropology",
-          "subtopics": ["Staatsphilosophie & Gerechtigkeitstheorien", "Freiheit & Determinismus", "Menschenbilder"]
+          "id": "letteratura_cultura",
+          "name_de": "Literatur & Landeskunde des italienischen Sprachraums",
+          "name_en": "Literature & Italian Culture",
+          "subtopics": [
+            "Klassische & moderne italienische Literatur (Dante, Petrarca, Boccaccio, Calvino)",
+            "Cultura & società italiana contemporanea",
+            "Italienische Schweiz (Svizzera italiana / Ticino & Grigioni)",
+            "Textanalyse & Interpretation"
+          ]
         }
       ]
     },
     {
-      "id": "paedagogik_psychologie",
-      "code": "PP",
-      "name_de": "Pädagogik / Psychologie",
-      "name_fr": "Pédagogie / Psychologie",
-      "name_en": "Education & Psychology",
-      "allowed_course_levels": ["EF", "FF"],
-      "default_grades": ["GYM3", "GYM4"],
+      "id": "latein",
+      "code": "LAT",
+      "name_de": "Latein",
+      "name_fr": "Latin",
+      "name_en": "Latin",
+      "allowed_course_levels": ["GF", "SF", "EF", "FF"],
+      "default_grades": ["GYM1", "GYM2", "GYM3", "GYM4"],
       "topics": [
         {
-          "id": "psychologie_grundlagen",
-          "name_de": "Grundlagen der Psychologie",
-          "name_en": "Foundations of Psychology",
-          "subtopics": ["Kognition, Wahrnehmung & Gedächtnis", "Entwicklungspsychologie", "Sozialpsychologie & Gruppenprozesse", "Klinische Psychologie & Diagnostik"]
+          "id": "lateinische_grammatik_syntax",
+          "name_de": "Grammatik, Morphologie & Syntax",
+          "name_en": "Grammar, Morphology & Syntax",
+          "subtopics": [
+            "Formenlehre (Deklinationen & Konjugationen)",
+            "AcI (Accusativus cum Infinitivo) & NCI",
+            "Ablativus Absolutus & Partizipialkonstruktionen (PC)",
+            "Kasuslehre, Gerundium & Gerundivum",
+            "Satzgefüge & Konjunktivische Nebensätze"
+          ]
         },
         {
-          "id": "paedagogik_bildung",
-          "name_de": "Pädagogik & Erziehungswissenschaft",
-          "name_en": "Educational Science",
-          "subtopics": ["Erziehungsstile & Erziehungsziele", "Lern- & Motivationstheorien", "Bildungssysteme & Sozialisation"]
+          "id": "lateinische_literatur_textanalyse",
+          "name_de": "Römische Literatur & Textanalyse",
+          "name_en": "Roman Literature & Text Analysis",
+          "subtopics": [
+            "Klassische Prosa (Caesar, Cicero, Sallust)",
+            "Römische Poesie & Metrik (Ovid, Vergil, Catull, Horaz)",
+            "Römische Philosophie & Briefliteratur (Seneca, Plinius)",
+            "Übersetzungstechnik & Stilmittel"
+          ]
+        },
+        {
+          "id": "antike_kultur_mythologie",
+          "name_de": "Antike Kultur, Geschichte & Rezeption",
+          "name_en": "Ancient Culture, History & Reception",
+          "subtopics": [
+            "Römische Republik & Kaiserzeit",
+            "Griechisch-römische Mythologie & Religion",
+            "Alltagsleben, Recht & Staatswesen im antiken Rom",
+            "Fortleben der Antike & europäische Tradition"
+          ]
         }
       ]
     }

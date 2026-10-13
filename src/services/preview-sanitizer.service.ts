@@ -1,5 +1,87 @@
+import DOMPurify from 'isomorphic-dompurify';
 import { SafeXmlValidatorService } from './xml-validator.service';
 import { SanitizedPreview, SanitizedQuestion, SanitizedOption } from '../types/xml.types';
+
+const SERVER_SANITIZE_CONFIG = {
+  USE_PROFILES: {
+    html: true,
+    mathMl: true,
+    svg: true,
+  },
+  ADD_DATA_URI_TAGS: ['img'],
+  ADD_TAGS: [
+    'annotation',
+    'semantics',
+    'annotation-xml',
+  ],
+  ADD_ATTR: [
+    'target',
+    'encoding',
+    'display',
+    'mathvariant',
+    'mathsize',
+    'mathcolor',
+    'mathbackground',
+    'columnalign',
+    'rowalign',
+    'linethickness',
+    'accent',
+    'accentunder',
+    'fence',
+    'separator',
+    'stretchy',
+    'symmetric',
+    'largeop',
+    'movablelimits',
+    'dir',
+    'aria-hidden',
+    'aria-label',
+    'role',
+    'colspan',
+    'rowspan',
+    'border',
+    'cellpadding',
+    'cellspacing',
+    'scope',
+  ],
+  FORBID_TAGS: [
+    'script',
+    'iframe',
+    'frame',
+    'object',
+    'embed',
+    'applet',
+    'form',
+    'input',
+    'button',
+    'select',
+    'textarea',
+    'base',
+    'link',
+    'meta',
+    'style',
+  ],
+  FORBID_ATTR: [
+    'onerror',
+    'onload',
+    'onclick',
+    'onmouseover',
+    'onmouseout',
+    'onmouseenter',
+    'onmouseleave',
+    'onfocus',
+    'onblur',
+    'onchange',
+    'onsubmit',
+    'onreset',
+    'onkeydown',
+    'onkeypress',
+    'onkeyup',
+    'ontoggle',
+  ],
+  ALLOW_DATA_ATTR: false,
+  SANITIZE_DOM: true,
+};
 
 export class PreviewSanitizerService {
   private static extractText(node: any): string {
@@ -9,6 +91,69 @@ export class PreviewSanitizerService {
     if (node.text !== undefined) return this.extractText(node.text);
     if (node['#text'] !== undefined) return String(node['#text']);
     return '';
+  }
+
+  /**
+   * Bereinigt unvertrauenswuerdiges HTML in Fragetexten und Optionen mit DOMPurify.
+   * Bewahrt mathematische Notationen (MathML/KaTeX), Tabellen, Listen und sichere data:image-URIs.
+   */
+  public static sanitizeHtml(dirtyHtml: string | null | undefined): string {
+    if (!dirtyHtml || typeof dirtyHtml !== 'string') return '';
+    return DOMPurify.sanitize(dirtyHtml, SERVER_SANITIZE_CONFIG);
+  }
+
+  /**
+   * Bereinigt eingebettete Cloze-Fragetexte (multianswer), indem alle Unterfragendefinitionen
+   * (Antworten, Gewichtungen, Feedback, Toleranzen) durch den Platzhalter '[ ... ]' ersetzt werden.
+   *
+   * Verarbeitet:
+   * - Alle Standard-Short-Codes: SA, MC, NM, MR, MW, SAC, MWC
+   * - Layout-Subtypen: MULTICHOICE_V, MCS, MCH, MULTIRESPONSE_H etc.
+   * - Gross-/Kleinschreibung: lowercase (shortanswer, mc), mixed-case
+   * - Weggelassene Gewichtungen: {:MC:...}
+   * - Beliebige Leerzeichen: { 1 : SA : =answer }
+   * - Maskierte Trennzeichen: \} in Antworten oder Feedback
+   * - Verschachtelte geschweifte Klammern: LaTeX-Makros oder balancierte Ausdruecke
+   */
+  public static sanitizeClozeQuestionText(text: string): string {
+    if (!text) return '';
+
+    const clozePrefixRegex = /^\{\s*\d*\s*:\s*[A-Za-z0-9_]+\s*:/;
+
+    let result = '';
+    let i = 0;
+    const len = text.length;
+
+    while (i < len) {
+      if (text[i] === '{') {
+        const slice = text.slice(i);
+        const match = slice.match(clozePrefixRegex);
+        if (match) {
+          let depth = 1;
+          let j = i + match[0].length;
+          while (j < len && depth > 0) {
+            if (text.charCodeAt(j) === 92 || text[j] === '\\') {
+              // Maskiertes Zeichen ueberspringen (z. B. \} oder \{)
+              j += 2;
+              continue;
+            }
+            if (text[j] === '{') {
+              depth++;
+            } else if (text[j] === '}') {
+              depth--;
+            }
+            j++;
+          }
+          result += '[ ... ]';
+          i = j;
+          continue;
+        }
+      }
+      result += text[i];
+      i++;
+    }
+
+    return result;
   }
 
   /**
@@ -43,7 +188,8 @@ export class PreviewSanitizerService {
     let qCounter = 1;
 
     for (const q of questionList) {
-      const qtype = q['@_type'] || q.type;
+      const rawQType = q['@_type'] || q.type;
+      const qtype = typeof rawQType === 'string' ? rawQType.toLowerCase().trim() : '';
       if (!qtype) continue;
 
       if (qtype === 'category') {
@@ -92,12 +238,18 @@ export class PreviewSanitizerService {
         }
       }
 
+      // If Cloze / multianswer, strip solutions before HTML sanitization
+      let processedQuestionHtml = rawQuestionHtml;
+      if (qtype === 'cloze' || qtype === 'multianswer') {
+        processedQuestionHtml = this.sanitizeClozeQuestionText(processedQuestionHtml);
+      }
+
       const sanitizedQ: SanitizedQuestion = {
         id: qId,
         name: qName,
         type: qtype,
         category: currentCategoryId,
-        questiontextHtml: rawQuestionHtml,
+        questiontextHtml: this.sanitizeHtml(processedQuestionHtml),
         mediaFiles,
       };
 
@@ -107,7 +259,7 @@ export class PreviewSanitizerService {
         const answers: any[] = Array.isArray(answersRaw) ? answersRaw : (answersRaw ? [answersRaw] : []);
         const options: SanitizedOption[] = answers.map((ans, idx) => ({
           id: `opt_${idx + 1}`,
-          textHtml: this.extractText(ans),
+          textHtml: this.sanitizeHtml(this.extractText(ans)),
         }));
         sanitizedQ.options = options;
       } else if (qtype === 'truefalse') {
@@ -121,15 +273,9 @@ export class PreviewSanitizerService {
         // Shuffle or present subquestions without linking correct answers
         const subList = subqs.map((sq) => {
           const stem = this.extractText(sq.text || sq);
-          return { textHtml: stem };
+          return { textHtml: this.sanitizeHtml(stem) };
         });
         sanitizedQ.subquestions = subList;
-      } else if (qtype === 'cloze' || qtype === 'multianswer') {
-        // Replace cloze solutions with generic placeholder
-        sanitizedQ.questiontextHtml = rawQuestionHtml.replace(
-          /\{[0-9]+:(?:SHORTANSWER|MULTICHOICE|NUMERICAL):[^}]*\}/g,
-          '[ ... ]'
-        );
       }
 
       sanitizedQuestions.push(sanitizedQ);
@@ -144,3 +290,4 @@ export class PreviewSanitizerService {
     };
   }
 }
+
