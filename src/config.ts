@@ -27,7 +27,9 @@ const ConfigSchema = z.object({
   JWT_EXPIRES_IN: z.string().default('30d'),
 
   // Pluggable Monetisation
-  MONETISATION_ENABLED: z.coerce.boolean().default(false),
+  MONETISATION_ENABLED: z
+    .preprocess(val => val === 'true' || val === true || val === '1' || val === 1, z.boolean())
+    .default(false),
 
   // Rate Limiting
   RATE_LIMIT_MAX: z.coerce.number().default(300),
