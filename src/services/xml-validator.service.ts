@@ -603,6 +603,10 @@ export class SafeXmlValidatorService {
         let openBraces = 0;
         let balanced = true;
         for (let i = 0; i < qTextHtml.length; i++) {
+          if (qTextHtml.charCodeAt(i) === 92 || qTextHtml[i] === '\\') {
+            i++;
+            continue;
+          }
           if (qTextHtml[i] === '{') openBraces++;
           if (qTextHtml[i] === '}') {
             openBraces--;
