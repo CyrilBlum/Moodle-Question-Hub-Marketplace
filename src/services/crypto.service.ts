@@ -33,7 +33,7 @@ export class CryptoService {
   public static generatePatToken(): { rawToken: string; tokenPrefix: string; tokenHash: string } {
     const randomHex = crypto.randomBytes(32).toString('hex');
     const rawToken = `mqh_pat_${randomHex}`;
-    const tokenPrefix = `mqh_pat_${randomHex.substring(0, 8)}...`;
+    const tokenPrefix = `mqh_pat_${randomHex.substring(0, 4)}...`;
     const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
     return { rawToken, tokenPrefix, tokenHash };
   }

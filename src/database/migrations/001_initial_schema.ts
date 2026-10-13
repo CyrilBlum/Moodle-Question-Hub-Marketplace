@@ -22,7 +22,7 @@ export async function up(knex: Knex): Promise<void> {
       table.string('id', 36).primary();
       table.string('user_id', 36).notNullable().references('id').inTable('users').onDelete('CASCADE');
       table.string('name', 100).notNullable();
-      table.string('token_prefix', 16).notNullable();
+      table.string('token_prefix', 32).notNullable();
       table.string('token_hash', 64).notNullable().unique();
       table.timestamp('last_used_at').nullable();
       table.timestamp('expires_at').nullable();
