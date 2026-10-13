@@ -7,12 +7,19 @@ export class TaxonomyService {
   private catalog: TaxonomyCatalog;
 
   private constructor() {
-    const seedPath = path.resolve(__dirname, '../taxonomy/taxonomy.seed.json');
-    if (fs.existsSync(seedPath)) {
-      const raw = fs.readFileSync(seedPath, 'utf-8');
+    const candidates = [
+      path.resolve(__dirname, '../taxonomy/taxonomy.seed.json'),
+      path.resolve(__dirname, '../../src/taxonomy/taxonomy.seed.json'),
+      path.resolve(process.cwd(), 'src/taxonomy/taxonomy.seed.json'),
+      path.resolve(process.cwd(), 'dist/server/taxonomy/taxonomy.seed.json'),
+    ];
+
+    const foundPath = candidates.find(p => fs.existsSync(p));
+    if (foundPath) {
+      const raw = fs.readFileSync(foundPath, 'utf-8');
       this.catalog = JSON.parse(raw);
     } else {
-      throw new Error(`Taxonomy seed file not found at ${seedPath}`);
+      throw new Error(`Taxonomy seed file not found in any of: ${candidates.join(', ')}`);
     }
   }
 
