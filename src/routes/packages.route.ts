@@ -26,7 +26,7 @@ export async function packageRoutes(app: FastifyInstance): Promise<void> {
       for await (const part of parts) {
         if (part.type === 'file') {
           const buffer = await part.toBuffer();
-          xmlContent = buffer.toString('utf-8');
+          xmlContent = SafeXmlValidatorService.decodeUpload(buffer);
         } else if (part.type === 'field' && part.fieldname === 'xml') {
           xmlContent = String(part.value);
         }
@@ -60,7 +60,7 @@ export async function packageRoutes(app: FastifyInstance): Promise<void> {
       for await (const part of parts) {
         if (part.type === 'file') {
           const buffer = await part.toBuffer();
-          xmlContent = buffer.toString('utf-8');
+          xmlContent = SafeXmlValidatorService.decodeUpload(buffer);
         } else if (part.type === 'field') {
           if (part.fieldname === 'metadata') {
             try {

@@ -140,4 +140,29 @@ describe('SafeXmlValidatorService Unit Tests', () => {
     expect(scriptResult.valid).toBe(false);
     expect(scriptResult.error).toContain('ERR_DISALLOWED_MEDIA_MIME');
   });
+
+  it('detects DOCTYPE in UTF-16 uploads with and without BOM', () => {
+    const xxe = '<?xml version="1.0" encoding="UTF-16"?><!DOCTYPE quiz [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><quiz></quiz>';
+    const le = Buffer.from(xxe, 'utf16le');
+    const be = Buffer.from(le).swap16();
+    const uploads = [
+      le,
+      be,
+      Buffer.concat([Buffer.from([0xFF, 0xFE]), le]),
+      Buffer.concat([Buffer.from([0xFE, 0xFF]), be]),
+    ];
+    for (const upload of uploads) {
+      const report = SafeXmlValidatorService.validatePackage(SafeXmlValidatorService.decodeUpload(upload));
+      expect(report.valid).toBe(false);
+      expect(report.diagnostics.errors[0].code).toBe('ERR_XXE_DOCTYPE_FORBIDDEN');
+    }
+  });
+
+  it('decodes benign UTF-16 packages and normalises the declaration to UTF-8', () => {
+    const xml = '<?xml version="1.0" encoding="UTF-16"?><quiz><question type="essay"><name><text>Grüezi</text></name></question></quiz>';
+    const decoded = SafeXmlValidatorService.decodeUpload(Buffer.concat([Buffer.from([0xFF, 0xFE]), Buffer.from(xml, 'utf16le')]));
+    expect(decoded.startsWith('<?xml version="1.0" encoding="UTF-8"?>')).toBe(true);
+    expect(decoded).toContain('Grüezi');
+    expect(SafeXmlValidatorService.decodeUpload(Buffer.from(xml.replace('UTF-16', 'UTF-8'), 'utf-8'))).toContain('Grüezi');
+  });
 });

@@ -30,6 +30,31 @@ export class SafeXmlValidatorService {
   ]);
 
   /**
+   * Decodes an uploaded XML buffer, detecting UTF-16 (with or without BOM) so that the
+   * DOCTYPE/ENTITY guards in assertSafeMarkup() inspect the real markup instead of mojibake.
+   * UTF-16 input is normalised to a UTF-8 declaration, since the result is stored as UTF-8.
+   */
+  public static decodeUpload(buffer: Buffer): string {
+    let encoding: 'utf-8' | 'utf-16le' | 'utf-16be' = 'utf-8';
+    if (buffer.length >= 2 && buffer[0] === 0xFF && buffer[1] === 0xFE) {
+      encoding = 'utf-16le';
+    } else if (buffer.length >= 2 && buffer[0] === 0xFE && buffer[1] === 0xFF) {
+      encoding = 'utf-16be';
+    } else if (buffer.length >= 2 && buffer[0] === 0x3C && buffer[1] === 0x00) {
+      encoding = 'utf-16le'; // '<' without BOM
+    } else if (buffer.length >= 2 && buffer[0] === 0x00 && buffer[1] === 0x3C) {
+      encoding = 'utf-16be'; // '<' without BOM
+    }
+
+    // TextDecoder strips a leading BOM for every encoding.
+    const text = new TextDecoder(encoding).decode(buffer);
+    if (encoding === 'utf-8') {
+      return text;
+    }
+    return text.replace(/^(<\?xml[^>]*\bencoding\s*=\s*["'])utf-16(?:le|be)?(["'])/i, '$1UTF-8$2');
+  }
+
+  /**
    * Pre-validation regex inspection before parser execution.
    * Strips CDATA sections to isolate structural XML markup and forbids DOCTYPE/ENTITY/XInclude.
    */
