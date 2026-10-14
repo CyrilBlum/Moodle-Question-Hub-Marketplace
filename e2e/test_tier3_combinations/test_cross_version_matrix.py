@@ -24,7 +24,7 @@ def test_t3_12_forward_interchange_m1_to_m2(hub_client, teacher_jwt, remote_php)
     define('CLI_SCRIPT', true);
     require_once('/mnt/HC_Volume_100926434/www/moodle-one/config.php');
     $exporter = new \\qbank_questionhub\\package_exporter(2);
-    $q = $DB->get_record_sql("SELECT id FROM {question} WHERE qtype != :top ORDER BY id ASC LIMIT 1", ["top" => "category"]);
+    $q = $DB->get_record_sql("SELECT id FROM {question} WHERE qtype != :top ORDER BY (name = 'E2E Seed Frage') DESC, id ASC LIMIT 1", ["top" => "category"]);
     $xml = $exporter->export_questions_xml([$q->id]);
     echo json_encode(['xml' => $xml]);
     """
