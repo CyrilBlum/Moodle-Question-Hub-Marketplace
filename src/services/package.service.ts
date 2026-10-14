@@ -23,6 +23,18 @@ export interface PackageSearchFilters {
   limit?: number;
 }
 
+/** Decodes HTML entities in plain-text metadata (older plugin versions sent "Computer &amp; X"). */
+export function decodeEntities(text: string): string {
+  return text
+    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)))
+    .replace(/&quot;/g, '"')
+    .replace(/&#0?39;|&apos;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&');
+}
+
 export class PackageService {
   private static instance: PackageService | null = null;
   private readonly storage: PackageStorageService;
@@ -128,8 +140,8 @@ export class PackageService {
         await trx('packages').insert({
           id: manifest.id,
           owner_id: ownerId,
-          title: manifest.title.trim(),
-          summary: manifest.summary.trim(),
+          title: decodeEntities(manifest.title.trim()),
+          summary: decodeEntities(manifest.summary.trim()),
           language: manifest.language || 'de-CH',
           license: manifest.license || 'CC-BY-4.0',
           framework: manifest.taxonomy?.framework || 'CH-EDK-RLP',
@@ -169,8 +181,8 @@ export class PackageService {
           .where({ id: manifest.id })
           .update({
             latest_version: manifest.version,
-            title: manifest.title.trim(),
-            summary: manifest.summary.trim(),
+            title: decodeEntities(manifest.title.trim()),
+            summary: decodeEntities(manifest.summary.trim()),
             subject: manifest.taxonomy?.subject || existingPackage.subject,
             subject_category: manifest.taxonomy?.subject_category || manifest.taxonomy?.level || existingPackage.subject_category,
             topic: manifest.taxonomy?.topic ?? existingPackage.topic,
@@ -482,9 +494,91 @@ export class PackageService {
     return release || null;
   }
 
+  /**
+   * Edits mutable package settings. Release contents and version numbers are immutable;
+   * to change a version, publish a new one or withdraw the old one.
+   */
+  public async updatePackage(
+    ownerId: string,
+    isAdmin: boolean,
+    packageId: string,
+    patch: {
+      title?: string;
+      summary?: string;
+      license?: string;
+      canton?: string | null;
+      topic?: string | null;
+      subject?: string;
+      subject_category?: string;
+      grades?: string[];
+      tags?: string[];
+      preview_enabled?: boolean;
+    }
+  ): Promise<void> {
+    const knex = getDatabase();
+    const pkg = await knex('packages').where({ id: packageId }).first();
+    if (!pkg) throw new Error('NOT_FOUND: Paket nicht gefunden.');
+    if (pkg.owner_id !== ownerId && !isAdmin) {
+      throw new Error('FORBIDDEN: Sie sind nicht berechtigt, dieses Paket zu verwalten.');
+    }
+
+    const update: Record<string, unknown> = {};
+    if (patch.title !== undefined) {
+      const t = decodeEntities(String(patch.title).trim());
+      if (t.length < 3 || t.length > 200) throw new Error('BAD_REQUEST: Der Titel muss 3 bis 200 Zeichen lang sein.');
+      update.title = t;
+    }
+    if (patch.summary !== undefined) {
+      const s = decodeEntities(String(patch.summary).trim());
+      if (s.length < 1) throw new Error('BAD_REQUEST: Die Beschreibung darf nicht leer sein.');
+      update.summary = s;
+    }
+    if (patch.license !== undefined) {
+      if (!['CC-BY-4.0', 'CC-BY-SA-4.0', 'CC0-1.0'].includes(patch.license)) {
+        throw new Error(`BAD_REQUEST: Unbekannte Lizenz '${patch.license}'.`);
+      }
+      update.license = patch.license;
+    }
+    if (patch.preview_enabled !== undefined) update.preview_enabled = !!patch.preview_enabled;
+    if (patch.topic !== undefined) update.topic = patch.topic ? String(patch.topic).trim() : null;
+    if (patch.canton !== undefined) update.canton = patch.canton ? String(patch.canton).toUpperCase() : null;
+    if (patch.subject !== undefined) update.subject = patch.subject;
+    if (patch.subject_category !== undefined) update.subject_category = patch.subject_category;
+
+    const check = this.taxonomy.validateTaxonomy({
+      subject: (update.subject as string) || pkg.subject,
+      level: (update.subject_category as string) || pkg.subject_category,
+      grades: patch.grades,
+      canton: (update.canton as string) || undefined,
+    });
+    if (!check.valid) {
+      throw new Error(`BAD_REQUEST: Taxonomie-Validierung fehlgeschlagen: ${check.errors.join('; ')}`);
+    }
+
+    await knex.transaction(async trx => {
+      if (Object.keys(update).length > 0) {
+        await trx('packages').where({ id: packageId }).update({ ...update, updated_at: new Date() });
+      }
+      if (patch.grades) {
+        await trx('package_grades').where({ package_id: packageId }).del();
+        for (const g of [...new Set(patch.grades)]) {
+          await trx('package_grades').insert({ package_id: packageId, grade: g });
+        }
+      }
+      if (patch.tags) {
+        await trx('package_tags').where({ package_id: packageId }).del();
+        for (const t of [...new Set(patch.tags.map(x => String(x).trim()).filter(Boolean))]) {
+          await trx('package_tags').insert({ package_id: packageId, tag: t.slice(0, 50) });
+        }
+      }
+    });
+  }
+
   /** Packages owned by a user (for the "my packages" view in the plugin and dashboard). */
   public async listOwnedPackages(ownerId: string): Promise<Array<{
-    id: string; title: string; latest_version: string; versions: string[];
+    id: string; title: string; summary: string; license: string; canton: string | null;
+    subject: string; subject_category: string; grades: string[]; tags: string[];
+    latest_version: string; versions: string[];
     preview_enabled: boolean; downloads_count: number; updated_at: string;
   }>> {
     const knex = getDatabase();
@@ -493,9 +587,18 @@ export class PackageService {
     const releases = ids.length
       ? await knex('releases').whereIn('package_id', ids).where({ is_yanked: false })
       : [];
+    const grades = ids.length ? await knex('package_grades').whereIn('package_id', ids) : [];
+    const tags = ids.length ? await knex('package_tags').whereIn('package_id', ids) : [];
     return rows.map(r => ({
       id: r.id,
       title: r.title,
+      summary: r.summary,
+      license: r.license,
+      canton: r.canton || null,
+      subject: r.subject,
+      subject_category: r.subject_category,
+      grades: grades.filter(g => g.package_id === r.id).map(g => g.grade),
+      tags: tags.filter(t => t.package_id === r.id).map(t => t.tag),
       latest_version: r.latest_version,
       versions: releases.filter(x => x.package_id === r.id).map(x => x.version),
       preview_enabled: !!r.preview_enabled,

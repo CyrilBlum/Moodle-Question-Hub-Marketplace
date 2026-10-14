@@ -137,6 +137,12 @@ export const api = {
     });
   },
   getMyPackages: () => request('/account/packages'),
+  updatePackage: (id: string, patch: Record<string, unknown>) =>
+    request(`/packages/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    }),
   withdrawPackage: (id: string) =>
     request(`/packages/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   withdrawRelease: (id: string, version: string) =>

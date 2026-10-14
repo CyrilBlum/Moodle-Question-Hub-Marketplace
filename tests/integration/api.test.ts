@@ -504,8 +504,10 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
     });
 
   it('preview_enabled=false hides the preview; default is enabled', async () => {
-    const res = await publishLifecycle('1.0.0', { preview_enabled: false });
+    const res = await publishLifecycle('1.0.0', { preview_enabled: false, title: 'Lifecycle &amp; Test' });
     expect(res.statusCode).toBe(201);
+    const titled = JSON.parse((await app.inject({ method: 'GET', url: `/api/v1/packages/${lifecycleId}` })).body);
+    expect(titled.title).toBe('Lifecycle & Test');
 
     const detail = JSON.parse((await app.inject({ method: 'GET', url: `/api/v1/packages/${lifecycleId}` })).body);
     expect(detail.preview_enabled).toBe(false);
@@ -579,5 +581,40 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
       (await app.inject({ method: 'DELETE', url: `/api/v1/packages/${lifecycleId}`, headers: auth })).statusCode
     ).toBe(204);
     expect((await app.inject({ method: 'GET', url: `/api/v1/packages/${lifecycleId}` })).statusCode).toBe(404);
+  });
+
+  it('PATCH /packages/:id edits settings for the owner only and refuses version changes', async () => {
+    const id = 'ch.gym.inf.patch-test';
+    const auth = { authorization: `Bearer ${teacherJwtToken}` };
+    const pub = await app.inject({
+      method: 'POST',
+      url: '/api/v1/packages',
+      headers: auth,
+      payload: {
+        metadata: {
+          id, version: '1.0.0', title: 'Patch Test', summary: 'Vorher', language: 'de-CH', license: 'CC-BY-4.0',
+          taxonomy: { subject: 'Informatik', subject_category: 'SF', grades: ['GYM2'] },
+        },
+        xml: fs.readFileSync(path.join(fixturesDir, 'valid-gym-datenstrukturen.xml'), 'utf-8'),
+      },
+    });
+    expect(pub.statusCode).toBe(201);
+
+    const ok = await app.inject({
+      method: 'PATCH', url: `/api/v1/packages/${id}`, headers: auth,
+      payload: { title: 'Neuer &amp; Titel', summary: 'Nachher', license: 'CC0-1.0', grades: ['GYM3', 'GYM4'], tags: ['a', 'b'], preview_enabled: false },
+    });
+    expect(ok.statusCode).toBe(200);
+    const body = JSON.parse(ok.body);
+    expect(body.title).toBe('Neuer & Titel');
+    expect(body.license).toBe('CC0-1.0');
+    expect(body.taxonomy.grades.sort()).toEqual(['GYM3', 'GYM4']);
+    expect(body.preview_enabled).toBe(false);
+
+    expect((await app.inject({ method: 'PATCH', url: `/api/v1/packages/${id}`, headers: auth, payload: { version: '9.9.9' } })).statusCode).toBe(400);
+    expect((await app.inject({ method: 'PATCH', url: `/api/v1/packages/${id}`, headers: auth, payload: { license: 'MIT' } })).statusCode).toBe(400);
+    expect((await app.inject({ method: 'PATCH', url: `/api/v1/packages/${id}`, payload: { title: 'x' } })).statusCode).toBe(401);
+
+    await app.inject({ method: 'DELETE', url: `/api/v1/packages/${id}`, headers: auth });
   });
 });

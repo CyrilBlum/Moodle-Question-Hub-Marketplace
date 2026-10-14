@@ -8,6 +8,8 @@ export const DashboardPage: React.FC = () => {
   const [user, setUser] = useState<any>(null);
   const [tokens, setTokens] = useState<any[]>([]);
   const [myPackages, setMyPackages] = useState<any[]>([]);
+  const [editing, setEditing] = useState<any | null>(null);
+  const [editError, setEditError] = useState('');
   const [loading, setLoading] = useState(true);
 
   // New Token Modal State
@@ -46,6 +48,38 @@ export const DashboardPage: React.FC = () => {
       setMyPackages(res?.data || []);
     } catch (err) {
       console.error('Fehler beim Laden Ihrer Pakete:', err);
+    }
+  };
+
+  const startEdit = (pkg: any) => {
+    setEditError('');
+    setEditing({
+      id: pkg.id,
+      title: pkg.title,
+      summary: pkg.summary || '',
+      license: pkg.license || 'CC-BY-4.0',
+      grades: pkg.grades || [],
+      tags: (pkg.tags || []).join(', '),
+      preview_enabled: pkg.preview_enabled !== false,
+    });
+  };
+
+  const saveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editing) return;
+    try {
+      await api.updatePackage(editing.id, {
+        title: editing.title,
+        summary: editing.summary,
+        license: editing.license,
+        grades: editing.grades,
+        tags: editing.tags.split(',').map((t: string) => t.trim()).filter(Boolean),
+        preview_enabled: editing.preview_enabled,
+      });
+      setEditing(null);
+      loadMyPackages();
+    } catch (err: any) {
+      setEditError(err.message || 'Speichern fehlgeschlagen.');
     }
   };
 
@@ -168,6 +202,12 @@ export const DashboardPage: React.FC = () => {
                   </div>
                 </div>
                 <button
+                  onClick={() => startEdit(pkg)}
+                  className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 sm:mr-2"
+                >
+                  Einstellungen
+                </button>
+                <button
                   onClick={() => handleWithdrawPackage(pkg)}
                   className="px-3 py-1.5 text-xs font-medium rounded-lg border border-red-200 text-red-700 hover:bg-red-50"
                 >
@@ -178,6 +218,65 @@ export const DashboardPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {editing && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+          <form onSubmit={saveEdit} className="bg-white rounded-xl p-6 w-full max-w-lg space-y-3 shadow-xl">
+            <h3 className="font-bold text-slate-900">Paket-Einstellungen</h3>
+            <p className="text-xs text-slate-500 font-mono">{editing.id}</p>
+            {editError && <p className="text-xs text-red-600">{editError}</p>}
+            <label className="block text-xs font-semibold text-slate-700">Titel
+              <input className="mt-1 w-full border rounded-lg p-2 text-sm" value={editing.title}
+                onChange={e => setEditing({ ...editing, title: e.target.value })} required />
+            </label>
+            <label className="block text-xs font-semibold text-slate-700">Beschreibung
+              <textarea className="mt-1 w-full border rounded-lg p-2 text-sm" rows={3} value={editing.summary}
+                onChange={e => setEditing({ ...editing, summary: e.target.value })} required />
+            </label>
+            <label className="block text-xs font-semibold text-slate-700">Lizenz
+              <select className="mt-1 w-full border rounded-lg p-2 text-sm" value={editing.license}
+                onChange={e => setEditing({ ...editing, license: e.target.value })}>
+                <option value="CC-BY-4.0">CC-BY-4.0</option>
+                <option value="CC-BY-SA-4.0">CC-BY-SA-4.0</option>
+                <option value="CC0-1.0">CC0-1.0</option>
+              </select>
+            </label>
+            <fieldset className="text-xs font-semibold text-slate-700">Zielstufen
+              <div className="flex gap-4 mt-1 font-normal">
+                {['GYM1', 'GYM2', 'GYM3', 'GYM4'].map(g => (
+                  <label key={g} className="flex items-center gap-1">
+                    <input type="checkbox" checked={editing.grades.includes(g)}
+                      onChange={e => setEditing({
+                        ...editing,
+                        grades: e.target.checked ? [...editing.grades, g] : editing.grades.filter((x: string) => x !== g),
+                      })} />
+                    {g}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <label className="block text-xs font-semibold text-slate-700">Schlagwörter (Komma-getrennt)
+              <input className="mt-1 w-full border rounded-lg p-2 text-sm" value={editing.tags}
+                onChange={e => setEditing({ ...editing, tags: e.target.value })} />
+            </label>
+            <label className="flex items-center gap-2 text-sm text-slate-700">
+              <input type="checkbox" checked={editing.preview_enabled}
+                onChange={e => setEditing({ ...editing, preview_enabled: e.target.checked })} />
+              Öffentliche Vorschau anzeigen
+            </label>
+            <p className="text-xs text-slate-500">
+              Versionsnummern sind unveränderlich: Für Änderungen am Inhalt veröffentlichen Sie eine neue Version
+              oder ziehen eine bestehende zurück.
+            </p>
+            <div className="flex justify-end gap-2 pt-2">
+              <button type="button" onClick={() => setEditing(null)} className="px-3 py-1.5 text-xs border rounded-lg">
+                Abbrechen
+              </button>
+              <button type="submit" className="px-3 py-1.5 text-xs bg-red-600 text-white rounded-lg">Speichern</button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {/* PAT Management Section */}
       <div className="bg-white rounded-xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6">

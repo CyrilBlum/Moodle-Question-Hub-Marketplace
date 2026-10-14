@@ -236,6 +236,32 @@ export async function packageRoutes(app: FastifyInstance): Promise<void> {
     return reply.status(500).send({ statusCode: 500, error: 'Internal Server Error', message: msg });
   };
 
+  // 7b. PATCH /api/v1/packages/:id (edit settings)
+  app.patch('/packages/:id', { preHandler: [app.authenticate] }, async (req, reply) => {
+    const user = (req as any).user;
+    const { id } = req.params as { id: string };
+    const body = (req.body || {}) as Record<string, unknown>;
+    const allowed = ['title', 'summary', 'license', 'canton', 'topic', 'subject', 'subject_category', 'grades', 'tags', 'preview_enabled'];
+    const patch: Record<string, unknown> = {};
+    for (const k of allowed) if (k in body) patch[k] = body[k];
+    if ('version' in body || 'latest_version' in body) {
+      return reply.status(400).send({
+        statusCode: 400,
+        error: 'Bad Request',
+        message: 'Versionsnummern sind unveränderlich. Veröffentlichen Sie eine neue Version oder ziehen Sie die alte zurück.',
+      });
+    }
+    try {
+      await packageService.updatePackage(user.id, user.role === 'admin', id, patch as any);
+      return reply.status(200).send(await packageService.getPackage(id));
+    } catch (err: any) {
+      if ((err.message || '').startsWith('BAD_REQUEST:')) {
+        return reply.status(400).send({ statusCode: 400, error: 'Bad Request', message: err.message.replace('BAD_REQUEST: ', '') });
+      }
+      return withdrawErrors(err, reply);
+    }
+  });
+
   // 8. DELETE /api/v1/packages/:id (withdraw the whole package)
   app.delete('/packages/:id', { preHandler: [app.authenticate] }, async (req, reply) => {
     const user = (req as any).user;
