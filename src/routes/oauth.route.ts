@@ -23,10 +23,17 @@ export async function oauthRoutes(app: FastifyInstance): Promise<void> {
       code_challenge?: string;
       code_challenge_method?: string;
       state?: string;
-      user_id?: string;
     };
 
+    const browserRequest = !(req.headers.accept || '').includes('application/json') &&
+      (req.headers.accept || '').includes('text/html');
+    const failBrowser = (msg: string) =>
+      reply.redirect(`/connect?error=${encodeURIComponent(msg)}`, 302);
+
     if (!query.client_id || !query.redirect_uri || query.response_type !== 'code' || !query.code_challenge) {
+      if (browserRequest) {
+        return failBrowser('Die Verbindungsanfrage ist unvollständig. Bitte starten Sie die Verknüpfung erneut aus Moodle.');
+      }
       return reply.status(400).send({
         statusCode: 400,
         error: 'Bad Request',
@@ -36,6 +43,9 @@ export async function oauthRoutes(app: FastifyInstance): Promise<void> {
 
     const isValidClient = await oauthService.validateClient(query.client_id, query.redirect_uri);
     if (!isValidClient) {
+      if (browserRequest) {
+        return failBrowser('Diese Moodle-Instanz ist für den Question Hub nicht freigegeben (redirect_uri nicht registriert).');
+      }
       return reply.status(400).send({
         statusCode: 400,
         error: 'Bad Request',
@@ -43,27 +53,36 @@ export async function oauthRoutes(app: FastifyInstance): Promise<void> {
       });
     }
 
-    // Identify user
-    let userId = query.user_id;
+    // Identify user: only a verified Bearer token counts. There is deliberately no
+    // fallback user and no user_id parameter: the user must have logged in.
+    let userId: string | undefined;
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      try {
+        const decoded = app.jwt.verify<any>(authHeader.substring(7));
+        userId = decoded.id;
+      } catch {}
+    }
+
+    const wantsJson = (req.headers.accept || '').includes('application/json');
+
     if (!userId) {
-      // Check if user is authenticated via Bearer token
-      const authHeader = req.headers.authorization;
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        try {
-          const decoded = app.jwt.verify<any>(authHeader.substring(7));
-          userId = decoded.id;
-        } catch {}
+      if (wantsJson) {
+        return reply.status(401).send({
+          statusCode: 401,
+          error: 'Unauthorized',
+          message: 'Anmeldung erforderlich: Bitte melden Sie sich zuerst im Question Hub an.',
+        });
       }
+      // Browser: send the user to the Hub login page, which returns here with a token.
+      const connect = new URLSearchParams();
+      for (const [k, v] of Object.entries(query)) {
+        if (typeof v === 'string') connect.set(k, v);
+      }
+      return reply.redirect(`/connect?${connect.toString()}`, 302);
     }
 
-    // If still no user, use default teacher user for headless API tests or redirect to login
-    if (!userId) {
-      const knex = getDatabase();
-      const defaultUser = await knex('users').first();
-      userId = defaultUser ? defaultUser.id : '11111111-2222-3333-4444-555555555555';
-    }
-
-    const finalUserId = userId || '11111111-2222-3333-4444-555555555555';
+    const finalUserId = userId;
 
     const code = await oauthService.createAuthCode({
       clientId: query.client_id,
@@ -73,9 +92,7 @@ export async function oauthRoutes(app: FastifyInstance): Promise<void> {
       redirectUri: query.redirect_uri,
     });
 
-    // Check if client expects JSON (e.g. API client test) or browser redirect
-    const acceptHeader = req.headers.accept || '';
-    if (acceptHeader.includes('application/json')) {
+    if (wantsJson) {
       return reply.status(200).send({
         code,
         state: query.state,

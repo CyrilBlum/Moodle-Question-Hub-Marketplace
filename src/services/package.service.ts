@@ -76,6 +76,14 @@ export class PackageService {
     // 3. Check existing package
     const existingPackage = await knex('packages').where({ id: manifest.id }).first();
     if (existingPackage) {
+      const sameVersion = await knex('releases')
+        .where({ package_id: manifest.id, version: manifest.version })
+        .first();
+      if (sameVersion) {
+        throw new Error(
+          `CONFLICT: Version ${manifest.version} existiert bereits oder ist nicht höher als die aktuelle Version ${existingPackage.latest_version} (zurückgezogene Versionen bleiben gesperrt).`
+        );
+      }
       if (existingPackage.owner_id !== ownerId) {
         throw new Error('FORBIDDEN: Sie sind nicht berechtigt, neue Versionen dieses Pakets zu veröffentlichen.');
       }
@@ -132,6 +140,7 @@ export class PackageService {
           latest_version: manifest.version,
           downloads_count: 0,
           is_monetised: false,
+          preview_enabled: manifest.preview_enabled !== false,
           created_at: now,
           updated_at: now,
         });
@@ -166,6 +175,10 @@ export class PackageService {
             subject_category: manifest.taxonomy?.subject_category || manifest.taxonomy?.level || existingPackage.subject_category,
             topic: manifest.taxonomy?.topic ?? existingPackage.topic,
             canton: manifest.taxonomy?.canton ?? existingPackage.canton,
+            preview_enabled:
+              manifest.preview_enabled === undefined
+                ? existingPackage.preview_enabled
+                : manifest.preview_enabled !== false,
             updated_at: now,
           });
       }
@@ -289,7 +302,7 @@ export class PackageService {
 
     // Fetch related releases, tags, grades
     const packageIds = rows.map(r => r.id);
-    const releases = packageIds.length > 0 ? await knex('releases').whereIn('package_id', packageIds) : [];
+    const releases = packageIds.length > 0 ? await knex('releases').whereIn('package_id', packageIds).where({ is_yanked: false }) : [];
     const tags = packageIds.length > 0 ? await knex('package_tags').whereIn('package_id', packageIds) : [];
     const grades = packageIds.length > 0 ? await knex('package_grades').whereIn('package_id', packageIds) : [];
 
@@ -338,6 +351,7 @@ export class PackageService {
         },
         latest_version: row.latest_version,
         versions: pkgReleases.map(r => r.version),
+        preview_enabled: !!row.preview_enabled,
         stats: {
           question_count: questionCount,
           categories_count: categoriesCount,
@@ -384,7 +398,7 @@ export class PackageService {
     if (!row) return null;
 
     const releases = await knex('releases')
-      .where({ package_id: packageId })
+      .where({ package_id: packageId, is_yanked: false })
       .orderBy('created_at', 'desc');
 
     const tags = await knex('package_tags').where({ package_id: packageId });
@@ -427,6 +441,7 @@ export class PackageService {
       },
       latest_version: row.latest_version,
       versions: releases.map(r => r.version),
+      preview_enabled: !!row.preview_enabled,
       stats: {
         question_count: latestRelease ? latestRelease.question_count : 0,
         categories_count: categories.length,
@@ -461,10 +476,77 @@ export class PackageService {
     }
 
     const release = await knex('releases')
-      .where({ package_id: packageId, version })
+      .where({ package_id: packageId, version, is_yanked: false })
       .first();
 
     return release || null;
+  }
+
+  /** Packages owned by a user (for the "my packages" view in the plugin and dashboard). */
+  public async listOwnedPackages(ownerId: string): Promise<Array<{
+    id: string; title: string; latest_version: string; versions: string[];
+    preview_enabled: boolean; downloads_count: number; updated_at: string;
+  }>> {
+    const knex = getDatabase();
+    const rows = await knex('packages').where({ owner_id: ownerId }).orderBy('updated_at', 'desc');
+    const ids = rows.map(r => r.id);
+    const releases = ids.length
+      ? await knex('releases').whereIn('package_id', ids).where({ is_yanked: false })
+      : [];
+    return rows.map(r => ({
+      id: r.id,
+      title: r.title,
+      latest_version: r.latest_version,
+      versions: releases.filter(x => x.package_id === r.id).map(x => x.version),
+      preview_enabled: !!r.preview_enabled,
+      downloads_count: r.downloads_count,
+      updated_at: new Date(r.updated_at).toISOString(),
+    }));
+  }
+
+  /**
+   * Withdraws one release. The row stays (yanked) so the version number can never be reused;
+   * the file is removed from download/listing. latest_version moves to the highest remaining one.
+   */
+  public async withdrawRelease(ownerId: string, isAdmin: boolean, packageId: string, version: string): Promise<void> {
+    const knex = getDatabase();
+    const pkg = await knex('packages').where({ id: packageId }).first();
+    if (!pkg) throw new Error('NOT_FOUND: Paket nicht gefunden.');
+    if (pkg.owner_id !== ownerId && !isAdmin) {
+      throw new Error('FORBIDDEN: Sie sind nicht berechtigt, dieses Paket zu verwalten.');
+    }
+    const release = await knex('releases').where({ package_id: packageId, version, is_yanked: false }).first();
+    if (!release) throw new Error('NOT_FOUND: Version nicht gefunden.');
+
+    const remaining = (await knex('releases').where({ package_id: packageId, is_yanked: false }))
+      .filter(r => r.version !== version)
+      .map(r => r.version)
+      .sort(semver.rcompare);
+    if (remaining.length === 0) {
+      throw new Error('CONFLICT: Dies ist die letzte Version. Ziehen Sie stattdessen das ganze Paket zurück.');
+    }
+    await knex.transaction(async trx => {
+      await trx('releases').where({ id: release.id }).update({ is_yanked: true });
+      await trx('packages').where({ id: packageId }).update({ latest_version: remaining[0], updated_at: new Date() });
+    });
+    await this.storage.removeRelease(packageId, version);
+  }
+
+  /** Withdraws a whole package: all releases, grades, tags and stored files are deleted. */
+  public async withdrawPackage(ownerId: string, isAdmin: boolean, packageId: string): Promise<void> {
+    const knex = getDatabase();
+    const pkg = await knex('packages').where({ id: packageId }).first();
+    if (!pkg) throw new Error('NOT_FOUND: Paket nicht gefunden.');
+    if (pkg.owner_id !== ownerId && !isAdmin) {
+      throw new Error('FORBIDDEN: Sie sind nicht berechtigt, dieses Paket zu verwalten.');
+    }
+    await knex.transaction(async trx => {
+      await trx('package_grades').where({ package_id: packageId }).del();
+      await trx('package_tags').where({ package_id: packageId }).del();
+      await trx('releases').where({ package_id: packageId }).del();
+      await trx('packages').where({ id: packageId }).del();
+    });
+    await this.storage.removePackage(packageId);
   }
 
   public async incrementDownloadCount(packageId: string): Promise<void> {

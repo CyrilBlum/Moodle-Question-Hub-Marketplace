@@ -136,6 +136,15 @@ export const api = {
       body: JSON.stringify({ name, expires_in_days: expiresInDays }),
     });
   },
+  getMyPackages: () => request('/account/packages'),
+  withdrawPackage: (id: string) =>
+    request(`/packages/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  withdrawRelease: (id: string, version: string) =>
+    request(`/packages/${encodeURIComponent(id)}/releases/${encodeURIComponent(version)}`, { method: 'DELETE' }),
+  oauthAuthorize: (params: Record<string, string>) =>
+    request(`/oauth/authorize?${new URLSearchParams(params).toString()}`, {
+      headers: { Accept: 'application/json' },
+    }),
   revokeToken: (id: string) => {
     return request(`/account/tokens/${id}`, {
       method: 'DELETE',

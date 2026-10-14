@@ -327,6 +327,30 @@ def moodle_test_data_cleanup():
         print(f"\n[cleanup] {MOODLE_INSTANCES[name]['label']}: {result}")
 
 
+@pytest.fixture(scope="session", autouse=True)
+def hub_test_data_cleanup(request):
+    """Withdraws every Hub package the teacher account published during the session."""
+    client = HubClient(request.getfixturevalue("hub_url"))
+    login = client.login()
+    if login.status_code != 200:
+        yield
+        return
+
+    def owned():
+        r = client.session.get(f"{client.api_base}/account/packages", headers=client._headers(), timeout=30)
+        return {p["id"] for p in r.json().get("data", [])} if r.status_code == 200 else set()
+
+    before = owned()
+    yield
+    if os.environ.get("QHUB_KEEP_TEST_DATA") == "1":
+        return
+    removed = 0
+    for pkg_id in sorted(owned() - before):
+        r = client.session.delete(f"{client.api_base}/packages/{pkg_id}", headers=client._headers(), timeout=30)
+        removed += r.status_code == 204
+    print(f"\n[cleanup] Hub: {removed} test packages withdrawn")
+
+
 @pytest.fixture(scope="session")
 def hetzner_ssh():
     """Fixture providing SSH command execution on Hetzner."""

@@ -7,6 +7,7 @@ export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
   const [tokens, setTokens] = useState<any[]>([]);
+  const [myPackages, setMyPackages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // New Token Modal State
@@ -24,6 +25,7 @@ export const DashboardPage: React.FC = () => {
     }
     setUser(getStoredUser());
     loadTokens();
+    loadMyPackages();
   }, []);
 
   const loadTokens = async () => {
@@ -35,6 +37,39 @@ export const DashboardPage: React.FC = () => {
       console.error('Fehler beim Laden der Tokens:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadMyPackages = async () => {
+    try {
+      const res = await api.getMyPackages();
+      setMyPackages(res?.data || []);
+    } catch (err) {
+      console.error('Fehler beim Laden Ihrer Pakete:', err);
+    }
+  };
+
+  const handleWithdrawPackage = async (pkg: any) => {
+    if (!confirm(`Paket «${pkg.title}» mit allen Versionen endgültig zurückziehen? Bereits in Moodle importierte Fragen bleiben dort erhalten.`)) {
+      return;
+    }
+    try {
+      await api.withdrawPackage(pkg.id);
+      loadMyPackages();
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Zurückziehen fehlgeschlagen.');
+    }
+  };
+
+  const handleWithdrawRelease = async (pkg: any, version: string) => {
+    if (!confirm(`Version ${version} von «${pkg.title}» zurückziehen? Die Versionsnummer kann nicht erneut verwendet werden.`)) {
+      return;
+    }
+    try {
+      await api.withdrawRelease(pkg.id, version);
+      loadMyPackages();
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Zurückziehen fehlgeschlagen.');
     }
   };
 
@@ -95,6 +130,53 @@ export const DashboardPage: React.FC = () => {
         <span className="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-xs font-semibold">
           Gymnasial-Lehrperson
         </span>
+      </div>
+
+      {/* My published packages */}
+      <div className="bg-white rounded-xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-4">
+        <h2 className="text-lg font-bold text-slate-900">Meine veröffentlichten Pakete</h2>
+        {errorMsg && <p className="text-xs text-red-600">{errorMsg}</p>}
+        {myPackages.length === 0 ? (
+          <p className="text-xs text-slate-500">Noch keine Pakete veröffentlicht.</p>
+        ) : (
+          <div className="divide-y divide-slate-100">
+            {myPackages.map(pkg => (
+              <div key={pkg.id} className="py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div>
+                  <a href={`/packages/${pkg.id}`} className="font-semibold text-sm text-slate-900 hover:text-red-600">
+                    {pkg.title}
+                  </a>
+                  <div className="text-xs text-slate-500 font-mono">
+                    {pkg.id} • v{pkg.latest_version} • {pkg.downloads_count} Downloads •{' '}
+                    {pkg.preview_enabled ? 'mit Vorschau' : 'ohne Vorschau'}
+                  </div>
+                  <div className="text-xs text-slate-500 mt-1 flex flex-wrap gap-2">
+                    {pkg.versions.map((v: string) => (
+                      <span key={v} className="inline-flex items-center bg-slate-100 rounded px-1.5 py-0.5 font-mono">
+                        {v}
+                        {pkg.versions.length > 1 && (
+                          <button
+                            onClick={() => handleWithdrawRelease(pkg, v)}
+                            title={`Version ${v} zurückziehen`}
+                            className="ml-1 text-slate-400 hover:text-red-600"
+                          >
+                            ×
+                          </button>
+                        )}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleWithdrawPackage(pkg)}
+                  className="px-3 py-1.5 text-xs font-medium rounded-lg border border-red-200 text-red-700 hover:bg-red-50"
+                >
+                  Paket zurückziehen
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* PAT Management Section */}

@@ -26,6 +26,7 @@ export const UploadPage: React.FC = () => {
   const [topic, setTopic] = useState('');
   const [tagsInput, setTagsInput] = useState('');
   const [license, setLicense] = useState('CC-BY-4.0');
+  const [previewEnabled, setPreviewEnabled] = useState(true);
   const [releaseNotes, setReleaseNotes] = useState('Erstveröffentlichung');
 
   useEffect(() => {
@@ -109,6 +110,7 @@ export const UploadPage: React.FC = () => {
         tags: tagsInput.split(',').map(t => t.trim()).filter(Boolean),
       },
       release_notes: releaseNotes.trim(),
+      preview_enabled: previewEnabled,
     };
 
     try {
@@ -451,6 +453,20 @@ export const UploadPage: React.FC = () => {
                 className="w-full text-sm border-slate-300 rounded-lg p-2.5 bg-slate-50 border focus:bg-white"
               />
             </div>
+            <label className="md:col-span-2 flex items-start space-x-2 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                checked={previewEnabled}
+                onChange={e => setPreviewEnabled(e.target.checked)}
+                className="mt-1"
+              />
+              <span>
+                Öffentliche Vorschau der Fragen anzeigen
+                <span className="block text-xs text-slate-500">
+                  Musterlösungen und Feedback werden nie angezeigt. Ohne Vorschau sehen Interessierte nur die Beschreibung.
+                </span>
+              </span>
+            </label>
           </div>
 
           <div className="flex justify-between items-center pt-6 border-t border-slate-100">

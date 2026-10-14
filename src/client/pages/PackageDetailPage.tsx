@@ -23,9 +23,11 @@ export const PackageDetailPage: React.FC = () => {
     try {
       const data = await api.getPackage(packageId);
       setPkg(data);
-      // Load preview
-      const prevData = await api.getPackagePreview(packageId);
-      setPreview(prevData);
+      // Load preview (only if the author enabled it)
+      if (data.preview_enabled !== false) {
+        const prevData = await api.getPackagePreview(packageId);
+        setPreview(prevData);
+      }
     } catch (err) {
       console.error('Fehler beim Laden des Pakets:', err);
     } finally {
@@ -84,6 +86,11 @@ export const PackageDetailPage: React.FC = () => {
               <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded">
                 {pkg.license}
               </span>
+              {pkg.preview_enabled !== false && (
+                <span className="text-xs bg-sky-50 text-sky-700 border border-sky-200 px-2 py-0.5 rounded">
+                  Vorschau
+                </span>
+              )}
               <span className="text-xs text-slate-400 font-mono">{pkg.id}</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">{pkg.title}</h1>
@@ -151,7 +158,9 @@ export const PackageDetailPage: React.FC = () => {
           {[
             { id: 'overview', label: 'Übersicht' },
             { id: 'categories', label: `Kategorien (${pkg.categories?.length || 0})` },
-            { id: 'preview', label: `Sichere Vorschau (${pkg.stats?.question_count || 0})` },
+            ...(pkg.preview_enabled !== false
+              ? [{ id: 'preview', label: `Sichere Vorschau (${pkg.stats?.question_count || 0})` }]
+              : []),
             { id: 'versions', label: `Versionen (${pkg.releases?.length || 0})` },
           ].map(tab => (
             <button

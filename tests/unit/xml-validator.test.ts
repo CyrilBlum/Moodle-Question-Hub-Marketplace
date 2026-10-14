@@ -165,4 +165,25 @@ describe('SafeXmlValidatorService Unit Tests', () => {
     expect(decoded).toContain('Grüezi');
     expect(SafeXmlValidatorService.decodeUpload(Buffer.from(xml.replace('UTF-16', 'UTF-8'), 'utf-8'))).toContain('Grüezi');
   });
+
+  describe('Cloze syntax check', () => {
+    it('ignores LaTeX and code braces that are not Cloze tokens', () => {
+      expect(
+        SafeXmlValidatorService.findClozeProblem(
+          '\\(\\begin{pmatrix} 1 & 2 \\\\ 3 & 4 \\end{pmatrix}\\) ergibt {1:NUMERICAL:=5} und \\frac{a}{b}'
+        )
+      ).toBeNull();
+    });
+
+    it('accepts valid tokens including escaped braces', () => {
+      expect(
+        SafeXmlValidatorService.findClozeProblem('{1:SHORTANSWER:=a\\}b~=c} und {2:MC:=ja~nein}')
+      ).toBeNull();
+    });
+
+    it('reports an unterminated token and a token without type', () => {
+      expect(SafeXmlValidatorService.findClozeProblem('Text {1:SHORTANSWER:=offen')).toMatch(/abgeschlossen/);
+      expect(SafeXmlValidatorService.findClozeProblem('Text {1:=Antwort}')).toMatch(/Typ/);
+    });
+  });
 });

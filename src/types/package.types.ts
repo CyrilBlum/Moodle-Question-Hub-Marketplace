@@ -18,6 +18,8 @@ export interface PackageManifest {
   license: string;
   taxonomy: PackageTaxonomy;
   release_notes?: string;
+  /** Whether the Hub shows a public preview of the questions (default true). */
+  preview_enabled?: boolean;
 }
 
 export interface PackageRecord {
@@ -69,6 +71,7 @@ export interface PackageSearchResult {
   taxonomy: PackageTaxonomy;
   latest_version: string;
   versions: string[];
+  preview_enabled: boolean;
   stats: {
     question_count: number;
     categories_count: number;

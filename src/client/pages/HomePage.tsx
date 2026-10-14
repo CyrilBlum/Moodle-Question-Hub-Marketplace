@@ -297,6 +297,11 @@ export const HomePage: React.FC = () => {
                         <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded">
                           {pkg.license}
                         </span>
+                        {pkg.preview_enabled !== false && (
+                          <span className="text-xs bg-sky-50 text-sky-700 border border-sky-200 px-2 py-0.5 rounded">
+                            Vorschau
+                          </span>
+                        )}
                       </div>
                     </div>
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
+import { ConnectPage } from './pages/ConnectPage';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { HomePage } from './pages/HomePage';
@@ -20,6 +21,7 @@ export const App: React.FC = () => {
           <Route path="/upload" element={<UploadPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/connect" element={<ConnectPage />} />
           <Route path="/register" element={<RegisterPage />} />
         </Routes>
       </main>

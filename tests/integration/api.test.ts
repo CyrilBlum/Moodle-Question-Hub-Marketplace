@@ -454,4 +454,130 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
     expect(tokenBody.token_type).toBe('Bearer');
     expect(tokenBody.user).toBeDefined();
   });
+
+  // 15. OAuth requires a real login (no fallback user)
+  it('OAuth authorize without login redirects browsers to /connect and rejects API calls', async () => {
+    const url =
+      '/oauth/authorize?client_id=moodle-plugin-client&redirect_uri=' +
+      encodeURIComponent('https://moodle-one.in-form-atik.ch/question/bank/questionhub/callback.php') +
+      '&response_type=code&code_challenge=abc&code_challenge_method=S256&state=s1';
+
+    const browser = await app.inject({ method: 'GET', url, headers: { accept: 'text/html' } });
+    expect(browser.statusCode).toBe(302);
+    expect(String(browser.headers.location)).toMatch(/^\/connect\?/);
+    expect(String(browser.headers.location)).not.toContain('code=');
+
+    const api = await app.inject({ method: 'GET', url, headers: { accept: 'application/json' } });
+    expect(api.statusCode).toBe(401);
+  });
+
+  it('OAuth authorize with missing parameters shows a friendly page for browsers', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/oauth/authorize',
+      headers: { accept: 'text/html' },
+    });
+    expect(res.statusCode).toBe(302);
+    expect(String(res.headers.location)).toMatch(/^\/connect\?error=/);
+  });
+
+  // 16. Preview switch and withdrawal
+  const lifecycleId = 'ch.gym.inf.lifecycle-test';
+  const publishLifecycle = (version: string, extra: object = {}, token = teacherJwtToken) =>
+    app.inject({
+      method: 'POST',
+      url: '/api/v1/packages',
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        metadata: {
+          id: lifecycleId,
+          version,
+          title: 'Lifecycle & Test',
+          summary: 'Paket fuer Vorschau- und Rueckzugstests.',
+          language: 'de-CH',
+          license: 'CC-BY-4.0',
+          taxonomy: { subject: 'Informatik', subject_category: 'SF' },
+          ...extra,
+        },
+        xml: validXml,
+      },
+    });
+
+  it('preview_enabled=false hides the preview; default is enabled', async () => {
+    const res = await publishLifecycle('1.0.0', { preview_enabled: false });
+    expect(res.statusCode).toBe(201);
+
+    const detail = JSON.parse((await app.inject({ method: 'GET', url: `/api/v1/packages/${lifecycleId}` })).body);
+    expect(detail.preview_enabled).toBe(false);
+
+    const prev = await app.inject({ method: 'GET', url: `/api/v1/packages/${lifecycleId}/preview` });
+    expect(prev.statusCode).toBe(403);
+    expect(JSON.parse(prev.body).code).toBe('PREVIEW_DISABLED');
+
+    const other = JSON.parse((await app.inject({ method: 'GET', url: `/api/v1/packages/${testPkgId}` })).body);
+    expect(other.preview_enabled).toBe(true);
+
+    // Next release without the field keeps the setting; explicit true re-enables it.
+    expect((await publishLifecycle('1.1.0')).statusCode).toBe(201);
+    const kept = JSON.parse((await app.inject({ method: 'GET', url: `/api/v1/packages/${lifecycleId}` })).body);
+    expect(kept.preview_enabled).toBe(false);
+    expect((await publishLifecycle('1.2.0', { preview_enabled: true })).statusCode).toBe(201);
+    const on = await app.inject({ method: 'GET', url: `/api/v1/packages/${lifecycleId}/preview` });
+    expect(on.statusCode).toBe(200);
+  });
+
+  it('only the owner can withdraw; a withdrawn version stays blocked; last version needs package withdrawal', async () => {
+    const auth = { authorization: `Bearer ${teacherJwtToken}` };
+
+    const strangerReg = await app.inject({
+      method: 'POST',
+      url: '/api/v1/auth/register',
+      payload: {
+        email: `stranger-${Date.now()}@example.ch`,
+        password: 'Stranger-Pass-123!',
+        full_name: 'Fremde Person',
+        institution: 'Kanti X',
+        canton: 'ZH',
+      },
+    });
+    const stranger = JSON.parse(strangerReg.body).token;
+    const denied = await app.inject({
+      method: 'DELETE',
+      url: `/api/v1/packages/${lifecycleId}`,
+      headers: { authorization: `Bearer ${stranger}` },
+    });
+    expect(denied.statusCode).toBe(403);
+
+    const mine = JSON.parse((await app.inject({ method: 'GET', url: '/api/v1/account/packages', headers: auth })).body);
+    expect(mine.data.some((p: any) => p.id === lifecycleId)).toBe(true);
+
+    // withdraw latest (1.2.0): latest falls back to 1.1.0, download gone, version number stays blocked
+    expect(
+      (await app.inject({ method: 'DELETE', url: `/api/v1/packages/${lifecycleId}/releases/1.2.0`, headers: auth }))
+        .statusCode
+    ).toBe(204);
+    const detail = JSON.parse((await app.inject({ method: 'GET', url: `/api/v1/packages/${lifecycleId}` })).body);
+    expect(detail.latest_version).toBe('1.1.0');
+    expect(detail.versions).not.toContain('1.2.0');
+    expect(
+      (await app.inject({ method: 'GET', url: `/api/v1/packages/${lifecycleId}/releases/1.2.0/download` })).statusCode
+    ).toBe(404);
+    expect((await publishLifecycle('1.2.0')).statusCode).toBe(409);
+
+    // withdraw 1.0.0, then the last remaining version is refused
+    expect(
+      (await app.inject({ method: 'DELETE', url: `/api/v1/packages/${lifecycleId}/releases/1.0.0`, headers: auth }))
+        .statusCode
+    ).toBe(204);
+    expect(
+      (await app.inject({ method: 'DELETE', url: `/api/v1/packages/${lifecycleId}/releases/1.1.0`, headers: auth }))
+        .statusCode
+    ).toBe(409);
+
+    // withdraw the whole package
+    expect(
+      (await app.inject({ method: 'DELETE', url: `/api/v1/packages/${lifecycleId}`, headers: auth })).statusCode
+    ).toBe(204);
+    expect((await app.inject({ method: 'GET', url: `/api/v1/packages/${lifecycleId}` })).statusCode).toBe(404);
+  });
 });

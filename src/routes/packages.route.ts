@@ -140,6 +140,15 @@ export async function packageRoutes(app: FastifyInstance): Promise<void> {
       });
     }
 
+    if (!pkg.preview_enabled) {
+      return reply.status(403).send({
+        statusCode: 403,
+        error: 'Forbidden',
+        code: 'PREVIEW_DISABLED',
+        message: 'Die Autorin oder der Autor hat die öffentliche Vorschau für dieses Paket deaktiviert.',
+      });
+    }
+
     const version = query.version || pkg.latest_version;
     let filePath: string;
     try {
@@ -204,6 +213,51 @@ export async function packageRoutes(app: FastifyInstance): Promise<void> {
 
     const fileStream = fs.createReadStream(filePath);
     return reply.send(fileStream);
+  });
+
+  // 7. GET /api/v1/account/packages (own packages)
+  app.get('/account/packages', { preHandler: [app.authenticate] }, async (req, reply) => {
+    const user = (req as any).user;
+    return reply.status(200).send({ data: await packageService.listOwnedPackages(user.id) });
+  });
+
+  const withdrawErrors = (err: any, reply: any) => {
+    const msg: string = err.message || '';
+    const map: Record<string, [number, string]> = {
+      'NOT_FOUND:': [404, 'Not Found'],
+      'FORBIDDEN:': [403, 'Forbidden'],
+      'CONFLICT:': [409, 'Conflict'],
+    };
+    for (const [prefix, [code, name]] of Object.entries(map)) {
+      if (msg.startsWith(prefix)) {
+        return reply.status(code).send({ statusCode: code, error: name, message: msg.slice(prefix.length).trim() });
+      }
+    }
+    return reply.status(500).send({ statusCode: 500, error: 'Internal Server Error', message: msg });
+  };
+
+  // 8. DELETE /api/v1/packages/:id (withdraw the whole package)
+  app.delete('/packages/:id', { preHandler: [app.authenticate] }, async (req, reply) => {
+    const user = (req as any).user;
+    const { id } = req.params as { id: string };
+    try {
+      await packageService.withdrawPackage(user.id, user.role === 'admin', id);
+      return reply.status(204).send();
+    } catch (err) {
+      return withdrawErrors(err, reply);
+    }
+  });
+
+  // 9. DELETE /api/v1/packages/:id/releases/:version (withdraw one version)
+  app.delete('/packages/:id/releases/:version', { preHandler: [app.authenticate] }, async (req, reply) => {
+    const user = (req as any).user;
+    const { id, version } = req.params as { id: string; version: string };
+    try {
+      await packageService.withdrawRelease(user.id, user.role === 'admin', id, version);
+      return reply.status(204).send();
+    } catch (err) {
+      return withdrawErrors(err, reply);
+    }
   });
 
   // 6. GET /api/v1/packages/:id

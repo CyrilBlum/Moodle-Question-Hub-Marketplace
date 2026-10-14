@@ -34,6 +34,44 @@ export class SafeXmlValidatorService {
    * DOCTYPE/ENTITY guards in assertSafeMarkup() inspect the real markup instead of mojibake.
    * UTF-16 input is normalised to a UTF-8 declaration, since the result is stored as UTF-8.
    */
+  /**
+   * Returns a description of the first Cloze syntax problem, or null if the text is fine.
+   * A Cloze token starts with `{`, optional digits (weight), `:TYPE:`, and ends with an
+   * unescaped `}`. Other braces are literal text and never reported.
+   */
+  public static findClozeProblem(text: string): string | null {
+    for (let i = 0; i < text.length; i++) {
+      if (text[i] === '\\') {
+        i++;
+        continue;
+      }
+      if (text[i] !== '{') continue;
+      const rest = text.slice(i, i + 80);
+      const full = /^\{\d*:[A-Za-z_]+:/.exec(rest);
+      if (full) {
+        let j = i + full[0].length;
+        let closed = false;
+        for (; j < text.length; j++) {
+          if (text[j] === '\\') {
+            j++;
+            continue;
+          }
+          if (text[j] === '}') {
+            closed = true;
+            break;
+          }
+        }
+        if (!closed) {
+          return `Cloze-Element '${rest.slice(0, 30)}' ist nicht mit } abgeschlossen.`;
+        }
+        i = j;
+      } else if (/^\{\d+:/.test(rest)) {
+        return `Cloze-Element '${rest.slice(0, 30)}' hat keinen gültigen Typ (z. B. {1:SHORTANSWER:=Antwort}).`;
+      }
+    }
+    return null;
+  }
+
   public static decodeUpload(buffer: Buffer): string {
     let encoding: 'utf-8' | 'utf-16le' | 'utf-16be' = 'utf-8';
     if (buffer.length >= 2 && buffer[0] === 0xFF && buffer[1] === 0xFE) {
@@ -624,31 +662,17 @@ export class SafeXmlValidatorService {
           });
         }
       } else if (qtype === 'multianswer' || qtype === 'cloze') {
-        // Balanced curly braces check
-        let openBraces = 0;
-        let balanced = true;
-        for (let i = 0; i < qTextHtml.length; i++) {
-          if (qTextHtml.charCodeAt(i) === 92 || qTextHtml[i] === '\\') {
-            i++;
-            continue;
-          }
-          if (qTextHtml[i] === '{') openBraces++;
-          if (qTextHtml[i] === '}') {
-            openBraces--;
-            if (openBraces < 0) {
-              balanced = false;
-              break;
-            }
-          }
-        }
-        if (!balanced || openBraces !== 0) {
+        // Only real Cloze tokens {n:TYPE:...} are checked. Any other curly brace
+        // (LaTeX like \begin{pmatrix}, code, JSON) is literal text for Moodle, too.
+        const clozeProblem = SafeXmlValidatorService.findClozeProblem(qTextHtml);
+        if (clozeProblem) {
           errors.push({
             code: 'ERR_CLOZE_SYNTAX_INVALID',
             severity: 'error',
             questionIndex: index,
             questionName: qName,
             categoryPath: currentCategory,
-            message: `Lückentext/Cloze-Frage '${qName}' enthält unausgeglichene geschweifte Klammern {}.`,
+            message: `Lückentext/Cloze-Frage '${qName}': ${clozeProblem}`,
           });
         }
       } else if (qtype === 'essay') {

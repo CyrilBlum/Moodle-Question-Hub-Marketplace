@@ -123,6 +123,13 @@ export async function up(knex: Knex): Promise<void> {
       table.index(['sha256'], 'idx_releases_sha256');
     });
   }
+
+  // 9. Additive migration: per-package switch for the public preview (default: on).
+  if (!(await knex.schema.hasColumn('packages', 'preview_enabled'))) {
+    await knex.schema.alterTable('packages', table => {
+      table.boolean('preview_enabled').notNullable().defaultTo(true);
+    });
+  }
 }
 
 export async function down(knex: Knex): Promise<void> {

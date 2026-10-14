@@ -158,6 +158,48 @@ export class PackageStorageService {
     return manifestPath;
   }
 
+  /** Removes the release folder of one version (the content-addressed artifact is kept if shared). */
+  public async removeRelease(packageId: string, version: string): Promise<void> {
+    await this.removeReleaseDir(path.join(this.releasesDir, packageId, version));
+  }
+
+  public async removePackage(packageId: string): Promise<void> {
+    const dir = path.join(this.releasesDir, packageId);
+    if (!fs.existsSync(dir)) return;
+    for (const version of await fs.promises.readdir(dir)) {
+      await this.removeReleaseDir(path.join(dir, version));
+    }
+    await fs.promises.rm(dir, { recursive: true, force: true });
+  }
+
+  private async removeReleaseDir(releaseDir: string): Promise<void> {
+    if (!fs.existsSync(releaseDir)) return;
+    // Delete the CAS artifact when this release folder is its only user.
+    try {
+      const xml = path.join(releaseDir, 'package.xml');
+      const real = fs.realpathSync(xml);
+      if (real.startsWith(this.artifactsDir)) {
+        const sha = path.basename(real, '.xml');
+        const referenced = await this.isArtifactReferenced(sha, releaseDir);
+        if (!referenced) {
+          await fs.promises.chmod(real, 0o644).catch(() => {});
+          await fs.promises.unlink(real).catch(() => {});
+        }
+      }
+    } catch {
+      // Release folder without a resolvable artifact: nothing to clean up.
+    }
+    await fs.promises.rm(releaseDir, { recursive: true, force: true });
+  }
+
+  private async isArtifactReferenced(sha: string, ignoreDir: string): Promise<boolean> {
+    const { getDatabase } = await import('../database/connection');
+    const rows = await getDatabase()('releases').where({ sha256: sha, is_yanked: false });
+    const ignorePkg = path.basename(path.dirname(ignoreDir));
+    const ignoreVer = path.basename(ignoreDir);
+    return rows.some((r: any) => !(r.package_id === ignorePkg && r.version === ignoreVer));
+  }
+
   public hasRelease(packageId: string, version: string): boolean {
     const releaseXmlPath = path.join(this.releasesDir, packageId, version, 'package.xml');
     return fs.existsSync(releaseXmlPath);

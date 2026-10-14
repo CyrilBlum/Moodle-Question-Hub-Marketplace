@@ -74,7 +74,7 @@ def test_f05_t04_personal_access_token_generation(hub_client, teacher_jwt):
     assert me_resp.status_code == 200
 
 
-def test_f05_t05_oauth_pkce_code_flow_and_replay_protection(hub_url):
+def test_f05_t05_oauth_pkce_code_flow_and_replay_protection(hub_url, teacher_jwt):
     """Verify OAuth 2.0 PKCE authorization code flow and single-use replay protection."""
     client_id = "moodle-plugin-client"
     redirect_uri = "https://moodle-one.in-form-atik.ch/question/bank/questionhub/callback.php"
@@ -92,9 +92,20 @@ def test_f05_t05_oauth_pkce_code_flow_and_replay_protection(hub_url):
         "state": state,
     }
 
-    # 1. Authorize GET expecting 302
+    # 0. Without a login the Hub must NOT issue a code: browsers are sent to the login page.
     auth_url = f"{hub_url}/oauth/authorize?{urllib.parse.urlencode(params)}"
-    auth_resp = requests.get(auth_url, allow_redirects=False, timeout=15)
+    anon = requests.get(auth_url, allow_redirects=False, timeout=15, headers={"Accept": "text/html"})
+    assert anon.status_code == 302
+    assert anon.headers["Location"].startswith("/connect?"), anon.headers["Location"]
+    assert "code=" not in anon.headers["Location"]
+
+    # 1. Authorize with a logged-in session (Bearer JWT) -> redirect back with a code
+    auth_resp = requests.get(
+        auth_url,
+        allow_redirects=False,
+        timeout=15,
+        headers={"Authorization": f"Bearer {teacher_jwt}", "Accept": "text/html"},
+    )
     assert auth_resp.status_code == 302, f"Expected 302, got {auth_resp.status_code}"
     location = auth_resp.headers.get("Location")
     assert location and location.startswith(redirect_uri)
