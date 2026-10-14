@@ -81,6 +81,26 @@ export const api = {
   getPackagePreview: (id: string, version?: string) => {
     return request(`/packages/${id}/preview${version ? `?version=${version}` : ''}`);
   },
+  requestPackageAccess: (id: string) => request(`/packages/${encodeURIComponent(id)}/access-requests`, { method: 'POST' }),
+  getPackageAccessRequests: (id: string) => request(`/account/packages/${encodeURIComponent(id)}/access-requests`),
+  setPackageAccessRequestStatus: (packageId: string, requestId: string, status: 'approved' | 'denied') =>
+    request(`/packages/${encodeURIComponent(packageId)}/access-requests/${encodeURIComponent(requestId)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    }),
+  downloadPackage: async (id: string, version: string) => {
+    const token = getToken();
+    const headers = new Headers();
+    if (token) headers.set('Authorization', `Bearer ${token}`);
+    const res = await fetch(`${API_BASE}/packages/${encodeURIComponent(id)}/releases/${encodeURIComponent(version)}/download`, { headers });
+    if (!res.ok) {
+      let errorData: any = {};
+      try { errorData = await res.json(); } catch {}
+      throw new Error(errorData.message || 'Download fehlgeschlagen.');
+    }
+    return res.blob();
+  },
 
   preflightXml: async (xml: string) => {
     return request('/packages/preflight', {

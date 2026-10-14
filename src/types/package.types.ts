@@ -20,6 +20,7 @@ export interface PackageManifest {
   release_notes?: string;
   /** Whether the Hub shows a public preview of the questions (default true). */
   preview_enabled?: boolean;
+  visibility?: 'public' | 'private';
 }
 
 export interface PackageRecord {
@@ -36,6 +37,7 @@ export interface PackageRecord {
   canton?: string | null;
   latest_version: string;
   downloads_count: number;
+  visibility?: 'public' | 'private';
   is_monetised: boolean | number;
   created_at: string | Date;
   updated_at: string | Date;
@@ -72,6 +74,15 @@ export interface PackageSearchResult {
   latest_version: string;
   versions: string[];
   preview_enabled: boolean;
+  visibility: 'public' | 'private';
+  access_status?: 'pending' | 'approved' | 'denied';
+  can_access?: boolean;
+  access_requests?: Array<{
+    id: string;
+    requester: { id: string; name: string; email: string; institution: string };
+    status: 'pending' | 'approved' | 'denied';
+    created_at: string;
+  }>;
   /** Category paths of the latest release, e.g. $course$/top/Informatik/Bäume. */
   categories?: string[];
   stats: {

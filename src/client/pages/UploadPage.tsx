@@ -27,6 +27,7 @@ export const UploadPage: React.FC = () => {
   const [tagsInput, setTagsInput] = useState('');
   const [license, setLicense] = useState('CC-BY-4.0');
   const [previewEnabled, setPreviewEnabled] = useState(true);
+  const [visibility, setVisibility] = useState<'public' | 'private'>('public');
   const [releaseNotes, setReleaseNotes] = useState('Erstveröffentlichung');
 
   useEffect(() => {
@@ -111,6 +112,7 @@ export const UploadPage: React.FC = () => {
       },
       release_notes: releaseNotes.trim(),
       preview_enabled: previewEnabled,
+      visibility,
     };
 
     try {
@@ -466,6 +468,14 @@ export const UploadPage: React.FC = () => {
                   Musterlösungen und Feedback werden nie angezeigt. Ohne Vorschau sehen Interessierte nur die Beschreibung.
                 </span>
               </span>
+            </label>
+            <label className="md:col-span-2 block text-sm font-medium text-slate-700">
+              Sichtbarkeit
+              <select value={visibility} onChange={e => setVisibility(e.target.value as 'public' | 'private')} className="mt-1 w-full text-sm border-slate-300 rounded-lg p-2.5 bg-slate-50 border">
+                <option value="public">Öffentlich</option>
+                <option value="private">Privat – nur mit Freigabe</option>
+              </select>
+              <span className="block mt-1 text-xs font-normal text-slate-500">Private Pakete erscheinen mit begrenzten Angaben in der Suche. Andere Hub-Konten können Zugriff anfragen.</span>
             </label>
           </div>
 

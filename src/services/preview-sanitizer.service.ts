@@ -104,7 +104,7 @@ export class PreviewSanitizerService {
 
   /**
    * Bereinigt eingebettete Cloze-Fragetexte (multianswer), indem alle Unterfragendefinitionen
-   * (Antworten, Gewichtungen, Feedback, Toleranzen) durch den Platzhalter '[ ... ]' ersetzt werden.
+   * (Antworten, Gewichtungen, Feedback, Toleranzen) durch eine formatierte Antwortlücke ersetzt werden.
    *
    * Verarbeitet:
    * - Alle Standard-Short-Codes: SA, MC, NM, MR, MW, SAC, MWC
@@ -144,7 +144,7 @@ export class PreviewSanitizerService {
             }
             j++;
           }
-          result += '[ ... ]';
+          result += '<span class="qh-cloze-gap" aria-label="Antwortlücke"></span>';
           i = j;
           continue;
         }
@@ -233,7 +233,12 @@ export class PreviewSanitizerService {
             mediaFiles[fName] = dataUri;
             // Rewrite @@PLUGINFILE@@/fName in HTML
             const regex = new RegExp(`@@PLUGINFILE@@\\/${fName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'g');
-            rawQuestionHtml = rawQuestionHtml.replace(regex, dataUri);
+            const encodedName = encodeURIComponent(fName).replace(/\(/g, '%28').replace(/\)/g, '%29');
+            const encodedRegex = new RegExp(
+              `@@PLUGINFILE@@\\/${encodedName}(?:\\?[^"'\\s>]*)?`,
+              'g'
+            );
+            rawQuestionHtml = rawQuestionHtml.replace(regex, dataUri).replace(encodedRegex, dataUri);
           }
         }
       }

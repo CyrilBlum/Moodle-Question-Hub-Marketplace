@@ -33,6 +33,7 @@
     "isomorphic-dompurify": "^4.5.0",
     "knex": "^3.1.0",
     "mysql2": "^3.9.2",
+    "nodemailer": "^10.1.1",
     "pino": "^8.19.0",
     "semver": "^7.6.0",
     "zod": "^3.22.4"
@@ -42,6 +43,7 @@
     "@types/dompurify": "^3.0.5",
     "@types/katex": "^0.16.8",
     "@types/node": "^22.0.0",
+    "@types/nodemailer": "^8.0.2",
     "@types/react": "^18.2.66",
     "@types/react-dom": "^18.2.22",
     "@types/semver": "^7.5.8",

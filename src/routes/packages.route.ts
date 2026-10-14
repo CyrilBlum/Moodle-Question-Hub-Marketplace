@@ -5,15 +5,16 @@ import { SafeXmlValidatorService } from '../services/xml-validator.service';
 import { PackageStorageService } from '../services/package-storage.service';
 import { PreviewSanitizerService } from '../services/preview-sanitizer.service';
 import { PackageManifest } from '../types/package.types';
+import { EmailService } from '../services/email.service';
 
 export async function packageRoutes(app: FastifyInstance): Promise<void> {
   const packageService = PackageService.getInstance();
   const storageService = PackageStorageService.getInstance();
 
   // 1. GET /api/v1/packages
-  app.get('/packages', async (req, reply) => {
+  app.get('/packages', { preHandler: [app.authenticateOptional] }, async (req, reply) => {
     const query = req.query as PackageSearchFilters;
-    const result = await packageService.searchPackages(query);
+    const result = await packageService.searchPackages(query, (req as any).user?.id);
     return reply.status(200).send(result);
   });
 
@@ -127,16 +128,26 @@ export async function packageRoutes(app: FastifyInstance): Promise<void> {
   });
 
   // 4. GET /api/v1/packages/:id/preview
-  app.get('/packages/:id/preview', async (req, reply) => {
+  app.get('/packages/:id/preview', { preHandler: [app.authenticateOptional] }, async (req, reply) => {
     const { id } = req.params as { id: string };
     const query = req.query as { version?: string };
+    const viewerId = (req as any).user?.id as string | undefined;
 
-    const pkg = await packageService.getPackage(id);
+    const pkg = await packageService.getPackage(id, viewerId);
     if (!pkg) {
       return reply.status(404).send({
         statusCode: 404,
         error: 'Not Found',
         message: `Paket '${id}' nicht gefunden.`,
+      });
+    }
+
+    if (!pkg.can_access) {
+      return reply.status(403).send({
+        statusCode: 403,
+        error: 'Forbidden',
+        code: 'ACCESS_REQUIRED',
+        message: 'Für die Vorschau dieses privaten Pakets benötigen Sie eine Freigabe.',
       });
     }
 
@@ -167,8 +178,18 @@ export async function packageRoutes(app: FastifyInstance): Promise<void> {
   });
 
   // 5. GET /api/v1/packages/:id/releases/:version/download
-  app.get('/packages/:id/releases/:version/download', async (req, reply) => {
+  app.get('/packages/:id/releases/:version/download', { preHandler: [app.authenticateOptional] }, async (req, reply) => {
     const { id, version } = req.params as { id: string; version: string };
+    const viewerId = (req as any).user?.id as string | undefined;
+
+    if (!(await packageService.canAccessPackage(id, viewerId))) {
+      return reply.status(403).send({
+        statusCode: 403,
+        error: 'Forbidden',
+        code: 'ACCESS_REQUIRED',
+        message: 'Für den Download dieses privaten Pakets benötigen Sie eine Freigabe.',
+      });
+    }
 
     const release = await packageService.getRelease(id, version);
     if (!release) {
@@ -206,7 +227,9 @@ export async function packageRoutes(app: FastifyInstance): Promise<void> {
       'Content-Disposition': `attachment; filename="${sanitizedFilename}"`,
       'Content-Length': fileStat.size,
       'ETag': `"${release.sha256}"`,
-      'Cache-Control': 'public, max-age=31536000, immutable',
+      'Cache-Control': (await packageService.getPackage(id, viewerId))?.visibility === 'private'
+        ? 'private, no-store'
+        : 'public, max-age=31536000, immutable',
       'X-Package-Sha256': release.sha256,
       'X-Content-Type-Options': 'nosniff',
     });
@@ -241,7 +264,7 @@ export async function packageRoutes(app: FastifyInstance): Promise<void> {
     const user = (req as any).user;
     const { id } = req.params as { id: string };
     const body = (req.body || {}) as Record<string, unknown>;
-    const allowed = ['title', 'summary', 'license', 'canton', 'topic', 'subject', 'subject_category', 'grades', 'tags', 'preview_enabled'];
+    const allowed = ['title', 'summary', 'license', 'canton', 'topic', 'subject', 'subject_category', 'grades', 'tags', 'preview_enabled', 'visibility'];
     const patch: Record<string, unknown> = {};
     for (const k of allowed) if (k in body) patch[k] = body[k];
     if ('version' in body || 'latest_version' in body) {
@@ -253,11 +276,76 @@ export async function packageRoutes(app: FastifyInstance): Promise<void> {
     }
     try {
       await packageService.updatePackage(user.id, user.role === 'admin', id, patch as any);
-      return reply.status(200).send(await packageService.getPackage(id));
+      return reply.status(200).send(await packageService.getPackage(id, user.id));
     } catch (err: any) {
       if ((err.message || '').startsWith('BAD_REQUEST:')) {
         return reply.status(400).send({ statusCode: 400, error: 'Bad Request', message: err.message.replace('BAD_REQUEST: ', '') });
       }
+      return withdrawErrors(err, reply);
+    }
+  });
+
+  app.post('/packages/:id/access-requests', {
+    preHandler: [app.authenticate],
+    config: { rateLimit: { max: 5, timeWindow: '1 hour' } },
+  }, async (req, reply) => {
+    const user = (req as any).user;
+    const { id } = req.params as { id: string };
+    if (!EmailService.isConfigured()) {
+      return reply.status(503).send({
+        statusCode: 503,
+        error: 'Service Unavailable',
+        code: 'EMAIL_NOT_CONFIGURED',
+        message: 'E-Mail-Versand ist derzeit nicht konfiguriert. Die Anfrage wurde nicht gespeichert.',
+      });
+    }
+
+    try {
+      const request = await packageService.createAccessRequest(id, user.id);
+      if (!request.shouldNotifyOwner) {
+        return reply.status(200).send({ status: request.requestStatus });
+      }
+
+      try {
+        await EmailService.sendAccessRequest({
+          packageId: id,
+          packageTitle: request.packageTitle,
+          requesterName: user.full_name,
+          requesterEmail: user.email,
+          requesterInstitution: user.institution,
+          ownerEmail: request.ownerEmail,
+        });
+        return reply.status(201).send({ status: 'pending', notification_sent: true });
+      } catch (emailError: any) {
+        req.log.error({ code: emailError?.code || 'EMAIL_DELIVERY_FAILED' }, 'Failed to send private package access request email');
+        return reply.status(202).send({ status: 'pending', notification_sent: false });
+      }
+    } catch (err: any) {
+      return withdrawErrors(err, reply);
+    }
+  });
+
+  app.get('/account/packages/:id/access-requests', { preHandler: [app.authenticate] }, async (req, reply) => {
+    const user = (req as any).user;
+    const { id } = req.params as { id: string };
+    try {
+      return reply.status(200).send({ data: await packageService.listAccessRequests(user.id, id) });
+    } catch (err: any) {
+      return withdrawErrors(err, reply);
+    }
+  });
+
+  app.patch('/packages/:id/access-requests/:requestId', { preHandler: [app.authenticate] }, async (req, reply) => {
+    const user = (req as any).user;
+    const { id, requestId } = req.params as { id: string; requestId: string };
+    const { status } = (req.body || {}) as { status?: unknown };
+    if (status !== 'approved' && status !== 'denied') {
+      return reply.status(400).send({ statusCode: 400, error: 'Bad Request', message: 'Status muss approved oder denied sein.' });
+    }
+    try {
+      await packageService.setAccessRequestStatus(user.id, id, requestId, status);
+      return reply.status(204).send();
+    } catch (err: any) {
       return withdrawErrors(err, reply);
     }
   });
@@ -287,9 +375,9 @@ export async function packageRoutes(app: FastifyInstance): Promise<void> {
   });
 
   // 6. GET /api/v1/packages/:id
-  app.get('/packages/:id', async (req, reply) => {
+  app.get('/packages/:id', { preHandler: [app.authenticateOptional] }, async (req, reply) => {
     const { id } = req.params as { id: string };
-    const pkg = await packageService.getPackage(id);
+    const pkg = await packageService.getPackage(id, (req as any).user?.id);
     if (!pkg) {
       return reply.status(404).send({
         statusCode: 404,

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Save, Trash2, AlertCircle, Check } from 'lucide-react';
 import { api } from '../api/client';
@@ -17,8 +17,21 @@ export const PackageSettings: React.FC<Props> = ({ pkg, onChanged }) => {
   const [grades, setGrades] = useState<string[]>(pkg.taxonomy?.grades || []);
   const [tags, setTags] = useState<string>((pkg.taxonomy?.tags || []).join(', '));
   const [previewEnabled, setPreviewEnabled] = useState<boolean>(pkg.preview_enabled !== false);
+  const [visibility, setVisibility] = useState<'public' | 'private'>(pkg.visibility === 'private' ? 'private' : 'public');
+  const [accessRequests, setAccessRequests] = useState<any[]>([]);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
+
+  const loadAccessRequests = async () => {
+    try {
+      const result = await api.getPackageAccessRequests(pkg.id);
+      setAccessRequests(result.data || []);
+    } catch {
+      setAccessRequests([]);
+    }
+  };
+
+  useEffect(() => { loadAccessRequests(); }, [pkg.id]);
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,6 +45,7 @@ export const PackageSettings: React.FC<Props> = ({ pkg, onChanged }) => {
         grades,
         tags: tags.split(',').map(t => t.trim()).filter(Boolean),
         preview_enabled: previewEnabled,
+        visibility,
       });
       setMessage({ ok: true, text: 'Einstellungen gespeichert.' });
       onChanged();
@@ -39,6 +53,15 @@ export const PackageSettings: React.FC<Props> = ({ pkg, onChanged }) => {
       setMessage({ ok: false, text: err.message || 'Speichern fehlgeschlagen.' });
     } finally {
       setBusy(false);
+    }
+  };
+
+  const updateRequest = async (requestId: string, status: 'approved' | 'denied') => {
+    try {
+      await api.setPackageAccessRequestStatus(pkg.id, requestId, status);
+      await loadAccessRequests();
+    } catch (err: any) {
+      setMessage({ ok: false, text: err.message || 'Zugriffsanfrage konnte nicht aktualisiert werden.' });
     }
   };
 
@@ -124,6 +147,17 @@ export const PackageSettings: React.FC<Props> = ({ pkg, onChanged }) => {
           <input className={inputCls} value={tags} onChange={e => setTags(e.target.value)} />
         </label>
 
+        <label className="block text-xs font-semibold text-slate-700">
+          Sichtbarkeit
+          <select className={inputCls} value={visibility} onChange={e => setVisibility(e.target.value as 'public' | 'private')}>
+            <option value="public">Öffentlich</option>
+            <option value="private">Privat – Zugriff nur nach Freigabe</option>
+          </select>
+          <span className="block text-xs font-normal text-slate-500 mt-1">
+            Private Pakete erscheinen mit begrenzten Angaben in der Suche. Vorschau und XML bleiben bis zur Freigabe gesperrt.
+          </span>
+        </label>
+
         <label className="flex items-start gap-2 text-sm text-slate-700">
           <input
             type="checkbox"
@@ -154,6 +188,30 @@ export const PackageSettings: React.FC<Props> = ({ pkg, onChanged }) => {
           </button>
         </div>
       </form>
+
+      <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-3">
+        <h2 className="text-base font-bold text-slate-900">Zugriffsanfragen</h2>
+        {accessRequests.length === 0 ? (
+          <p className="text-sm text-slate-500">Noch keine Anfragen.</p>
+        ) : (
+          <div className="divide-y divide-slate-100">
+            {accessRequests.map(request => (
+              <div key={request.id} className="py-3 flex flex-wrap items-center justify-between gap-3">
+                <div className="text-sm text-slate-700">
+                  <div className="font-medium">{request.requester.name} · {request.requester.institution}</div>
+                  <a href={`mailto:${request.requester.email}`} className="text-xs text-slate-500 hover:underline">{request.requester.email}</a>
+                  <div className="text-xs text-slate-400">{new Date(request.created_at).toLocaleDateString('de-CH')}</div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500">{request.status === 'approved' ? 'Freigegeben' : request.status === 'denied' ? 'Abgelehnt' : 'Offen'}</span>
+                  {request.status !== 'approved' && <button onClick={() => updateRequest(request.id, 'approved')} className="text-xs px-3 py-1.5 rounded border border-emerald-300 text-emerald-700 hover:bg-emerald-50">Freigeben</button>}
+                  {request.status !== 'denied' && <button onClick={() => updateRequest(request.id, 'denied')} className="text-xs px-3 py-1.5 rounded border border-slate-300 text-slate-600 hover:bg-slate-50">Ablehnen</button>}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-3">
         <h2 className="text-base font-bold text-slate-900">Versionen zurückziehen</h2>

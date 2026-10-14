@@ -69,7 +69,7 @@ describe('PreviewSanitizerService Unit Tests', () => {
       const preview = PreviewSanitizerService.sanitizeXmlToPreview('pkg', '1.0.0', 'T', makeClozeXml(qText));
       const html = preview.questions[0].questiontextHtml;
 
-      expect(html).toContain('<p>Test: [ ... ] and [ ... ] and [ ... ]</p>');
+      expect(html).toContain('<p>Test: <span class="qh-cloze-gap" aria-label="Antwortlücke"></span> and <span class="qh-cloze-gap" aria-label="Antwortlücke"></span> and <span class="qh-cloze-gap" aria-label="Antwortlücke"></span></p>');
       expect(JSON.stringify(preview)).not.toContain(CANARY_SECRETS.SA_STANDARD);
       expect(JSON.stringify(preview)).not.toContain(CANARY_SECRETS.MC_STANDARD);
       expect(JSON.stringify(preview)).not.toContain(CANARY_SECRETS.NM_STANDARD);
@@ -84,7 +84,7 @@ describe('PreviewSanitizerService Unit Tests', () => {
       expect(json).not.toContain(CANARY_SECRETS.MC_SHORT);
       expect(json).not.toContain(CANARY_SECRETS.NM_SHORT);
       expect(json).not.toContain(CANARY_SECRETS.MR_CHECKBOXES);
-      expect(preview.questions[0].questiontextHtml).toBe('<p>SA: [ ... ] MC: [ ... ] NM: [ ... ] MR: [ ... ]</p>');
+      expect(preview.questions[0].questiontextHtml).toBe('<p>SA: <span class="qh-cloze-gap" aria-label="Antwortlücke"></span> MC: <span class="qh-cloze-gap" aria-label="Antwortlücke"></span> NM: <span class="qh-cloze-gap" aria-label="Antwortlücke"></span> MR: <span class="qh-cloze-gap" aria-label="Antwortlücke"></span></p>');
     });
 
     it('sanitizes layout variations (MULTICHOICE_V, MCV, MULTICHOICE_H, MCS, MULTIRESPONSE_H)', () => {
@@ -92,7 +92,7 @@ describe('PreviewSanitizerService Unit Tests', () => {
       const preview = PreviewSanitizerService.sanitizeXmlToPreview('pkg', '1.0.0', 'T', makeClozeXml(qText));
 
       expect(JSON.stringify(preview)).not.toContain(CANARY_SECRETS.MC_VERTICAL);
-      expect(preview.questions[0].questiontextHtml).toBe('<p>[ ... ] and [ ... ] and [ ... ]</p>');
+      expect(preview.questions[0].questiontextHtml).toBe('<p><span class="qh-cloze-gap" aria-label="Antwortlücke"></span> and <span class="qh-cloze-gap" aria-label="Antwortlücke"></span> and <span class="qh-cloze-gap" aria-label="Antwortlücke"></span></p>');
     });
 
     it('sanitizes case-insensitive type declarations (lowercase & mixed-case)', () => {
@@ -100,7 +100,7 @@ describe('PreviewSanitizerService Unit Tests', () => {
       const preview = PreviewSanitizerService.sanitizeXmlToPreview('pkg', '1.0.0', 'T', makeClozeXml(qText));
 
       expect(JSON.stringify(preview)).not.toContain(CANARY_SECRETS.SA_LOWERCASE);
-      expect(preview.questions[0].questiontextHtml).toBe('<p>[ ... ] and [ ... ] and [ ... ]</p>');
+      expect(preview.questions[0].questiontextHtml).toBe('<p><span class="qh-cloze-gap" aria-label="Antwortlücke"></span> and <span class="qh-cloze-gap" aria-label="Antwortlücke"></span> and <span class="qh-cloze-gap" aria-label="Antwortlücke"></span></p>');
     });
 
     it('sanitizes Cloze items with omitted weights ({:MC:...})', () => {
@@ -108,7 +108,7 @@ describe('PreviewSanitizerService Unit Tests', () => {
       const preview = PreviewSanitizerService.sanitizeXmlToPreview('pkg', '1.0.0', 'T', makeClozeXml(qText));
 
       expect(JSON.stringify(preview)).not.toContain(CANARY_SECRETS.MC_OMITTED_WEIGHT);
-      expect(preview.questions[0].questiontextHtml).toBe('<p>Omitted: [ ... ] and [ ... ]</p>');
+      expect(preview.questions[0].questiontextHtml).toBe('<p>Omitted: <span class="qh-cloze-gap" aria-label="Antwortlücke"></span> and <span class="qh-cloze-gap" aria-label="Antwortlücke"></span></p>');
     });
 
     it('sanitizes Cloze items with arbitrary whitespace ({ 2 : SA : ... })', () => {
@@ -116,7 +116,7 @@ describe('PreviewSanitizerService Unit Tests', () => {
       const preview = PreviewSanitizerService.sanitizeXmlToPreview('pkg', '1.0.0', 'T', makeClozeXml(qText));
 
       expect(JSON.stringify(preview)).not.toContain(CANARY_SECRETS.SA_WHITESPACE);
-      expect(preview.questions[0].questiontextHtml).toBe('<p>Spaces: [ ... ] and [ ... ]</p>');
+      expect(preview.questions[0].questiontextHtml).toBe('<p>Spaces: <span class="qh-cloze-gap" aria-label="Antwortlücke"></span> and <span class="qh-cloze-gap" aria-label="Antwortlücke"></span></p>');
     });
 
     it('sanitizes Cloze items containing escaped closing braces (\\}) without leaking remainder', () => {
@@ -124,7 +124,7 @@ describe('PreviewSanitizerService Unit Tests', () => {
       const preview = PreviewSanitizerService.sanitizeXmlToPreview('pkg', '1.0.0', 'T', makeClozeXml(qText));
 
       expect(JSON.stringify(preview)).not.toContain(CANARY_SECRETS.SA_ESCAPED_BRACE);
-      expect(preview.questions[0].questiontextHtml).toBe('<p>Escaped: [ ... ]</p>');
+      expect(preview.questions[0].questiontextHtml).toBe('<p>Escaped: <span class="qh-cloze-gap" aria-label="Antwortlücke"></span></p>');
     });
 
     it('sanitizes multiline Cloze subquestions across CRLF and LF', () => {
@@ -132,7 +132,7 @@ describe('PreviewSanitizerService Unit Tests', () => {
       const preview = PreviewSanitizerService.sanitizeXmlToPreview('pkg', '1.0.0', 'T', makeClozeXml(qText));
 
       expect(JSON.stringify(preview)).not.toContain(CANARY_SECRETS.MULTILINE);
-      expect(preview.questions[0].questiontextHtml).toBe('<p>Multiline:\n[ ... ]</p>');
+      expect(preview.questions[0].questiontextHtml).toBe('<p>Multiline:\n<span class="qh-cloze-gap" aria-label="Antwortlücke"></span></p>');
     });
 
     it('preserves surrounding LaTeX formulas containing curly braces', () => {
@@ -140,7 +140,7 @@ describe('PreviewSanitizerService Unit Tests', () => {
       const preview = PreviewSanitizerService.sanitizeXmlToPreview('pkg', '1.0.0', 'T', makeClozeXml(qText));
 
       expect(preview.questions[0].questiontextHtml).toBe(
-        '<p>Given \\( f(x) = \\frac{1}{x} \\) and set \\{1, 2\\}, calculate [ ... ].</p>'
+        '<p>Given \\( f(x) = \\frac{1}{x} \\) and set \\{1, 2\\}, calculate <span class="qh-cloze-gap" aria-label="Antwortlücke"></span>.</p>'
       );
     });
 
@@ -149,14 +149,14 @@ describe('PreviewSanitizerService Unit Tests', () => {
       const preview = PreviewSanitizerService.sanitizeXmlToPreview('pkg', '1.0.0', 'T', makeClozeXml(qText));
 
       expect(JSON.stringify(preview)).not.toContain(CANARY_SECRETS.NESTED_BRACES);
-      expect(preview.questions[0].questiontextHtml).toBe('<p>Nested: [ ... ]</p>');
+      expect(preview.questions[0].questiontextHtml).toBe('<p>Nested: <span class="qh-cloze-gap" aria-label="Antwortlücke"></span></p>');
     });
 
     it('supports question type "multianswer" as well as "cloze"', () => {
       const qText = `<p>Native Moodle type: {1:SA:=Secret}</p>`;
       const preview = PreviewSanitizerService.sanitizeXmlToPreview('pkg', '1.0.0', 'T', makeClozeXml(qText, 'multianswer'));
 
-      expect(preview.questions[0].questiontextHtml).toBe('<p>Native Moodle type: [ ... ]</p>');
+      expect(preview.questions[0].questiontextHtml).toBe('<p>Native Moodle type: <span class="qh-cloze-gap" aria-label="Antwortlücke"></span></p>');
     });
 
     it('sanitizes back-to-back Cloze items without delimiter collisions', () => {
@@ -165,7 +165,7 @@ describe('PreviewSanitizerService Unit Tests', () => {
 
       expect(JSON.stringify(preview)).not.toContain(CANARY_SECRETS.BACK_TO_BACK_1);
       expect(JSON.stringify(preview)).not.toContain(CANARY_SECRETS.BACK_TO_BACK_2);
-      expect(preview.questions[0].questiontextHtml).toBe('<p>[ ... ][ ... ]</p>');
+      expect(preview.questions[0].questiontextHtml).toBe('<p><span class="qh-cloze-gap" aria-label="Antwortlücke"></span><span class="qh-cloze-gap" aria-label="Antwortlücke"></span></p>');
     });
 
     it('sanitizes numerical questions with tolerances and negative credits', () => {
@@ -173,7 +173,7 @@ describe('PreviewSanitizerService Unit Tests', () => {
       const preview = PreviewSanitizerService.sanitizeXmlToPreview('pkg', '1.0.0', 'T', makeClozeXml(qText));
 
       expect(JSON.stringify(preview)).not.toContain(CANARY_SECRETS.TOLERANCE_VAL);
-      expect(preview.questions[0].questiontextHtml).toBe('<p>Toleranz: [ ... ]</p>');
+      expect(preview.questions[0].questiontextHtml).toBe('<p>Toleranz: <span class="qh-cloze-gap" aria-label="Antwortlücke"></span></p>');
     });
 
     it('sanitizes Cloze items with complex per-answer feedback tokens', () => {
@@ -182,7 +182,7 @@ describe('PreviewSanitizerService Unit Tests', () => {
 
       expect(JSON.stringify(preview)).not.toContain('Super gemacht!');
       expect(JSON.stringify(preview)).not.toContain('Leider daneben');
-      expect(preview.questions[0].questiontextHtml).toBe('<p>Feedback: [ ... ]</p>');
+      expect(preview.questions[0].questiontextHtml).toBe('<p>Feedback: <span class="qh-cloze-gap" aria-label="Antwortlücke"></span></p>');
     });
   });
 

@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Filter, Download, Eye, FileQuestion, BookOpen, Layers, CheckCircle } from 'lucide-react';
 import { api } from '../api/client';
+import { QuestionTypeBadges } from '../components/QuestionTypeBadges';
 
 export const HomePage: React.FC = () => {
   const [packages, setPackages] = useState<any[]>([]);
@@ -292,13 +293,10 @@ export const HomePage: React.FC = () => {
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <span className="text-xs font-mono font-semibold bg-slate-100 text-slate-800 px-2 py-0.5 rounded">
-                          v{pkg.latest_version}
-                        </span>
-                        <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded">
-                          {pkg.license}
-                        </span>
-                        {pkg.preview_enabled !== false && (
+                        {pkg.can_access !== false && <span className="text-xs font-mono font-semibold bg-slate-100 text-slate-800 px-2 py-0.5 rounded">v{pkg.latest_version}</span>}
+                        {pkg.visibility === 'private' && <span className="text-xs bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 rounded">Privat · Zugriff anfragen</span>}
+                        {pkg.can_access !== false && <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded">{pkg.license}</span>}
+                        {pkg.can_access !== false && pkg.preview_enabled !== false && (
                           <span className="text-xs bg-sky-50 text-sky-700 border border-sky-200 px-2 py-0.5 rounded">
                             Vorschau
                           </span>
@@ -307,7 +305,7 @@ export const HomePage: React.FC = () => {
                     </div>
 
                     {/* Summary */}
-                    <p className="text-sm text-slate-600 mt-3 line-clamp-2">{pkg.summary}</p>
+                    <p className="text-sm text-slate-600 mt-3 line-clamp-2">{pkg.can_access === false ? 'Privates Fragenpaket. Öffnen Sie die Paketdetails, um Zugriff anzufragen.' : pkg.summary}</p>
 
                     {/* Taxonomy Tags */}
                     <div className="flex flex-wrap items-center gap-2 mt-4">
@@ -331,27 +329,34 @@ export const HomePage: React.FC = () => {
                         </span>
                       )}
                     </div>
+                    {pkg.can_access !== false && (
+                      <div className="mt-3">
+                        <QuestionTypeBadges breakdown={pkg.stats?.qtypes_breakdown} max={4} />
+                      </div>
+                    )}
                   </div>
 
                   {/* Footer stats & Actions */}
                   <div className="flex items-center justify-between pt-4 mt-4 border-t border-slate-100 text-xs text-slate-500">
                     <div className="flex items-center space-x-4">
+                      {pkg.can_access === false ? <span>Nur begrenzte Angaben</span> : <>
                       <span className="flex items-center space-x-1 font-medium text-slate-700">
                         <Layers className="w-4 h-4 text-slate-400" />
                         <span>{pkg.stats?.question_count || 0} Fragen</span>
                       </span>
                       <span>{pkg.stats?.downloads_count || 0} Downloads</span>
+                      </>}
                     </div>
 
                     <div className="flex items-center space-x-2">
-                      <a
+                      {pkg.visibility !== 'private' && <a
                         href={`/api/v1/packages/${pkg.id}/releases/${pkg.latest_version}/download`}
                         download
                         className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 font-medium transition"
                       >
                         <Download className="w-3.5 h-3.5 text-slate-500" />
                         <span>XML</span>
-                      </a>
+                      </a>}
                       <Link
                         to={`/packages/${pkg.id}`}
                         className="inline-flex items-center space-x-1 px-3.5 py-1.5 rounded-lg bg-slate-900 text-white hover:bg-slate-800 font-medium shadow-sm transition"

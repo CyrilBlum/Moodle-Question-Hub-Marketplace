@@ -8,6 +8,7 @@ import { UserPublicProfile } from '../types/user.types';
 declare module 'fastify' {
   interface FastifyInstance {
     authenticate: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
+    authenticateOptional: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
   }
 }
 
@@ -70,6 +71,11 @@ async function authPluginAsync(fastify: FastifyInstance): Promise<void> {
         message: 'Token ungültig oder abgelaufen.',
       });
     }
+  });
+
+  fastify.decorate('authenticateOptional', async (request: FastifyRequest, reply: FastifyReply) => {
+    if (!request.headers.authorization) return;
+    await fastify.authenticate(request, reply);
   });
 }
 

@@ -26,6 +26,14 @@ const ConfigSchema = z.object({
   JWT_SECRET: z.string().default('development-secret-must-be-at-least-32-chars-long!'),
   JWT_EXPIRES_IN: z.string().default('30d'),
 
+  // Outbound email for package access requests
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().default(587),
+  SMTP_SECURE: z.preprocess(val => val === 'true' || val === true || val === '1' || val === 1, z.boolean()).default(false),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASSWORD: z.string().optional(),
+  SMTP_FROM: z.string().optional(),
+
   // Pluggable Monetisation
   MONETISATION_ENABLED: z
     .preprocess(val => val === 'true' || val === true || val === '1' || val === 1, z.boolean())

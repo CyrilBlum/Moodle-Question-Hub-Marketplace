@@ -130,9 +130,29 @@ export async function up(knex: Knex): Promise<void> {
       table.boolean('preview_enabled').notNullable().defaultTo(true);
     });
   }
+
+  if (!(await knex.schema.hasColumn('packages', 'visibility'))) {
+    await knex.schema.alterTable('packages', table => {
+      table.string('visibility', 10).notNullable().defaultTo('public');
+    });
+  }
+
+  if (!(await knex.schema.hasTable('package_access_requests'))) {
+    await knex.schema.createTable('package_access_requests', table => {
+      table.string('id', 36).primary();
+      table.string('package_id', 100).notNullable().references('id').inTable('packages').onDelete('CASCADE');
+      table.string('requester_id', 36).notNullable().references('id').inTable('users').onDelete('CASCADE');
+      table.string('status', 10).notNullable().defaultTo('pending');
+      table.timestamp('created_at').notNullable().defaultTo(knex.fn.now());
+      table.timestamp('updated_at').notNullable().defaultTo(knex.fn.now());
+      table.unique(['package_id', 'requester_id'], { indexName: 'uq_package_access_requester' });
+      table.index(['package_id', 'status'], 'idx_access_request_package_status');
+    });
+  }
 }
 
 export async function down(knex: Knex): Promise<void> {
+  await knex.schema.dropTableIfExists('package_access_requests');
   await knex.schema.dropTableIfExists('releases');
   await knex.schema.dropTableIfExists('package_tags');
   await knex.schema.dropTableIfExists('package_grades');

@@ -1,10 +1,32 @@
-import React, { useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
+import renderMathInElement from 'katex/contrib/auto-render';
+import 'katex/dist/katex.min.css';
 import { useParams, Link } from 'react-router-dom';
 import { Download, Copy, Check, Eye, Layers, ShieldCheck, Calendar, BookOpen, ArrowLeft } from 'lucide-react';
 import { api, getStoredUser, getToken } from '../api/client';
 import { PackageSettings } from '../components/PackageSettings';
+import { QuestionTypeBadges } from '../components/QuestionTypeBadges';
 import { sanitizeQuestionHtml } from '../utils/sanitize';
 import { buildCategoryTree, CategoryNode } from '../utils/categoryTree';
+
+const QuestionHtml: React.FC<{ html: string; className?: string }> = ({ html, className }) => {
+  const elementRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!elementRef.current) return;
+    renderMathInElement(elementRef.current, {
+      delimiters: [
+        { left: '$$', right: '$$', display: true },
+        { left: '\\[', right: '\\]', display: true },
+        { left: '\\(', right: '\\)', display: false },
+        { left: '$', right: '$', display: false },
+      ],
+      throwOnError: false,
+    });
+  }, [html]);
+
+  return <div ref={elementRef} className={className} dangerouslySetInnerHTML={{ __html: sanitizeQuestionHtml(html) }} />;
+};
 
 const CategoryBranch: React.FC<{ nodes: CategoryNode[]; depth?: number }> = ({ nodes, depth = 0 }) => (
   <ul className={depth === 0 ? 'space-y-1' : 'mt-1 ml-5 pl-3 border-l-2 border-slate-200 space-y-1'}>
@@ -30,6 +52,7 @@ export const PackageDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'categories' | 'preview' | 'versions' | 'settings'>('overview');
   const [copiedUrl, setCopiedUrl] = useState(false);
+  const [accessRequestMessage, setAccessRequestMessage] = useState('');
 
   useEffect(() => {
     if (id) {
@@ -43,7 +66,7 @@ export const PackageDetailPage: React.FC = () => {
       const data = await api.getPackage(packageId);
       setPkg(data);
       // Load preview (only if the author enabled it)
-      if (data.preview_enabled !== false) {
+      if (data.preview_enabled !== false && data.can_access !== false) {
         const prevData = await api.getPackagePreview(packageId);
         setPreview(prevData);
       }
@@ -60,6 +83,33 @@ export const PackageDetailPage: React.FC = () => {
     navigator.clipboard.writeText(url);
     setCopiedUrl(true);
     setTimeout(() => setCopiedUrl(false), 2500);
+  };
+
+  const requestAccess = async () => {
+    try {
+      const result = await api.requestPackageAccess(pkg.id);
+      setAccessRequestMessage(result.notification_sent === false
+        ? 'Die Anfrage wurde gespeichert, aber die E-Mail an die Eigentümerschaft konnte nicht zugestellt werden.'
+        : result.status === 'approved' ? 'Sie haben bereits Zugriff.' : 'Anfrage gesendet. Die Eigentümerschaft wurde per E-Mail benachrichtigt.');
+      if (result.status === 'approved') loadData(pkg.id, true);
+      else setPkg((current: any) => ({ ...current, access_status: 'pending' }));
+    } catch (err: any) {
+      setAccessRequestMessage(err.message || 'Die Anfrage konnte nicht gesendet werden.');
+    }
+  };
+
+  const downloadXml = async () => {
+    try {
+      const blob = await api.downloadPackage(pkg.id, pkg.latest_version);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `package-${pkg.id}-${pkg.latest_version}.xml`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      setAccessRequestMessage(err.message || 'Download fehlgeschlagen.');
+    }
   };
 
   const currentUser = getStoredUser();
@@ -103,7 +153,7 @@ export const PackageDetailPage: React.FC = () => {
           <div className="space-y-2">
             <div className="flex items-center space-x-2">
               <span className="text-xs font-mono font-semibold bg-slate-100 text-slate-800 px-2 py-0.5 rounded">
-                v{pkg.latest_version}
+                {pkg.can_access === false ? 'Privat' : `v${pkg.latest_version}`}
               </span>
               <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded">
                 {pkg.license}
@@ -125,10 +175,10 @@ export const PackageDetailPage: React.FC = () => {
           </div>
 
           {/* Action buttons */}
-          <div className="flex flex-wrap items-center gap-2 pt-2 md:pt-0">
+          {pkg.can_access !== false && <div className="flex flex-wrap items-center gap-2 pt-2 md:pt-0">
             <a
-              href={`/api/v1/packages/${pkg.id}/releases/${pkg.latest_version}/download`}
-              download
+              href="#download"
+              onClick={e => { e.preventDefault(); downloadXml(); }}
               className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700 shadow-sm transition text-sm"
             >
               <Download className="w-4 h-4" />
@@ -142,7 +192,7 @@ export const PackageDetailPage: React.FC = () => {
               {copiedUrl ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-slate-500" />}
               <span>{copiedUrl ? 'Kopiert!' : 'Import-URL'}</span>
             </button>
-          </div>
+          </div>}
         </div>
 
         {/* Taxonomy pills */}
@@ -179,11 +229,11 @@ export const PackageDetailPage: React.FC = () => {
         <nav className="flex space-x-8">
           {[
             { id: 'overview', label: 'Übersicht' },
-            { id: 'categories', label: `Kategorien (${pkg.categories?.length || 0})` },
-            ...(pkg.preview_enabled !== false
+            ...(pkg.can_access !== false ? [{ id: 'categories', label: `Kategorien (${pkg.categories?.length || 0})` }] : []),
+            ...(pkg.can_access !== false && pkg.preview_enabled !== false
               ? [{ id: 'preview', label: `Sichere Vorschau (${pkg.stats?.question_count || 0})` }]
               : []),
-            { id: 'versions', label: `Versionen (${pkg.releases?.length || 0})` },
+            ...(pkg.can_access !== false ? [{ id: 'versions', label: `Versionen (${pkg.releases?.length || 0})` }] : []),
             ...(isOwner ? [{ id: 'settings', label: 'Einstellungen' }] : []),
           ].map(tab => (
             <button
@@ -208,6 +258,20 @@ export const PackageDetailPage: React.FC = () => {
             <h2 className="text-base font-bold text-slate-900">Beschreibung & Pädagogischer Kontext</h2>
             <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">{pkg.summary}</div>
 
+            {pkg.can_access === false && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-3">
+                <p className="text-sm text-amber-900">Dieses Paket ist privat. Beschreibung, Vorschau und XML werden erst nach einer Freigabe angezeigt.</p>
+                {pkg.access_status === 'pending' ? (
+                  <p className="text-sm font-medium text-amber-800">Ihre Zugriffsanfrage ist offen.</p>
+                ) : getToken() ? (
+                  <button onClick={requestAccess} className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700">Zugriff anfragen</button>
+                ) : (
+                  <Link to={`/login?return_to=${encodeURIComponent(window.location.pathname)}`} className="inline-block px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700">Anmelden, um Zugriff anzufragen</Link>
+                )}
+                {accessRequestMessage && <p role="status" className="text-xs text-amber-900">{accessRequestMessage}</p>}
+              </div>
+            )}
+
             <div className="pt-4 border-t border-slate-100">
               <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
                 Lehrplan-Referenzrahmen
@@ -220,15 +284,8 @@ export const PackageDetailPage: React.FC = () => {
 
           <div className="space-y-6">
             <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-4">
-              <h3 className="text-sm font-bold text-slate-900">Fragentypen-Verteilung</h3>
-              <div className="space-y-2">
-                {pkg.stats?.qtypes_breakdown && Object.entries(pkg.stats.qtypes_breakdown).map(([type, count]: [string, any]) => (
-                  <div key={type} className="flex justify-between items-center text-xs">
-                    <span className="font-mono text-slate-600">{type}</span>
-                    <span className="font-semibold text-slate-800 px-2 py-0.5 rounded bg-slate-100">{count}</span>
-                  </div>
-                ))}
-              </div>
+              <h3 className="text-sm font-bold text-slate-900">Fragetypen im Paket</h3>
+              <QuestionTypeBadges breakdown={pkg.stats?.qtypes_breakdown} max={20} />
             </div>
 
             <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-3">
@@ -275,10 +332,7 @@ export const PackageDetailPage: React.FC = () => {
                 </div>
 
                 {/* Question HTML with Base64 embedded images */}
-                <div
-                  className="prose prose-sm max-w-none text-slate-800 text-sm"
-                  dangerouslySetInnerHTML={{ __html: sanitizeQuestionHtml(q.questiontextHtml) }}
-                />
+                <QuestionHtml html={q.questiontextHtml} className="prose prose-sm max-w-none text-slate-800 text-sm" />
 
                 {/* Answer choices if options exist */}
                 {q.options && q.options.length > 0 && (

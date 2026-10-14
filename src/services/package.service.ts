@@ -153,6 +153,7 @@ export class PackageService {
           downloads_count: 0,
           is_monetised: false,
           preview_enabled: manifest.preview_enabled !== false,
+          visibility: manifest.visibility === 'private' ? 'private' : 'public',
           created_at: now,
           updated_at: now,
         });
@@ -191,6 +192,10 @@ export class PackageService {
               manifest.preview_enabled === undefined
                 ? existingPackage.preview_enabled
                 : manifest.preview_enabled !== false,
+            visibility:
+              manifest.visibility === undefined
+                ? existingPackage.visibility || 'public'
+                : manifest.visibility === 'private' ? 'private' : 'public',
             updated_at: now,
           });
       }
@@ -227,7 +232,7 @@ export class PackageService {
   /**
    * Search packages with multifaceted filtering and pagination.
    */
-  public async searchPackages(filters: PackageSearchFilters): Promise<{
+  public async searchPackages(filters: PackageSearchFilters, viewerId?: string): Promise<{
     data: PackageSearchResult[];
     pagination: {
       page: number;
@@ -288,9 +293,7 @@ export class PackageService {
       const qLower = `%${filters.q.toLowerCase()}%`;
       query = query.where(function() {
         this.whereRaw('LOWER(packages.title) LIKE ?', [qLower])
-          .orWhereRaw('LOWER(packages.summary) LIKE ?', [qLower])
-          .orWhereRaw('LOWER(packages.topic) LIKE ?', [qLower])
-          .orWhereRaw('LOWER(packages.id) LIKE ?', [qLower])
+          .orWhereRaw("(packages.visibility != 'private' AND (LOWER(packages.summary) LIKE ? OR LOWER(packages.topic) LIKE ? OR LOWER(packages.id) LIKE ?))", [qLower, qLower, qLower])
           .orWhereRaw('LOWER(users.full_name) LIKE ?', [qLower]);
       });
     }
@@ -318,6 +321,11 @@ export class PackageService {
     const tags = packageIds.length > 0 ? await knex('package_tags').whereIn('package_id', packageIds) : [];
     const grades = packageIds.length > 0 ? await knex('package_grades').whereIn('package_id', packageIds) : [];
 
+    const accessRequests = viewerId && packageIds.length > 0
+      ? await knex('package_access_requests').where({ requester_id: viewerId }).whereIn('package_id', packageIds)
+      : [];
+    const accessByPackage = new Map(accessRequests.map(request => [request.package_id, request.status]));
+
     const data: PackageSearchResult[] = rows.map(row => {
       const pkgReleases = releases.filter(r => r.package_id === row.id);
       const pkgTags = tags.filter(t => t.package_id === row.id).map(t => t.tag);
@@ -341,14 +349,18 @@ export class PackageService {
         } catch {}
       }
 
+      const isPrivate = row.visibility === 'private';
+      const accessStatus = accessByPackage.get(row.id) as 'pending' | 'approved' | 'denied' | undefined;
+      const canAccess = !isPrivate || row.owner_id === viewerId || accessStatus === 'approved';
+
       return {
         id: row.id,
         title: row.title,
-        summary: row.summary,
+        summary: canAccess ? row.summary : '',
         language: row.language,
-        license: row.license,
+        license: canAccess ? row.license : '',
         author: {
-          id: row.owner_id,
+          id: canAccess ? row.owner_id : undefined,
           name: row.author_name,
           institution: row.author_institution,
           canton: row.author_canton,
@@ -357,21 +369,24 @@ export class PackageService {
           framework: row.framework,
           canton: row.canton || undefined,
           level: 'GYM_SEK_II',
-          grades: pkgGrades,
+          grades: canAccess ? pkgGrades : [],
           subject_category: row.subject_category,
           subject: row.subject,
-          topic: row.topic || undefined,
-          tags: pkgTags,
+          topic: canAccess ? row.topic || undefined : undefined,
+          tags: canAccess ? pkgTags : [],
         },
-        latest_version: row.latest_version,
-        versions: pkgReleases.map(r => r.version),
-        preview_enabled: !!row.preview_enabled,
-        categories: categoryPaths,
+        latest_version: canAccess ? row.latest_version : '',
+        versions: canAccess ? pkgReleases.map(r => r.version) : [],
+        preview_enabled: canAccess && !!row.preview_enabled,
+        visibility: isPrivate ? 'private' : 'public',
+        access_status: accessStatus,
+        can_access: canAccess,
+        categories: canAccess ? categoryPaths : [],
         stats: {
-          question_count: questionCount,
-          categories_count: categoriesCount,
-          downloads_count: row.downloads_count,
-          qtypes_breakdown: qtypesBreakdown,
+          question_count: canAccess ? questionCount : 0,
+          categories_count: canAccess ? categoriesCount : 0,
+          downloads_count: canAccess ? row.downloads_count : 0,
+          qtypes_breakdown: canAccess ? qtypesBreakdown : {},
         },
         compatibility: {
           min_moodle_version: '4.5',
@@ -396,7 +411,7 @@ export class PackageService {
   /**
    * Retrieves single package by ID with release history and question breakdown.
    */
-  public async getPackage(packageId: string): Promise<PackageDetailResult | null> {
+  public async getPackage(packageId: string, viewerId?: string): Promise<PackageDetailResult | null> {
     const knex = getDatabase();
 
     const row = await knex('packages')
@@ -411,6 +426,13 @@ export class PackageService {
       .first();
 
     if (!row) return null;
+
+    const accessRequest = viewerId
+      ? await knex('package_access_requests').where({ package_id: packageId, requester_id: viewerId }).first()
+      : null;
+    const accessStatus = accessRequest?.status as 'pending' | 'approved' | 'denied' | undefined;
+    const isPrivate = row.visibility === 'private';
+    const canAccess = !isPrivate || row.owner_id === viewerId || accessStatus === 'approved';
 
     const releases = await knex('releases')
       .where({ package_id: packageId, is_yanked: false })
@@ -432,14 +454,14 @@ export class PackageService {
       } catch {}
     }
 
-    return {
+    const result: PackageDetailResult = {
       id: row.id,
       title: row.title,
-      summary: row.summary,
+      summary: canAccess ? row.summary : 'Privates Fragenpaket. Beantragen Sie Zugriff, um weitere Angaben zu sehen.',
       language: row.language,
-      license: row.license,
+      license: canAccess ? row.license : '',
       author: {
-        id: row.owner_id,
+        id: canAccess ? row.owner_id : undefined,
         name: row.author_name,
         institution: row.author_institution,
         canton: row.author_canton,
@@ -448,23 +470,26 @@ export class PackageService {
         framework: row.framework,
         canton: row.canton || undefined,
         level: 'GYM_SEK_II',
-        grades: grades.map(g => g.grade),
+        grades: canAccess ? grades.map(g => g.grade) : [],
         subject_category: row.subject_category,
         subject: row.subject,
-        topic: row.topic || undefined,
-        tags: tags.map(t => t.tag),
+        topic: canAccess ? row.topic || undefined : undefined,
+        tags: canAccess ? tags.map(t => t.tag) : [],
       },
-      latest_version: row.latest_version,
-      versions: releases.map(r => r.version),
-      preview_enabled: !!row.preview_enabled,
+      latest_version: canAccess ? row.latest_version : '',
+      versions: canAccess ? releases.map(r => r.version) : [],
+      preview_enabled: canAccess && !!row.preview_enabled,
+      visibility: isPrivate ? 'private' : 'public',
+      access_status: accessStatus,
+      can_access: canAccess,
       stats: {
-        question_count: latestRelease ? latestRelease.question_count : 0,
-        categories_count: categories.length,
-        downloads_count: row.downloads_count,
-        qtypes_breakdown: qtypesBreakdown,
+        question_count: canAccess && latestRelease ? latestRelease.question_count : 0,
+        categories_count: canAccess ? categories.length : 0,
+        downloads_count: canAccess ? row.downloads_count : 0,
+        qtypes_breakdown: canAccess ? qtypesBreakdown : {},
       },
-      categories,
-      releases: releases.map(r => ({
+      categories: canAccess ? categories : [],
+      releases: canAccess ? releases.map(r => ({
         version: r.version,
         sha256: r.sha256,
         file_size_bytes: Number(r.file_size_bytes),
@@ -472,7 +497,7 @@ export class PackageService {
         release_notes: r.release_notes || undefined,
         download_url: `/api/v1/packages/${packageId}/releases/${r.version}/download`,
         created_at: new Date(r.created_at).toISOString(),
-      })),
+      })) : [],
       compatibility: {
         min_moodle_version: '4.5',
         tested_versions: ['4.5', '5.0'],
@@ -480,6 +505,104 @@ export class PackageService {
       created_at: new Date(row.created_at).toISOString(),
       updated_at: new Date(row.updated_at).toISOString(),
     };
+
+    return result;
+  }
+
+  public async canAccessPackage(packageId: string, userId?: string): Promise<boolean> {
+    const knex = getDatabase();
+    const pkg = await knex('packages').where({ id: packageId }).select('owner_id', 'visibility').first();
+    if (!pkg) return false;
+    if (pkg.visibility !== 'private' || pkg.owner_id === userId) return true;
+    if (!userId) return false;
+    const grant = await knex('package_access_requests')
+      .where({ package_id: packageId, requester_id: userId, status: 'approved' })
+      .first();
+    return !!grant;
+  }
+
+  public async createAccessRequest(packageId: string, requesterId: string): Promise<{
+    shouldNotifyOwner: boolean;
+    requestStatus: string;
+    packageTitle: string;
+    requester: { name: string; email: string; institution: string };
+    ownerEmail: string;
+  }> {
+    const knex = getDatabase();
+    const pkg = await knex('packages').where({ id: packageId }).first();
+    if (!pkg) throw new Error('NOT_FOUND: Paket nicht gefunden.');
+    if (pkg.visibility !== 'private') throw new Error('CONFLICT: Dieses Paket ist bereits öffentlich.');
+    if (pkg.owner_id === requesterId) throw new Error('CONFLICT: Sie sind Eigentümer dieses Pakets.');
+
+    const [owner, requester] = await Promise.all([
+      knex('users').where({ id: pkg.owner_id }).select('email').first(),
+      knex('users').where({ id: requesterId }).select('full_name', 'email', 'institution').first(),
+    ]);
+    if (!owner || !requester) throw new Error('NOT_FOUND: Benutzerkonto nicht gefunden.');
+
+    const existing = await knex('package_access_requests').where({ package_id: packageId, requester_id: requesterId }).first();
+    let shouldNotifyOwner = false;
+    if (!existing) {
+      const now = new Date();
+      await knex('package_access_requests').insert({
+        id: crypto.randomUUID(), package_id: packageId, requester_id: requesterId,
+        status: 'pending', created_at: now, updated_at: now,
+      });
+      shouldNotifyOwner = true;
+    } else if (existing.status === 'denied') {
+      await knex('package_access_requests').where({ id: existing.id }).update({ status: 'pending', updated_at: new Date() });
+      shouldNotifyOwner = true;
+    }
+
+    return {
+      shouldNotifyOwner,
+      requestStatus: existing?.status === 'approved' ? 'approved' : 'pending',
+      packageTitle: pkg.title,
+      requester: { name: requester.full_name, email: requester.email, institution: requester.institution },
+      ownerEmail: owner.email,
+    };
+  }
+
+  public async listAccessRequests(ownerId: string, packageId: string): Promise<any[]> {
+    const knex = getDatabase();
+    const pkg = await knex('packages').where({ id: packageId }).first();
+    if (!pkg) throw new Error('NOT_FOUND: Paket nicht gefunden.');
+    if (pkg.owner_id !== ownerId) throw new Error('FORBIDDEN: Nur die Eigentümerin oder der Eigentümer kann Anfragen sehen.');
+
+    const rows = await knex('package_access_requests')
+      .join('users', 'package_access_requests.requester_id', 'users.id')
+      .where({ 'package_access_requests.package_id': packageId })
+      .select(
+        'package_access_requests.id', 'package_access_requests.status', 'package_access_requests.created_at',
+        'users.id as requester_id', 'users.full_name as requester_name', 'users.email as requester_email',
+        'users.institution as requester_institution'
+      )
+      .orderBy('package_access_requests.created_at', 'desc');
+
+    return rows.map(row => ({
+      id: row.id,
+      status: row.status,
+      created_at: new Date(row.created_at).toISOString(),
+      requester: {
+        id: row.requester_id,
+        name: row.requester_name,
+        email: row.requester_email,
+        institution: row.requester_institution,
+      },
+    }));
+  }
+
+  public async setAccessRequestStatus(ownerId: string, packageId: string, requestId: string, status: 'approved' | 'denied'): Promise<void> {
+    const knex = getDatabase();
+    const row = await knex('package_access_requests')
+      .join('packages', 'package_access_requests.package_id', 'packages.id')
+      .where({ 'package_access_requests.id': requestId, 'package_access_requests.package_id': packageId })
+      .select('package_access_requests.id', 'packages.owner_id')
+      .first();
+    if (!row) throw new Error('NOT_FOUND: Zugriffsanfrage nicht gefunden.');
+    if (row.owner_id !== ownerId) throw new Error('FORBIDDEN: Nur die Eigentümerin oder der Eigentümer kann Anfragen bearbeiten.');
+
+    await knex('package_access_requests').where({ id: requestId }).update({ status, updated_at: new Date() });
   }
 
   public async getRelease(packageId: string, version: string): Promise<any | null> {
@@ -516,6 +639,7 @@ export class PackageService {
       grades?: string[];
       tags?: string[];
       preview_enabled?: boolean;
+      visibility?: 'public' | 'private';
     }
   ): Promise<void> {
     const knex = getDatabase();
@@ -543,6 +667,12 @@ export class PackageService {
       update.license = patch.license;
     }
     if (patch.preview_enabled !== undefined) update.preview_enabled = !!patch.preview_enabled;
+    if (patch.visibility !== undefined) {
+      if (patch.visibility !== 'public' && patch.visibility !== 'private') {
+        throw new Error('BAD_REQUEST: Die Sichtbarkeit muss public oder private sein.');
+      }
+      update.visibility = patch.visibility;
+    }
     if (patch.topic !== undefined) update.topic = patch.topic ? String(patch.topic).trim() : null;
     if (patch.canton !== undefined) update.canton = patch.canton ? String(patch.canton).toUpperCase() : null;
     if (patch.subject !== undefined) update.subject = patch.subject;
@@ -605,6 +735,7 @@ export class PackageService {
       latest_version: r.latest_version,
       versions: releases.filter(x => x.package_id === r.id).map(x => x.version),
       preview_enabled: !!r.preview_enabled,
+      visibility: r.visibility === 'private' ? 'private' : 'public',
       downloads_count: r.downloads_count,
       updated_at: new Date(r.updated_at).toISOString(),
     }));
