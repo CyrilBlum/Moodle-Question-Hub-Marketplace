@@ -13,7 +13,7 @@ It is therefore not part of CI (`npm test` runs the unit and integration tests).
 ## Credentials (environment, never committed)
 | Variable | Purpose |
 |---|---|
-| `QHUB_TEACHER_PASSWORD` | Hub teacher account (`QHUB_TEACHER_EMAIL`, default `teacher@kanti.ch`) |
+| `QHUB_TEACHER_PASSWORD` | Hub teacher account (`QHUB_TEACHER_EMAIL`, default `c@cblum.ch`) |
 | `QHUB_MOODLE_TEACHER_PASSWORD` | Moodle teacher (`QHUB_MOODLE_TEACHER_USER`, default `teacher1`) |
 | `QHUB_M1_ADMIN_PASSWORD` / `QHUB_M2_ADMIN_PASSWORD` | Moodle admin accounts |
 

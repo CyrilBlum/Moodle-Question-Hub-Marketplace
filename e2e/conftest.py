@@ -29,7 +29,7 @@ def _required_env(name: str) -> str:
     return value
 
 
-DEFAULT_TEACHER_EMAIL = os.environ.get("QHUB_TEACHER_EMAIL", "teacher@kanti.ch")
+DEFAULT_TEACHER_EMAIL = os.environ.get("QHUB_TEACHER_EMAIL", "c@cblum.ch")
 DEFAULT_MOODLE_TEACHER_USER = os.environ.get("QHUB_MOODLE_TEACHER_USER", "teacher1")
 
 

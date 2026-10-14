@@ -12,6 +12,8 @@ import urllib.parse
 import pytest
 import requests
 
+from conftest import DEFAULT_TEACHER_EMAIL
+
 
 def test_f05_t01_teacher_registration(hub_client):
     """Verify teacher registration with institutional metadata."""
@@ -37,7 +39,7 @@ def test_f05_t02_teacher_login_and_jwt(hub_client):
     data = resp.json()
     assert "token" in data
     assert "user" in data
-    assert data["user"]["email"] == "teacher@kanti.ch"
+    assert data["user"]["email"] == DEFAULT_TEACHER_EMAIL
     assert len(data["token"].split(".")) == 3, "Token must be a valid 3-part JWT"
 
 
@@ -48,7 +50,7 @@ def test_f05_t03_authenticated_profile_me(hub_client, teacher_jwt):
     resp = hub_client.get_me()
     assert resp.status_code == 200
     user = resp.json().get("user", resp.json())
-    assert user.get("email") == "teacher@kanti.ch"
+    assert user.get("email") == DEFAULT_TEACHER_EMAIL
 
     # 2. Unauthenticated
     hub_client.set_token(None)
