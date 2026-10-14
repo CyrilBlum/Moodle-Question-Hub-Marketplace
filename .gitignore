@@ -8,3 +8,11 @@ storage/
 .env
 *.log
 .DS_Store
+
+# E2E suite: private data and caches
+e2e/fixtures/real_dataset/
+e2e/fixtures/packages/real_world_dataset_sample.xml
+e2e/.env
+__pycache__/
+*.pyc
+.pytest_cache/

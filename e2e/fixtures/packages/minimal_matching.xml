@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+  <question type="category">
+    <category><text>$course$/top/Default/Matching</text></category>
+  </question>
+  <question type="matching">
+    <name><text>MATCH Valid</text></name>
+    <questiontext format="html"><text><![CDATA[<p>Ordnen Sie die Kantone ihren Hauptorten zu:</p>]]></text></questiontext>
+    <shuffleanswers>true</shuffleanswers>
+    <subquestion format="html">
+      <text><![CDATA[<p>Bern</p>]]></text>
+      <answer><text>Bern</text></answer>
+    </subquestion>
+    <subquestion format="html">
+      <text><![CDATA[<p>Waadt</p>]]></text>
+      <answer><text>Lausanne</text></answer>
+    </subquestion>
+    <subquestion format="html">
+      <text><![CDATA[<p>Tessin</p>]]></text>
+      <answer><text>Bellinzona</text></answer>
+    </subquestion>
+  </question>
+</quiz>

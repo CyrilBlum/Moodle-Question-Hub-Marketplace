@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+  <question type="category">
+    <category><text>$course$/top/Default/Cloze</text></category>
+  </question>
+  <question type="cloze">
+    <name><text>CLOZE Valid</text></name>
+    <questiontext format="html"><text><![CDATA[<p>Vervollstaendigen Sie: {1:SHORTANSWER:=Schweiz} ist ein Bundesstaat in {1:MULTICHOICE:=Europa~Asien~Afrika}.</p>]]></text></questiontext>
+  </question>
+</quiz>

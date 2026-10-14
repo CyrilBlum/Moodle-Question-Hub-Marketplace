@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+  <question type="category">
+    <category><text>$course$/top/Default/MultichoiceMultiple</text></category>
+  </question>
+  <question type="multichoice">
+    <name><text>MC Multi Valid</text></name>
+    <questiontext format="html"><text><![CDATA[<p>Welche der folgenden Staedte liegen in der Schweiz?</p>]]></text></questiontext>
+    <single>false</single>
+    <shuffleanswers>true</shuffleanswers>
+    <answernumbering>abc</answernumbering>
+    <answer fraction="50" format="html">
+      <text><![CDATA[<p>Basel</p>]]></text>
+    </answer>
+    <answer fraction="50" format="html">
+      <text><![CDATA[<p>Luzern</p>]]></text>
+    </answer>
+    <answer fraction="-50" format="html">
+      <text><![CDATA[<p>Muenchen</p>]]></text>
+    </answer>
+  </question>
+</quiz>

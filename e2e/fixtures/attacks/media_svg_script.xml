@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+  <question type="description">
+    <name><text>SVG Script</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Malicious SVG</p>]]></text>
+      <file name="xss.svg" encoding="base64">PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxzY3JpcHQ+YWxlcnQoMSk8L3NjcmlwdD48Y2lyY2xlIGN4PSIxMCIgY3k9IjEwIiByPSI1Ii8+PC9zdmc+</file>
+    </questiontext>
+  </question>
+</quiz>

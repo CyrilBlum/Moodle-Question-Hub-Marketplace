@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+  <question type="category">
+    <category><text>$course$/top/Gymnasium_SG/Physik_EF/Klassische_Mechanik_und_Schwingungen</text></category>
+  </question>
+
+  <!-- 1. NUM: Kinetic energy m=2.5kg, h=5.0m -->
+  <question type="numerical">
+    <name><text>PHYS_Q01_Kinetische_Energie_Freier_Fall</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Ein Koerper der Masse m = 2.5 kg faellt im Schwerefeld der Erde (g = 9.81 m/s^2) aus der Ruhe um die Hoehe h = 5.0 m. Berechnen Sie die kinetische Energie beim Aufprall unter Vernachlaessigung des Luftwiderstands (E_kin = m * g * h = 2.5 * 9.81 * 5.0 = 122.625 J).</p>]]></text>
+    </questiontext>
+    <answer fraction="100" format="moodle_auto_format">
+      <text>122.625</text>
+      <tolerance>0.5</tolerance>
+    </answer>
+  </question>
+
+  <!-- 2. NUM: Pendulum period l=1.0m -->
+  <question type="numerical">
+    <name><text>PHYS_Q02_Fadenpendel_Periodendauer</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Berechnen Sie die Periodendauer T eines mathematischen Fadenpendels der Laenge l = 1.0 m fuer kleine Auslenkungen (g = 9.81 m/s^2): T = 2 * pi * sqrt(l / g) = 2 * pi * sqrt(1.0 / 9.81) = 2.006 s.</p>]]></text>
+    </questiontext>
+    <answer fraction="100" format="moodle_auto_format">
+      <text>2.006</text>
+      <tolerance>0.02</tolerance>
+    </answer>
+  </question>
+
+  <!-- 3. NUM: Satellite speed -->
+  <question type="numerical">
+    <name><text>PHYS_Q03_Satelliten_Bahngeschwindigkeit</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Ein geostationaerer Satellit umkreist die Erde auf einer Kreisbahn mit Radius r = 42164 km in T = 86164 s. Berechnen Sie seine Bahngeschwindigkeit v = 2 * pi * r / T in m/s: (2 * pi * 42164000) / 86164 = 3075 m/s.</p>]]></text>
+    </questiontext>
+    <answer fraction="100" format="moodle_auto_format">
+      <text>3075.0</text>
+      <tolerance>10.0</tolerance>
+    </answer>
+  </question>
+
+  <!-- 4. NUM: Spring constant m=0.5kg, T=0.8s -->
+  <question type="numerical">
+    <name><text>PHYS_Q04_Federkonstante_Harmonischer_Oszillator</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Ein Federpendel mit Masse m = 0.5 kg schwingt mit einer Periode T = 0.8 s. Berechnen Sie die Federkonstante D = 4 * pi^2 * m / T^2 = (4 * pi^2 * 0.5) / 0.64 = 30.84 N/m.</p>]]></text>
+    </questiontext>
+    <answer fraction="100" format="moodle_auto_format">
+      <text>30.84</text>
+      <tolerance>0.2</tolerance>
+    </answer>
+  </question>
+
+  <!-- 5. MC Single: Centripetal force direction -->
+  <question type="multichoice">
+    <name><text>PHYS_Q05_Zentripetalkraft_Richtung</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>In welche Richtung zeigt der Vektor der Zentripetalkraft bei einer gleichfoermigen Kreisbewegung?</p>]]></text>
+    </questiontext>
+    <single>true</single>
+    <shuffleanswers>true</shuffleanswers>
+    <answernumbering>abc</answernumbering>
+    <answer fraction="100" format="html"><text><![CDATA[<p>Stets radial zum Kreismittelpunkt gerichtet.</p>]]></text></answer>
+    <answer fraction="0" format="html"><text><![CDATA[<p>Tangential in Richtung des Geschwindigkeitsvektors.</p>]]></text></answer>
+    <answer fraction="0" format="html"><text><![CDATA[<p>Vom Kreismittelpunkt nach aussen (Fliehkraftrichtung).</p>]]></text></answer>
+  </question>
+
+  <!-- 6. MC Multi: Elastic collision conservation -->
+  <question type="multichoice">
+    <name><text>PHYS_Q06_Elastischer_Stoss_Erhaltungsgroessen</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Welche physikalischen Groessen bleiben bei einem ideal elastischen Stoss in einem abgeschlossenen System vollstaendig erhalten?</p>]]></text>
+    </questiontext>
+    <single>false</single>
+    <shuffleanswers>true</shuffleanswers>
+    <answernumbering>abc</answernumbering>
+    <answer fraction="50" format="html"><text><![CDATA[<p>Gesamtimpuls des Systems</p>]]></text></answer>
+    <answer fraction="50" format="html"><text><![CDATA[<p>Gesamte kinetische Energie des Systems</p>]]></text></answer>
+    <answer fraction="-50" format="html"><text><![CDATA[<p>Geschwindigkeit jedes einzelnen Koerpers</p>]]></text></answer>
+  </question>
+
+  <!-- 7. MC Single: Kepler's 3rd law -->
+  <question type="multichoice">
+    <name><text>PHYS_Q07_Keplersches_Drittes_Gesetz</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Welche Beziehung beschreibt das 3. Keplersche Gesetz fuer Planetenbahnen um die Sonne?</p>]]></text>
+    </questiontext>
+    <single>true</single>
+    <shuffleanswers>true</shuffleanswers>
+    <answernumbering>abc</answernumbering>
+    <answer fraction="100" format="html"><text><![CDATA[<p>Das Verhaeltnis T^2 / a^3 ist fuer alle Planeten konstant.</p>]]></text></answer>
+    <answer fraction="0" format="html"><text><![CDATA[<p>T proportional zu a.</p>]]></text></answer>
+    <answer fraction="0" format="html"><text><![CDATA[<p>T^3 / a^2 ist konstant.</p>]]></text></answer>
+  </question>
+
+  <!-- 8. TF: Gravity at poles vs equator -->
+  <question type="truefalse">
+    <name><text>PHYS_Q08_Erdbeschleunigung_Pole_Aequator</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Die effektive Erdbeschleunigung g ist an den geografischen Erdpolen geringer als am Aequator.</p>]]></text>
+    </questiontext>
+    <answer fraction="0" format="moodle_auto_format"><text>true</text></answer>
+    <answer fraction="100" format="moodle_auto_format"><text>false</text></answer>
+  </question>
+
+  <!-- 9. TF: Undamped oscillator energy constant -->
+  <question type="truefalse">
+    <name><text>PHYS_Q09_Ungedaempfter_Oszillator_Energie</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Bei einer ungedaempften harmonischen Schwingung ist die mechanische Gesamtenergie (Summe aus kinetischer und potentieller Energie) zeitlich konstant.</p>]]></text>
+    </questiontext>
+    <answer fraction="100" format="moodle_auto_format"><text>true</text></answer>
+    <answer fraction="0" format="moodle_auto_format"><text>false</text></answer>
+  </question>
+
+  <!-- 10. TF: Inelastic collision momentum conservation -->
+  <question type="truefalse">
+    <name><text>PHYS_Q10_Inelastischer_Stoss_Impulserhaltung</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Der Gesamtimpuls eines abgeschlossenen Systems bleibt auch bei einem vollkommen inelastischen Stoss stets erhalten.</p>]]></text>
+    </questiontext>
+    <answer fraction="100" format="moodle_auto_format"><text>true</text></answer>
+    <answer fraction="0" format="moodle_auto_format"><text>false</text></answer>
+  </question>
+
+  <!-- 11. SA: SI unit of force -->
+  <question type="shortanswer">
+    <name><text>PHYS_Q11_SI_Einheit_Kraft</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Wie lautet der Name oder das Einheitenzeichen der abgeleiteten SI-Einheit der Kraft?</p>]]></text>
+    </questiontext>
+    <usecase>0</usecase>
+    <answer fraction="100" format="moodle_auto_format"><text>Newton</text></answer>
+    <answer fraction="100" format="moodle_auto_format"><text>N</text></answer>
+  </question>
+
+  <!-- 12. SA: Resonance -->
+  <question type="shortanswer">
+    <name><text>PHYS_Q12_Resonanz_Fachbegriff</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Wie nennt man das physikalische Phaenomen eines maximalen Amplitudenanstiegs, wenn die Erregerfrequenz mit der Eigenfrequenz eines schwingungsfaehigen Systems uebereinstimmt?</p>]]></text>
+    </questiontext>
+    <usecase>0</usecase>
+    <answer fraction="100" format="moodle_auto_format"><text>Resonanz</text></answer>
+    <answer fraction="100" format="moodle_auto_format"><text>Resonanzkatastrophe</text></answer>
+  </question>
+
+  <!-- 13. MATCH: Physical quantities to base SI units -->
+  <question type="matching">
+    <name><text>PHYS_Q13_SI_Basiseinheiten_Zuordnung</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Ordnen Sie die abgeleiteten physikalischen Groessen ihren Darstellungen in SI-Basiseinheiten zu:</p>]]></text>
+    </questiontext>
+    <subquestion format="html">
+      <text><![CDATA[<p>Kraft (N)</p>]]></text>
+      <answer><text>kg * m * s^-2</text></answer>
+    </subquestion>
+    <subquestion format="html">
+      <text><![CDATA[<p>Energie / Arbeit (J)</p>]]></text>
+      <answer><text>kg * m^2 * s^-2</text></answer>
+    </subquestion>
+    <subquestion format="html">
+      <text><![CDATA[<p>Leistung (W)</p>]]></text>
+      <answer><text>kg * m^2 * s^-3</text></answer>
+    </subquestion>
+    <subquestion format="html">
+      <text><![CDATA[<p>Druck (Pa)</p>]]></text>
+      <answer><text>kg * m^-1 * s^-2</text></answer>
+    </subquestion>
+  </question>
+
+  <!-- 14. MATCH: Pendulum parameters to influence on period -->
+  <question type="matching">
+    <name><text>PHYS_Q14_Fadenpendel_Parameter_Einfluss</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Ordnen Sie die Parameter eines Fadenpendels ihrem Einfluss auf die Schwingungsdauer T zu:</p>]]></text>
+    </questiontext>
+    <subquestion format="html">
+      <text><![CDATA[<p>Pendellaenge l</p>]]></text>
+      <answer><text>Periodendauer steigt proportional zu sqrt(l)</text></answer>
+    </subquestion>
+    <subquestion format="html">
+      <text><![CDATA[<p>Pendelmasse m</p>]]></text>
+      <answer><text>Kein Einfluss auf die Periodendauer</text></answer>
+    </subquestion>
+    <subquestion format="html">
+      <text><![CDATA[<p>Erdbeschleunigung g</p>]]></text>
+      <answer><text>Periodendauer sinkt umgekehrt proportional zu sqrt(g)</text></answer>
+    </subquestion>
+  </question>
+</quiz>

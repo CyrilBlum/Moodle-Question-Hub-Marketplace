@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+  <question type="category">
+    <category><text>$course$/top/Gymnasium_LU/Chemie_SF/Chemisches_Gleichgewicht_und_Saeure_Base</text></category>
+  </question>
+
+  <!-- 1. MC Single: Le Chatelier pressure effect -->
+  <question type="multichoice">
+    <name><text>CHEM_Q01_Le_Chatelier_Druckeinfluss</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Gegeben ist die Ammoniaksynthese nach Haber-Bosch:<br/>
+\( N_2(g) + 3 H_2(g) \rightleftharpoons 2 NH_3(g) \quad \Delta H &lt; 0 \)<br/>
+Wie verschiebt sich das chemische Gleichgewicht bei einer Erhoehung des Gesamtdrucks nach dem Prinzip von Le Chatelier?</p>]]></text>
+    </questiontext>
+    <single>true</single>
+    <shuffleanswers>true</shuffleanswers>
+    <answernumbering>abc</answernumbering>
+    <answer fraction="100" format="html"><text><![CDATA[<p>Das Gleichgewicht verschiebt sich nach rechts (zur Seite der geringeren Stoffmenge an Gas).</p>]]></text></answer>
+    <answer fraction="0" format="html"><text><![CDATA[<p>Das Gleichgewicht verschiebt sich nach links (zu den Edukten).</p>]]></text></answer>
+    <answer fraction="0" format="html"><text><![CDATA[<p>Der Druck hat keinen Einfluss auf die Gleichgewichtslage.</p>]]></text></answer>
+  </question>
+
+  <!-- 2. MC Single: Amphoteric definition -->
+  <question type="multichoice">
+    <name><text>CHEM_Q02_Ampholyte_Definition</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Welche der folgenden chemischen Teilchenart kann sowohl als Broensted-Saeure (Protonendonator) als auch als Broensted-Base (Protonenakzeptor) reagieren (Ampholyt)?</p>]]></text>
+    </questiontext>
+    <single>true</single>
+    <shuffleanswers>true</shuffleanswers>
+    <answernumbering>abc</answernumbering>
+    <answer fraction="100" format="html"><text><![CDATA[<p>\( HCO_3^- \) (Hydrogencarbonat-Ion)</p>]]></text></answer>
+    <answer fraction="0" format="html"><text><![CDATA[<p>\( Cl^- \) (Chlorid-Ion)</p>]]></text></answer>
+    <answer fraction="0" format="html"><text><![CDATA[<p>\( NH_4^+ \) (Ammonium-Ion)</p>]]></text></answer>
+  </question>
+
+  <!-- 3. MC Multi: Factors altering equilibrium constant Kc -->
+  <question type="multichoice">
+    <name><text>CHEM_Q03_Kc_Abhaengigkeit_Faktoren</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Welche der folgenden Faktoren veraendern den thermodynamischen Zahlenwert der Gleichgewichtskonstanten Kc?</p>]]></text>
+    </questiontext>
+    <single>false</single>
+    <shuffleanswers>true</shuffleanswers>
+    <answernumbering>abc</answernumbering>
+    <answer fraction="100" format="html"><text><![CDATA[<p>Temperatur</p>]]></text></answer>
+    <answer fraction="-50" format="html"><text><![CDATA[<p>Einsatz eines Katalysators</p>]]></text></answer>
+    <answer fraction="-50" format="html"><text><![CDATA[<p>Konzentrationsaenderung der Edukte</p>]]></text></answer>
+  </question>
+
+  <!-- 4. MC Single: Buffer capacity -->
+  <question type="multichoice">
+    <name><text>CHEM_Q04_Pufferkapazitaet_Optimum</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Wann ist die Pufferkapazitaet eines Essigsaeure/Acetat-Puffersystems am groessten?</p>]]></text>
+    </questiontext>
+    <single>true</single>
+    <shuffleanswers>true</shuffleanswers>
+    <answernumbering>abc</answernumbering>
+    <answer fraction="100" format="html"><text><![CDATA[<p>Wenn das Verhaeltnis c(CH3COOH) : c(CH3COO-) gleich 1:1 ist (pH = pKs).</p>]]></text></answer>
+    <answer fraction="0" format="html"><text><![CDATA[<p>Bei stark alkalischem pH-Wert &gt; 12.</p>]]></text></answer>
+    <answer fraction="0" format="html"><text><![CDATA[<p>Wenn die Saeurekomponente vollstaendig deprotoniert vorliegt.</p>]]></text></answer>
+  </question>
+
+  <!-- 5. NUM: pH of HCl 0.005 M -->
+  <question type="numerical">
+    <name><text>CHEM_Q05_pH_Starke_Saeure</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Berechnen Sie den pH-Wert einer Salzsaeureloesung mit einer Konzentration von c(HCl) = 0.005 mol/l (pH = -log10(0.005)).</p>]]></text>
+    </questiontext>
+    <answer fraction="100" format="moodle_auto_format">
+      <text>2.301</text>
+      <tolerance>0.02</tolerance>
+    </answer>
+  </question>
+
+  <!-- 6. NUM: pH of acetic acid 0.1 M -->
+  <question type="numerical">
+    <name><text>CHEM_Q06_pH_Schwache_Saeure_Essigsaeure</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Berechnen Sie den pH-Wert einer 0.10 mol/l Essigsaeureloesung mit pKs = 4.75 ueber die Naeherungsformel pH = 0.5 * (pKs - log10(c0)). (4.75 - (-1)) * 0.5 = 2.875.</p>]]></text>
+    </questiontext>
+    <answer fraction="100" format="moodle_auto_format">
+      <text>2.875</text>
+      <tolerance>0.03</tolerance>
+    </answer>
+  </question>
+
+  <!-- 7. NUM: pH of buffer -->
+  <question type="numerical">
+    <name><text>CHEM_Q07_pH_Henderson_Hasselbalch_Puffer</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Ein Acetatpuffer enthaelt c(CH3COOH) = 0.20 mol/l und c(CH3COO-) = 0.40 mol/l (pKs = 4.75). Berechnen Sie den pH-Wert nach Henderson-Hasselbalch: pH = 4.75 + log10(0.40/0.20) = 4.75 + 0.301 = 5.051.</p>]]></text>
+    </questiontext>
+    <answer fraction="100" format="moodle_auto_format">
+      <text>5.051</text>
+      <tolerance>0.02</tolerance>
+    </answer>
+  </question>
+
+  <!-- 8. NUM: Titration concentration calculation with SVG diagram -->
+  <question type="numerical">
+    <name><text>CHEM_Q08_Titration_Konzentrationsberechnung</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Betrachten Sie die Titrationskurve:<br/><img src="@@PLUGINFILE@@/titration_curve.svg" alt="Titrationskurve" /><br/>Zur Neutralisation von 20.0 ml einer Essigsaeureloesung unbekannter Konzentration werden bis zum Aequivalenzpunkt genau 18.5 ml einer 0.100 mol/l NaOH-Massloesung verbraucht. Berechnen Sie die Stoffmengenkonzentration c der Essigsaeure in mol/l: c = (18.5 * 0.100) / 20.0 = 0.0925.</p>]]></text>
+      <file name="titration_curve.svg" encoding="base64">PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMjAwIiB2aWV3Qm94PSIwIDAgMzAwIDIwMCI+CiAgPHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iI2ZmZmZmZiIvPgogIDxsaW5lIHgxPSI0MCIgeTE9IjE3MCIgeDI9IjI4MCIgeTI9IjE3MCIgc3Ryb2tlPSIjMzMzMzMzIiBzdHJva2Utd2lkdGg9IjIiLz4KICA8bGluZSB4MT0iNDAiIHkxPSIxNzAiIHgyPSI0MCIgeTI9IjIwIiBzdHJva2U9IiMzMzMzMzMiIHN0cm9rZS13aWR0aD0iMiIvPgogIDxwYXRoIGQ9Ik0gNDAgMTUwIFEgMTQwIDE0NSAxNjAgOTUgVCAyODAgNDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzI1NjNlYiIgc3Ryb2tlLXdpZHRoPSIzIi8+CiAgPGNpcmNsZSBjeD0iMTYwIiBjeT0iOTUiIHI9IjQiIGZpbGw9IiNlZjQ0NDQiLz4KICA8dGV4dCB4PSIxNzAiIHk9Ijk4IiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMSIgZmlsbD0iI2VmNDQ0NCI+QWVxdWl2YWxlbnpwdW5rdCAocEggOC43KTwvdGV4dD4KPC9zdmc+</file>
+    </questiontext>
+    <answer fraction="100" format="moodle_auto_format">
+      <text>0.0925</text>
+      <tolerance>0.002</tolerance>
+    </answer>
+  </question>
+
+  <!-- 9. SA: Conjugate acid of H2O -->
+  <question type="shortanswer">
+    <name><text>CHEM_Q09_Konjugierte_Saeure_Wasser</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Geben Sie die Summenformel der konjugierten Saeure (des Oxonium-Ions) von Wasser (H2O) an:</p>]]></text>
+    </questiontext>
+    <usecase>0</usecase>
+    <answer fraction="100" format="moodle_auto_format"><text>H3O+</text></answer>
+    <answer fraction="100" format="moodle_auto_format"><text>H3O^+ </text></answer>
+  </question>
+
+  <!-- 10. SA: Le Chatelier principle -->
+  <question type="shortanswer">
+    <name><text>CHEM_Q10_Prinzip_Vom_Kleinsten_Zwang</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Wie lautet der Name des franzoesischen Chemikers, nach dem das Prinzip vom kleinsten Zwang fuer chemische Gleichgewichte benannt ist?</p>]]></text>
+    </questiontext>
+    <usecase>0</usecase>
+    <answer fraction="100" format="moodle_auto_format"><text>Le Chatelier</text></answer>
+    <answer fraction="100" format="moodle_auto_format"><text>Prinzip von Le Chatelier</text></answer>
+  </question>
+
+  <!-- 11. SA: Equivalence point -->
+  <question type="shortanswer">
+    <name><text>CHEM_Q11_Aequivalenzpunkt_Fachbegriff</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Wie nennt man bei einer Titration den Punkt, an dem die Stoffmenge der zugegebenen Massloesung exakt aequivalent zur Stoffmenge des Analyten ist?</p>]]></text>
+    </questiontext>
+    <usecase>0</usecase>
+    <answer fraction="100" format="moodle_auto_format"><text>Aequivalenzpunkt</text></answer>
+    <answer fraction="100" format="moodle_auto_format"><text>Äquivalenzpunkt</text></answer>
+  </question>
+
+  <!-- 12. TF: Catalyst does not shift equilibrium -->
+  <question type="truefalse">
+    <name><text>CHEM_Q12_Katalysator_Gleichgewichtslage</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Ein Katalysator beschleunigt Hin- und Rueckreaktion gleichermassen und veraendert die thermodynamische Gleichgewichtslage nicht.</p>]]></text>
+    </questiontext>
+    <answer fraction="100" format="moodle_auto_format"><text>true</text></answer>
+    <answer fraction="0" format="moodle_auto_format"><text>false</text></answer>
+  </question>
+
+  <!-- 13. TF: Ammonium chloride acidic -->
+  <question type="truefalse">
+    <name><text>CHEM_Q13_Ammoniumchlorid_Sauer</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Eine waessrige Loesung von Ammoniumchlorid (NH4Cl) reagiert basisch (pH &gt; 7).</p>]]></text>
+    </questiontext>
+    <answer fraction="0" format="moodle_auto_format"><text>true</text></answer>
+    <answer fraction="100" format="moodle_auto_format"><text>false</text></answer>
+  </question>
+
+  <!-- 14. TF: Exothermic Kc with temperature -->
+  <question type="truefalse">
+    <name><text>CHEM_Q14_Exotherm_Kc_Temperatur</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Bei einer exothermen Reaktion sinkt der Wert der Gleichgewichtskonstanten Kc mit steigender Temperatur.</p>]]></text>
+    </questiontext>
+    <answer fraction="100" format="moodle_auto_format"><text>true</text></answer>
+    <answer fraction="0" format="moodle_auto_format"><text>false</text></answer>
+  </question>
+
+  <!-- 15. MATCH: Indicators to transition range and color -->
+  <question type="matching">
+    <name><text>CHEM_Q15_pH_Indikatoren_Umschlagsbereich</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Ordnen Sie die Saeure-Base-Indikatoren ihrem Umschlagsbereich und Farbwechsel zu:</p>]]></text>
+    </questiontext>
+    <subquestion format="html">
+      <text><![CDATA[<p>Phenolphthalein</p>]]></text>
+      <answer><text>Farblos zu Pink/Magenta (pH 8.2 - 10.0)</text></answer>
+    </subquestion>
+    <subquestion format="html">
+      <text><![CDATA[<p>Methylorange</p>]]></text>
+      <answer><text>Rot zu Gelb/Orange (pH 3.1 - 4.4)</text></answer>
+    </subquestion>
+    <subquestion format="html">
+      <text><![CDATA[<p>Bromthymolblau</p>]]></text>
+      <answer><text>Gelb zu Blau (pH 6.0 - 7.6)</text></answer>
+    </subquestion>
+  </question>
+
+  <!-- 16. MATCH: Conjugate acid-base pairs -->
+  <question type="matching">
+    <name><text>CHEM_Q16_Konjugierte_Saeure_Base_Paare</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Ordnen Sie der Broensted-Saeure ihre korrespondierende Broensted-Base zu:</p>]]></text>
+    </questiontext>
+    <subquestion format="html">
+      <text><![CDATA[<p>Schwefelsaeure (H2SO4)</p>]]></text>
+      <answer><text>Hydrogensulfat-Ion (HSO4-)</text></answer>
+    </subquestion>
+    <subquestion format="html">
+      <text><![CDATA[<p>Ammonium-Ion (NH4+)</p>]]></text>
+      <answer><text>Ammoniak (NH3)</text></answer>
+    </subquestion>
+    <subquestion format="html">
+      <text><![CDATA[<p>Hydrogencarbonat-Ion (HCO3-)</p>]]></text>
+      <answer><text>Carbonat-Ion (CO3 2-)</text></answer>
+    </subquestion>
+  </question>
+
+  <!-- 17. ESSAY: CaCO3 solubility in carbonated water -->
+  <question type="essay">
+    <name><text>CHEM_Q17_Kalkloeslichkeit_Karstbildung</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Erlaeutern Sie anhand des Massenwirkungsgesetzes und gekoppelter chemischer Gleichgewichte, warum Calciumcarbonat (CaCO3) in kohlensaeurehaltigem Wasser signifikant loeslicher ist als in reinem Wasser (Verkarstungsprozess). Formulieren Sie die Reaktionsgleichungen.</p>]]></text>
+    </questiontext>
+    <responseformat>editor</responseformat>
+    <responserequired>1</responserequired>
+    <responsefieldlines>15</responsefieldlines>
+    <graderinfo format="html">
+      <text><![CDATA[<p>Kriterien:<br/>
+1. Loeslichkeitsgleichgewicht: CaCO3(s) &lt;=&gt; Ca2+ + CO3(2-) mit KL (30%).<br/>
+2. Saeure-Base-Reaktion: CO2 + H2O &lt;=&gt; H2CO3 &lt;=&gt; H+ + HCO3- (30%).<br/>
+3. Gekoppeltes Gleichgewicht: CO3(2-) + H+ &lt;=&gt; HCO3-. Entzug von Carbonationen verschiebt das Kalkgleichgewicht nach rechts (Le Chatelier) (40%).</p>]]></text>
+    </graderinfo>
+  </question>
+
+  <!-- 18. ESSAY: Titration curve interpretation -->
+  <question type="essay">
+    <name><text>CHEM_Q18_Titrationskurve_Halbaequivalenzpunkt</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Skizzieren und interpretieren Sie den Verlauf einer Titrationskurve bei der Titration einer schwachen einprotonigen Saeure (z. B. Essigsaeure) mit starker Base (NaOH). Erklaeren Sie die besondere Bedeutung des Halbaequivalenzpunktes.</p>]]></text>
+    </questiontext>
+    <responseformat>editor</responseformat>
+    <responserequired>1</responserequired>
+    <responsefieldlines>12</responsefieldlines>
+    <graderinfo format="html">
+      <text><![CDATA[<p>Kriterien: Start-pH im schwach sauren Bereich. Pufferbereich mit flachem Anstieg. Am Halbaequivalenzpunkt gilt c(HA)=c(A-), folglich pH = pKs nach Henderson-Hasselbalch. Am Aequivalenzpunkt ist pH &gt; 7 wegen Hydrolyse des Acetats.</p>]]></text>
+    </graderinfo>
+  </question>
+</quiz>

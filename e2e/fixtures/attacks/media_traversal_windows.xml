@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+  <question type="description">
+    <name><text>Windows Traversal</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Windows path traversal</p>]]></text>
+      <file name="..\..\boot.ini" encoding="base64">iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=</file>
+    </questiontext>
+  </question>
+</quiz>

@@ -1,0 +1,3 @@
+<?xml version="1.0"?>
+<!ENTITY xxe "evil">
+<quiz><question type="description"><name><text>&xxe;</text></name></question></quiz>

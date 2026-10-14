@@ -1,0 +1,281 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+  <question type="category">
+    <category><text>$course$/top/Gymnasium_BE/Biologie_SF/Molekulargenetik_und_Zellbiologie</text></category>
+  </question>
+
+  <!-- 1. MC Single: Base pairing in DNA with diagram -->
+  <question type="multichoice">
+    <name><text>BIO_Q01_DNA_Basenpaarung</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Betrachten Sie die Abbildung der DNA-Doppelhelix:<br/><img src="@@PLUGINFILE@@/dna_replication.png" alt="DNA Doppelhelix" /><br/>Welche Basenpaarung ist komplementaer und ueber wie viele Wasserstoffbrueckenbindungen verknuepft?</p>]]></text>
+      <file name="dna_replication.png" encoding="base64">iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=</file>
+    </questiontext>
+    <single>true</single>
+    <shuffleanswers>true</shuffleanswers>
+    <answernumbering>abc</answernumbering>
+    <answer fraction="100" format="html"><text><![CDATA[<p>Adenin paart mit Thymin ueber 2 Wasserstoffbrueckenbindungen.</p>]]></text></answer>
+    <answer fraction="0" format="html"><text><![CDATA[<p>Guanin paart mit Cytosin ueber 2 Wasserstoffbrueckenbindungen.</p>]]></text></answer>
+    <answer fraction="0" format="html"><text><![CDATA[<p>Adenin paart mit Uracil in der DNA ueber 3 Wasserstoffbrueckenbindungen.</p>]]></text></answer>
+    <answer fraction="0" format="html"><text><![CDATA[<p>Cytosin paart mit Thymin ueber 3 Wasserstoffbrueckenbindungen.</p>]]></text></answer>
+  </question>
+
+  <!-- 2. MC Single: Start codon -->
+  <question type="multichoice">
+    <name><text>BIO_Q02_Startcodon_Translation</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Welches Codon fungiert bei Eukaryoten als Standard-Startcodon fuer die Translation und fuer welche Aminosaeure codiert es?</p>]]></text>
+    </questiontext>
+    <single>true</single>
+    <shuffleanswers>true</shuffleanswers>
+    <answernumbering>abc</answernumbering>
+    <answer fraction="100" format="html"><text><![CDATA[<p>AUG (Methionin)</p>]]></text></answer>
+    <answer fraction="0" format="html"><text><![CDATA[<p>UAA (Stopcodon)</p>]]></text></answer>
+    <answer fraction="0" format="html"><text><![CDATA[<p>UAG (Leucin)</p>]]></text></answer>
+    <answer fraction="0" format="html"><text><![CDATA[<p>GUG (Valin)</p>]]></text></answer>
+  </question>
+
+  <!-- 3. MC Multi: Enzymes in replication -->
+  <question type="multichoice">
+    <name><text>BIO_Q03_Replikationsenzyme</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Welche der folgenden Enzyme sind direkt an der semikonservativen Replikation der DNA beteiligt? (Waehlen Sie alle zutreffenden Enzyme)</p>]]></text>
+    </questiontext>
+    <single>false</single>
+    <shuffleanswers>true</shuffleanswers>
+    <answernumbering>abc</answernumbering>
+    <answer fraction="33.33333" format="html"><text><![CDATA[<p>Helikase</p>]]></text></answer>
+    <answer fraction="33.33333" format="html"><text><![CDATA[<p>DNA-Polymerase</p>]]></text></answer>
+    <answer fraction="33.33334" format="html"><text><![CDATA[<p>DNA-Ligase</p>]]></text></answer>
+    <answer fraction="-50" format="html"><text><![CDATA[<p>Ribulose-1,5-bisphosphat-carboxylase (Rubisco)</p>]]></text></answer>
+  </question>
+
+  <!-- 4. MC Single: Golgi apparatus function -->
+  <question type="multichoice">
+    <name><text>BIO_Q04_Golgi_Apparat_Funktion</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Welche Hauptfunktion erfuellt der Golgi-Apparat in eukaryotischen Zellen?</p>]]></text>
+    </questiontext>
+    <single>true</single>
+    <shuffleanswers>true</shuffleanswers>
+    <answernumbering>abc</answernumbering>
+    <answer fraction="100" format="html"><text><![CDATA[<p>Modifikation, Sortierung und Verpackung von Proteinen fuer den Transport.</p>]]></text></answer>
+    <answer fraction="0" format="html"><text><![CDATA[<p>Synthese von ATP ueber oxidative Phosphorylierung.</p>]]></text></answer>
+    <answer fraction="0" format="html"><text><![CDATA[<p>Synthese ribosomaler RNA im Zellkern.</p>]]></text></answer>
+  </question>
+
+  <!-- 5. TF: RNA contains Uracil -->
+  <question type="truefalse">
+    <name><text>BIO_Q05_RNA_Uracil_Vorkommen</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Die Ribonukleinsaeure (RNA) enthaelt anstelle der Pyrimidinbase Thymin die Base Uracil.</p>]]></text>
+    </questiontext>
+    <answer fraction="100" format="moodle_auto_format"><text>true</text></answer>
+    <answer fraction="0" format="moodle_auto_format"><text>false</text></answer>
+  </question>
+
+  <!-- 6. TF: Leading strand replication -->
+  <question type="truefalse">
+    <name><text>BIO_Q06_Leitstrang_Syntheserichtung</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Der Leitstrang (Leading Strand) wird waehrend der DNA-Replikation diskontinuierlich ueber Okazaki-Fragmente synthetisiert.</p>]]></text>
+    </questiontext>
+    <answer fraction="0" format="moodle_auto_format"><text>true</text></answer>
+    <answer fraction="100" format="moodle_auto_format"><text>false</text></answer>
+  </question>
+
+  <!-- 7. TF: Mitochondria circular DNA -->
+  <question type="truefalse">
+    <name><text>BIO_Q07_Mitochondrien_Eigene_DNA</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Mitochondrien besitzen eine eigene, zirkulaere DNA und 70S-Ribosomen, was die Endosymbiontentheorie stuetzt.</p>]]></text>
+    </questiontext>
+    <answer fraction="100" format="moodle_auto_format"><text>true</text></answer>
+    <answer fraction="0" format="moodle_auto_format"><text>false</text></answer>
+  </question>
+
+  <!-- 8. SA: Enzyme unzipping DNA -->
+  <question type="shortanswer">
+    <name><text>BIO_Q08_DNA_Entwindungsenzym</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Welches Enzym trennt die Wasserstoffbrueckenbindungen zwischen den komplementaeren Basenpaaren und oeffnet die Replikationsgabel?</p>]]></text>
+    </questiontext>
+    <usecase>0</usecase>
+    <answer fraction="100" format="moodle_auto_format"><text>Helikase</text></answer>
+    <answer fraction="100" format="moodle_auto_format"><text>DNA-Helikase</text></answer>
+  </question>
+
+  <!-- 9. SA: Non-coding intervening sequences -->
+  <question type="shortanswer">
+    <name><text>BIO_Q09_Nichtcodierende_Spleisssequenzen</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Wie nennt man die nicht-codierenden Abschnitte der prae-mRNA, die beim Spleissen herausgeschnitten werden?</p>]]></text>
+    </questiontext>
+    <usecase>0</usecase>
+    <answer fraction="100" format="moodle_auto_format"><text>Introns</text></answer>
+    <answer fraction="100" format="moodle_auto_format"><text>Intron</text></answer>
+  </question>
+
+  <!-- 10. SA: Aerobic ATP synthesis organelle -->
+  <question type="shortanswer">
+    <name><text>BIO_Q10_Kraftwerk_Der_Zelle</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Welches Organell wird aufgrund der oxidativen Phosphorylierung und aeroben ATP-Synthese als Kraftwerk der Zelle bezeichnet?</p>]]></text>
+    </questiontext>
+    <usecase>0</usecase>
+    <answer fraction="100" format="moodle_auto_format"><text>Mitochondrium</text></answer>
+    <answer fraction="100" format="moodle_auto_format"><text>Mitochondrien</text></answer>
+  </question>
+
+  <!-- 11. NUM: Chargaff rule calculation -->
+  <question type="numerical">
+    <name><text>BIO_Q11_Chargaff_Regel_Berechnung</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Ein doppelstraengiger DNA-Abschnitt enthaelt 30% Cytosin. Wie hoch ist der prozentuale Anteil von Thymin nach den Chargaff-Regeln? (in Prozent)</p>]]></text>
+    </questiontext>
+    <answer fraction="100" format="moodle_auto_format">
+      <text>20</text>
+      <tolerance>0</tolerance>
+    </answer>
+  </question>
+
+  <!-- 12. NUM: Codon length -->
+  <question type="numerical">
+    <name><text>BIO_Q12_Basen_Pro_Codon</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Aus wie vielen Nukleotidbasen besteht ein einzelnes Codon des genetischen Codes?</p>]]></text>
+    </questiontext>
+    <answer fraction="100" format="moodle_auto_format">
+      <text>3</text>
+      <tolerance>0</tolerance>
+    </answer>
+  </question>
+
+  <!-- 13. NUM: Human gamete chromosomes -->
+  <question type="numerical">
+    <name><text>BIO_Q13_Menschliche_Keimzelle_Chromosomen</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Wie viele Chromosomen enthaelt eine gesunde menschliche haploide Keimzelle (Spermium oder Eizelle)?</p>]]></text>
+    </questiontext>
+    <answer fraction="100" format="moodle_auto_format">
+      <text>23</text>
+      <tolerance>0</tolerance>
+    </answer>
+  </question>
+
+  <!-- 14. MATCH: Organelles to function -->
+  <question type="matching">
+    <name><text>BIO_Q14_Zellorganellen_Funktion_Zuordnung</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Ordnen Sie die Zellorganellen ihrer Stoffwechselfunktion zu:</p>]]></text>
+    </questiontext>
+    <subquestion format="html">
+      <text><![CDATA[<p>Ribosom</p>]]></text>
+      <answer><text>Translation der mRNA in Polypeptide</text></answer>
+    </subquestion>
+    <subquestion format="html">
+      <text><![CDATA[<p>Mitochondrium</p>]]></text>
+      <answer><text>Zellatmung und ATP-Synthese</text></answer>
+    </subquestion>
+    <subquestion format="html">
+      <text><![CDATA[<p>Endoplasmatisches Retikulum</p>]]></text>
+      <answer><text>Lipidsynthese und Proteinfaltung</text></answer>
+    </subquestion>
+    <subquestion format="html">
+      <text><![CDATA[<p>Chloroplast</p>]]></text>
+      <answer><text>Photosynthese und Glukosebildung</text></answer>
+    </subquestion>
+  </question>
+
+  <!-- 15. MATCH: RNA types to roles -->
+  <question type="matching">
+    <name><text>BIO_Q15_RNA_Typen_Aufgaben_Zuordnung</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Ordnen Sie die RNA-Typen ihren biologischen Aufgaben zu:</p>]]></text>
+    </questiontext>
+    <subquestion format="html">
+      <text><![CDATA[<p>mRNA</p>]]></text>
+      <answer><text>Traeger der genetischen Information vom Zellkern zum Ribosom</text></answer>
+    </subquestion>
+    <subquestion format="html">
+      <text><![CDATA[<p>tRNA</p>]]></text>
+      <answer><text>Transport spezifischer Aminosaeuren zum Ribosom</text></answer>
+    </subquestion>
+    <subquestion format="html">
+      <text><![CDATA[<p>rRNA</p>]]></text>
+      <answer><text>Struktureller und katalytischer Bestandteil der Ribosomen</text></answer>
+    </subquestion>
+  </question>
+
+  <!-- 16. MATCH: Mutation types to consequences -->
+  <question type="matching">
+    <name><text>BIO_Q16_Mutationstypen_Konsequenz_Zuordnung</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Ordnen Sie den Punktmutationstyp seiner molekularen Konsequenz zu:</p>]]></text>
+    </questiontext>
+    <subquestion format="html">
+      <text><![CDATA[<p>Stumme Mutation</p>]]></text>
+      <answer><text>Keine Aenderung der Aminosaeuresequenz</text></answer>
+    </subquestion>
+    <subquestion format="html">
+      <text><![CDATA[<p>Missense-Mutation</p>]]></text>
+      <answer><text>Einbau einer anderen Aminosaeure</text></answer>
+    </subquestion>
+    <subquestion format="html">
+      <text><![CDATA[<p>Nonsense-Mutation</p>]]></text>
+      <answer><text>Vorzeitiges Stopcodon und Kettenabbruch</text></answer>
+    </subquestion>
+  </question>
+
+  <!-- 17. CLOZE: Protein synthesis translation pathway -->
+  <question type="cloze">
+    <name><text>BIO_Q17_Proteinsynthese_Ablauf_Lueckentext</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Vervollstaendigen Sie die Schritte der eukaryotischen Proteinbiosynthese:<br/>
+Die Transkription findet im {1:MC:=Zellkern~Zytoplasma~Ribosom} statt.<br/>
+Das Enzym {1:SA:=RNA-Polymerase} synthetisiert die mRNA von 5' nach 3'.<br/>
+An den {1:MC:=Ribosomen~Mitochondrien} bindet die tRNA mit ihrem passenden {1:SA:=Anticodon} an das Codon der mRNA.
+</p>]]></text>
+    </questiontext>
+  </question>
+
+  <!-- 18. CLOZE: Replication fork -->
+  <question type="cloze">
+    <name><text>BIO_Q18_Replikationsgabel_Lueckentext</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Replikationsmechanismus am Doppelstrang:<br/>
+Der Leitstrang wird {1:MC:=kontinuierlich~diskontinuierlich} synthetisiert.<br/>
+Der Folgestrang benoetigt {1:SA:=Okazaki-Fragmente~Okazakifragmente}, welche anschliessend durch die {1:SA:=Ligase~DNA-Ligase} kovalent verknuepft werden.
+</p>]]></text>
+    </questiontext>
+  </question>
+
+  <!-- 19. CLOZE: Mitosis phases ordering -->
+  <question type="cloze">
+    <name><text>BIO_Q19_Mitose_Phasen_Lueckentext</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Geben Sie die korrekte Reihenfolge der vier Kernteilungsphasen der Mitose an:<br/>
+1. Prophase<br/>
+2. {1:SA:=Metaphase}<br/>
+3. {1:SA:=Anaphase}<br/>
+4. {1:SA:=Telophase}
+</p>]]></text>
+    </questiontext>
+  </question>
+
+  <!-- 20. ESSAY: Endosymbiont theory -->
+  <question type="essay">
+    <name><text>BIO_Q20_Endosymbiontentheorie_Beweise</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Erlaeutern Sie die Endosymbiontentheorie zur evolutionaeren Entstehung von Mitochondrien und Chloroplasten in eukaryotischen Zellen. Nennen Sie mindestens drei unabhaengige zellbiologische Belege fuer diese Theorie.</p>]]></text>
+    </questiontext>
+    <responseformat>editor</responseformat>
+    <responserequired>1</responserequired>
+    <responsefieldlines>15</responsefieldlines>
+    <graderinfo format="html">
+      <text><![CDATA[<p>Kriterien:<br/>
+1. Erklaerung der Phagozytose eines aeroben alpha-Proteobakteriums bzw. Cyanobakteriums durch Urkaryoten ohne Verdauung (Symbiose) (40%).<br/>
+2. Nennung von mindestens 3 Belegen: Doppelmembran, eigene zirkulaere DNA, 70S-Ribosomen, Vermehrung durch Zweiteilung (60%).</p>]]></text>
+    </graderinfo>
+  </question>
+</quiz>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+  <question type="description">
+    <name><text>SVG Onload</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Malicious SVG onload</p>]]></text>
+      <file name="onload.svg" encoding="base64">PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIG9ubG9hZD0iYWxlcnQoMSkiPjxjaXJjbGUgY3g9IjEwIiBjeT0iMTAiIHI9IjUiLz48L3N2Zz4=</file>
+    </questiontext>
+  </question>
+</quiz>

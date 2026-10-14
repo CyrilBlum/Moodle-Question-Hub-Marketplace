@@ -1,0 +1,364 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+  <question type="category">
+    <category><text>$course$/top/Gymnasium_ZH/Informatik_GF/Algorithmen_und_Datenstrukturen</text></category>
+  </question>
+
+  <!-- 1. MC Single: Best-case time complexity of Quicksort -->
+  <question type="multichoice">
+    <name><text>CS_Q01_Quicksort_BestCase</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Welche asymptotische Laufzeitkomplexitaet besitzt der Quicksort-Algorithmus im besten Fall (Best-Case)?</p>]]></text>
+    </questiontext>
+    <single>true</single>
+    <shuffleanswers>true</shuffleanswers>
+    <answernumbering>abc</answernumbering>
+    <answer fraction="100" format="html"><text><![CDATA[<p>O(n log n)</p>]]></text></answer>
+    <answer fraction="0" format="html"><text><![CDATA[<p>O(n^2)</p>]]></text></answer>
+    <answer fraction="0" format="html"><text><![CDATA[<p>O(n)</p>]]></text></answer>
+    <answer fraction="0" format="html"><text><![CDATA[<p>O(log n)</p>]]></text></answer>
+  </question>
+
+  <!-- 2. MC Single: BST Invariant with Embedded SVG Diagram -->
+  <question type="multichoice">
+    <name><text>CS_Q02_BST_Invariant</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Betrachten Sie den folgenden binaeren Suchbaum:<br/><img src="@@PLUGINFILE@@/binary_tree.svg" alt="Binaerbaum" /><br/>Welche Invariante muss fuer jeden Knoten k eines binaeren Suchbaums stets erfuellt sein?</p>]]></text>
+      <file name="binary_tree.svg" encoding="base64">PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMjAwIiB2aWV3Qm94PSIwIDAgMzAwIDIwMCI+CiAgPHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iI2Y4ZmFmYyIvPgogIDxjaXJjbGUgY3g9IjE1MCIgY3k9IjQwIiByPSIyMCIgZmlsbD0iIzNiODJmNiIgc3Ryb2tlPSIjMWQ0ZWQ4IiBzdHJva2Utd2lkdGg9IjIiLz4KICA8dGV4dCB4PSIxNTAiIHk9IjQ2IiBmb250LWZhbWlseT0ic2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iI2ZmZmZmZiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+MTA8L3RleHQ+CiAgPGxpbmUgeDE9IjEzNSIgeTE9IjU0IiB4Mj0iODUiIHkyPSI4NiIgc3Ryb2tlPSIjNjQ3NDhiIiBzdHJva2Utd2lkdGg9IjIiLz4KICA8bGluZSB4MT0iMTY1IiB5MT0iNTQiIHgyPSIyMTUiIHkyPSI4NiIgc3Ryb2tlPSIjNjQ3NDhiIiBzdHJva2Utd2lkdGg9IjIiLz4KICA8Y2lyY2xlIGN4PSI3MCIgY3k9IjEwMCIgcj0iMjAiIGZpbGw9IiMzYjgyZjYiIHN0cm9rZT0iIzFkNGVkOCIgc3Ryb2tlLXdpZHRoPSIyIi8+CiAgPHRleHQgeD0iNzAiIHk9IjEwNiIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiNmZmZmZmYiIHRleHQtYW5jaG9yPSJtaWRkbGUiPjU8L3RleHQ+CiAgPGNpcmNsZSBjeD0iMjMwIiBjeT0iMTAwIiByPSIyMCIgZmlsbD0iIzNiODJmNiIgc3Ryb2tlPSIjMWQ0ZWQ4IiBzdHJva2Utd2lkdGg9IjIiLz4KICA8dGV4dCB4PSIyMzAiIHk9IjEwNiIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiNmZmZmZmYiIHRleHQtYW5jaG9yPSJtaWRkbGUiPjE1PC90ZXh0Pgo8L3N2Zz4=</file>
+    </questiontext>
+    <single>true</single>
+    <shuffleanswers>true</shuffleanswers>
+    <answernumbering>abc</answernumbering>
+    <answer fraction="100" format="html"><text><![CDATA[<p>Alle Schluessel im linken Teilbaum sind kleiner als der Schluessel von k, alle im rechten groesser.</p>]]></text></answer>
+    <answer fraction="0" format="html"><text><![CDATA[<p>Der Baum muss auf allen Ebenen vollstaendig gefuellt sein.</p>]]></text></answer>
+    <answer fraction="0" format="html"><text><![CDATA[<p>Die Hoehe des linken Teilbaums ist stets gleich der des rechten Teilbaums.</p>]]></text></answer>
+    <answer fraction="0" format="html"><text><![CDATA[<p>Jeder Knoten besitzt genau zwei Kindknoten.</p>]]></text></answer>
+  </question>
+
+  <!-- 3. MC Multi: Stable sorting algorithms -->
+  <question type="multichoice">
+    <name><text>CS_Q03_Stabile_Sortieralgorithmen</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Welche der folgenden Sortieralgorithmen sind in ihrer Standardimplementierung stabil? (Waehlen Sie alle zutreffenden Optionen)</p>]]></text>
+    </questiontext>
+    <single>false</single>
+    <shuffleanswers>true</shuffleanswers>
+    <answernumbering>abc</answernumbering>
+    <answer fraction="50" format="html"><text><![CDATA[<p>Mergesort</p>]]></text></answer>
+    <answer fraction="50" format="html"><text><![CDATA[<p>Insertion Sort</p>]]></text></answer>
+    <answer fraction="-50" format="html"><text><![CDATA[<p>Heapsort</p>]]></text></answer>
+    <answer fraction="-50" format="html"><text><![CDATA[<p>Standard Quicksort</p>]]></text></answer>
+  </question>
+
+  <!-- 4. MC Single: Array Lookup -->
+  <question type="multichoice">
+    <name><text>CS_Q04_Array_Lookup_Komplexitaet</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Welche Laufzeitkomplexitaet hat der wahlfreie Zugriff auf ein Element ueber seinen Index in einem zusammenhaengenden statischen Array?</p>]]></text>
+    </questiontext>
+    <single>true</single>
+    <shuffleanswers>true</shuffleanswers>
+    <answernumbering>abc</answernumbering>
+    <answer fraction="100" format="html"><text><![CDATA[<p>O(1)</p>]]></text></answer>
+    <answer fraction="0" format="html"><text><![CDATA[<p>O(log n)</p>]]></text></answer>
+    <answer fraction="0" format="html"><text><![CDATA[<p>O(n)</p>]]></text></answer>
+  </question>
+
+  <!-- 5. MC Multi: Tree Traversals -->
+  <question type="multichoice">
+    <name><text>CS_Q05_Traversierungsarten</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Welche der folgenden Traversierungsarten sind Tiefentraversierungen (Depth-First) bei Baeumen?</p>]]></text>
+    </questiontext>
+    <single>false</single>
+    <shuffleanswers>true</shuffleanswers>
+    <answernumbering>abc</answernumbering>
+    <answer fraction="33.33333" format="html"><text><![CDATA[<p>Preorder</p>]]></text></answer>
+    <answer fraction="33.33333" format="html"><text><![CDATA[<p>Inorder</p>]]></text></answer>
+    <answer fraction="33.33334" format="html"><text><![CDATA[<p>Postorder</p>]]></text></answer>
+    <answer fraction="-50" format="html"><text><![CDATA[<p>Level-Order (Breitensuche)</p>]]></text></answer>
+  </question>
+
+  <!-- 6. TF: Max height of binary tree -->
+  <question type="truefalse">
+    <name><text>CS_Q06_Binaerbaum_Maximale_Hoehe</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Ein binaerer Baum mit n Knoten besitzt eine maximale Hoehe von n (wenn jeder Knoten maximal ein Kind hat und der Baum zu einer linearen Kette entartet).</p>]]></text>
+    </questiontext>
+    <answer fraction="100" format="moodle_auto_format"><text>true</text></answer>
+    <answer fraction="0" format="moodle_auto_format"><text>false</text></answer>
+  </question>
+
+  <!-- 7. TF: Bubble Sort average runtime -->
+  <question type="truefalse">
+    <name><text>CS_Q07_Bubblesort_Average_Komplexitaet</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Bubble Sort besitzt im durchschnittlichen Fall (Average-Case) eine asymptotische Laufzeit von O(n log n).</p>]]></text>
+    </questiontext>
+    <answer fraction="0" format="moodle_auto_format"><text>true</text></answer>
+    <answer fraction="100" format="moodle_auto_format"><text>false</text></answer>
+  </question>
+
+  <!-- 8. TF: Min-Heap Root -->
+  <question type="truefalse">
+    <name><text>CS_Q08_Min_Heap_Wurzeleigenschaft</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>In einem Min-Heap enthaelt der Wurzelknoten stets das kleinste Element aller im Heap gespeicherten Werte.</p>]]></text>
+    </questiontext>
+    <answer fraction="100" format="moodle_auto_format"><text>true</text></answer>
+    <answer fraction="0" format="moodle_auto_format"><text>false</text></answer>
+  </question>
+
+  <!-- 9. SA: Inorder Traversal BST -->
+  <question type="shortanswer">
+    <name><text>CS_Q09_Inorder_Reihenfolge</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>In welcher Reihenfolge liefert die Inorder-Traversierung die Werte eines binaeren Suchbaums? Geben Sie das deutsche Adjektiv an (z. B. aufsteigend).</p>]]></text>
+    </questiontext>
+    <usecase>0</usecase>
+    <answer fraction="100" format="moodle_auto_format"><text>aufsteigend</text></answer>
+    <answer fraction="100" format="moodle_auto_format"><text>sortiert</text></answer>
+    <answer fraction="100" format="moodle_auto_format"><text>monoton steigend</text></answer>
+  </question>
+
+  <!-- 10. SA: Python Base Case Keyword -->
+  <question type="shortanswer">
+    <name><text>CS_Q10_Rekursion_Basisfall_Keyword</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Welches Schluesselwort leitet in Python typischerweise die Rueckgabe des Werts im Basisfall einer rekursiven Funktion ein?</p>]]></text>
+    </questiontext>
+    <usecase>0</usecase>
+    <answer fraction="100" format="moodle_auto_format"><text>return</text></answer>
+  </question>
+
+  <!-- 11. SA: Divide and Conquer sorting algorithm -->
+  <question type="shortanswer">
+    <name><text>CS_Q11_Divide_Conquer_Algorithmus</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Wie heisst der Sortieralgorithmus, der das Array wiederholt in zwei Haelften teilt, diese rekursiv sortiert und anschliessend verschmilzt?</p>]]></text>
+    </questiontext>
+    <usecase>0</usecase>
+    <answer fraction="100" format="moodle_auto_format"><text>Mergesort</text></answer>
+    <answer fraction="100" format="moodle_auto_format"><text>Merge Sort</text></answer>
+  </question>
+
+  <!-- 12. SA: Leaf node -->
+  <question type="shortanswer">
+    <name><text>CS_Q12_Baumknoten_Ohne_Kinder</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Wie nennt man in der Graphentheorie und Datenstrukturlehre einen Baumknoten, der keine Kindknoten besitzt?</p>]]></text>
+    </questiontext>
+    <usecase>0</usecase>
+    <answer fraction="100" format="moodle_auto_format"><text>Blatt</text></answer>
+    <answer fraction="100" format="moodle_auto_format"><text>Leaf</text></answer>
+    <answer fraction="100" format="moodle_auto_format"><text>Blattknoten</text></answer>
+  </question>
+
+  <!-- 13. NUM: Complete binary tree max nodes -->
+  <question type="numerical">
+    <name><text>CS_Q13_Knotenanzahl_Hoehe_4</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Wie viele Knoten besitzt ein vollstaendiger binaerer Baum maximal bei einer Hoehe von h = 4 (Wurzel besitzt Hoehe 0)? Formel: 2^(h+1) - 1.</p>]]></text>
+    </questiontext>
+    <answer fraction="100" format="moodle_auto_format">
+      <text>31</text>
+      <tolerance>0</tolerance>
+    </answer>
+  </question>
+
+  <!-- 14. NUM: Binary search comparisons -->
+  <question type="numerical">
+    <name><text>CS_Q14_Binaere_Suche_Vergleiche</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Wie viele Schluesselvergleiche fuehrt die binaere Suche auf einem sortierten Array mit 128 Elementen im unguenstigsten Fall hoechstens durch? (log2(128) + 1)</p>]]></text>
+    </questiontext>
+    <answer fraction="100" format="moodle_auto_format">
+      <text>8</text>
+      <tolerance>0</tolerance>
+    </answer>
+  </question>
+
+  <!-- 15. NUM: Selection sort swaps -->
+  <question type="numerical">
+    <name><text>CS_Q15_Selection_Sort_Tausche</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Wie viele Vertauschungen (Swaps) von Elementen fuehrt Selection Sort auf einem Array mit 10 Elementen im unguenstigsten Fall maximal durch?</p>]]></text>
+    </questiontext>
+    <answer fraction="100" format="moodle_auto_format">
+      <text>9</text>
+      <tolerance>0</tolerance>
+    </answer>
+  </question>
+
+  <!-- 16. NUM: Min height BST 15 nodes -->
+  <question type="numerical">
+    <name><text>CS_Q16_Minimale_Hoehe_BST_15</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Welche minimale Hoehe hat ein balancierter binaerer Suchbaum mit genau n = 15 Knoten (Wurzel hat Hoehe 0)?</p>]]></text>
+    </questiontext>
+    <answer fraction="100" format="moodle_auto_format">
+      <text>3</text>
+      <tolerance>0</tolerance>
+    </answer>
+  </question>
+
+  <!-- 17. MATCH: Sorting algorithms to worst-case complexity -->
+  <question type="matching">
+    <name><text>CS_Q17_Sortieralgorithmen_Komplexitaet_Zuordnung</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Ordnen Sie die Sortieralgorithmen ihrer Worst-Case-Laufzeitkomplexitaet zu:</p>]]></text>
+    </questiontext>
+    <subquestion format="html">
+      <text><![CDATA[<p>Quicksort</p>]]></text>
+      <answer><text>O(n^2)</text></answer>
+    </subquestion>
+    <subquestion format="html">
+      <text><![CDATA[<p>Mergesort</p>]]></text>
+      <answer><text>O(n log n)</text></answer>
+    </subquestion>
+    <subquestion format="html">
+      <text><![CDATA[<p>Bubble Sort</p>]]></text>
+      <answer><text>O(n^2)</text></answer>
+    </subquestion>
+    <subquestion format="html">
+      <text><![CDATA[<p>Heapsort</p>]]></text>
+      <answer><text>O(n log n)</text></answer>
+    </subquestion>
+  </question>
+
+  <!-- 18. MATCH: Data structure memory nature -->
+  <question type="matching">
+    <name><text>CS_Q18_Datenstrukturen_Speicherlayout</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Ordnen Sie die Datenstrukturen ihrem Speicherlayout im Arbeitsspeicher zu:</p>]]></text>
+    </questiontext>
+    <subquestion format="html">
+      <text><![CDATA[<p>Statisches Array</p>]]></text>
+      <answer><text>Feste Groesse im zusammenhaengenden Speicher</text></answer>
+    </subquestion>
+    <subquestion format="html">
+      <text><![CDATA[<p>Verkettete Liste</p>]]></text>
+      <answer><text>Dynamische Knoten mit Zeigern und Referenzen</text></answer>
+    </subquestion>
+    <subquestion format="html">
+      <text><![CDATA[<p>Binaerbaum</p>]]></text>
+      <answer><text>Nicht-lineare hierarchische Verzeigerung</text></answer>
+    </subquestion>
+  </question>
+
+  <!-- 19. MATCH: Tree traversal visit order -->
+  <question type="matching">
+    <name><text>CS_Q19_Traversierungsreihenfolge_Zuordnung</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Ordnen Sie der Traversierungsart die korrekte Besuchsreihenfolge zu:</p>]]></text>
+    </questiontext>
+    <subquestion format="html">
+      <text><![CDATA[<p>Preorder</p>]]></text>
+      <answer><text>Wurzel, Links, Rechts</text></answer>
+    </subquestion>
+    <subquestion format="html">
+      <text><![CDATA[<p>Inorder</p>]]></text>
+      <answer><text>Links, Wurzel, Rechts</text></answer>
+    </subquestion>
+    <subquestion format="html">
+      <text><![CDATA[<p>Postorder</p>]]></text>
+      <answer><text>Links, Rechts, Wurzel</text></answer>
+    </subquestion>
+  </question>
+
+  <!-- 20. CLOZE: Binary Search Python Code -->
+  <question type="cloze">
+    <name><text>CS_Q20_Binaere_Suche_Code_Lueckentext</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Ergaenzen Sie die Schluesselstellen des binaeren Suchalgorithmus in Python:<br/>
+<code>
+def binary_search(arr, target):<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;low = 0<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;high = len(arr) - 1<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;while low &lt;= high:<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;mid = {1:SA:=(low + high) // 2~=(high + low) // 2}<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if arr[mid] == target:<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{1:MC:=return mid~return True~return low}<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;elif arr[mid] &lt; target:<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;low = mid + 1<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;else:<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;high = mid - 1<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;return -1
+</code>
+</p>]]></text>
+    </questiontext>
+  </question>
+
+  <!-- 21. CLOZE: Factorial recursion -->
+  <question type="cloze">
+    <name><text>CS_Q21_Fakultaet_Rekursion_Lueckentext</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Vervollstaendigen Sie die rekursive Fakultaetsfunktion:<br/>
+<code>
+def fak(n):<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;if n &lt;= {1:NUMERICAL:=1:0}:<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return {1:NUMERICAL:=1:0}<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;else:<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return n * fak({1:SA:=n - 1~n-1})
+</code>
+</p>]]></text>
+    </questiontext>
+  </question>
+
+  <!-- 22. CLOZE: Big-O Complexity Classification -->
+  <question type="cloze">
+    <name><text>CS_Q22_Komplexitaet_Klassifikation_Lueckentext</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Klassifizieren Sie die durchschnittlichen Laufzeiten:<br/>
+Lineare Suche im unsortierten Array: {1:MC:=O(n)~O(log n)~O(1)}<br/>
+Binaere Suche im sortierten Array: {1:MC:=O(log n)~O(n)~O(n^2)}<br/>
+Quicksort im Average-Case: {1:MC:=O(n log n)~O(n^2)~O(n)}
+</p>]]></text>
+    </questiontext>
+  </question>
+
+  <!-- 23. ESSAY: Singly linked list reversal -->
+  <question type="essay">
+    <name><text>CS_Q23_Verkettete_Liste_Umkehren</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Entwerfen Sie einen Algorithmus (in Pseudocode oder Python) zum iterativen Umkehren einer einfach verketteten Liste. Der Algorithmus muss in O(n) Zeit und O(1) zusaetzlichem Speicherplatz arbeiten. Erklaeren Sie die Funktionsweise Ihrer Zeigermutationen.</p>]]></text>
+    </questiontext>
+    <responseformat>editor</responseformat>
+    <responserequired>1</responserequired>
+    <responsefieldlines>15</responsefieldlines>
+    <graderinfo format="html">
+      <text><![CDATA[<p>Bewertungskriterien:<br/>
+1. Korrekte Initialisierung von prev = None, current = head (30%).<br/>
+2. Korrekte Zeigerumlenkung current.next = prev unter Erhalt von next_node = current.next (40%).<br/>
+3. Rueckgabe des neuen Kopfknotens (prev) und Zeit/Speicherkomplexitaet O(n)/O(1) (30%).</p>]]></text>
+    </graderinfo>
+  </question>
+
+  <!-- 24. ESSAY: Array vs Linked Queue -->
+  <question type="essay">
+    <name><text>CS_Q24_Warteschlange_Implementierungsvergleich</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Vergleichen Sie die Vor- und Nachteile von Array-basierten (Ringpuffer) versus einfach verketteten Listen-Implementierungen fuer eine Warteschlange (Queue FIFO). Gehen Sie auf Speicheroverhead, Cache-Lokalitaet und dynamische Groessenaenderung ein.</p>]]></text>
+    </questiontext>
+    <responseformat>editor</responseformat>
+    <responserequired>1</responserequired>
+    <responsefieldlines>12</responsefieldlines>
+    <graderinfo format="html">
+      <text><![CDATA[<p>Kriterien: Ringpuffer hat exzellente Cache-Lokalitaet und minimalen Overhead pro Element, aber feste Groesse. Verkettete Liste waechst dynamisch ohne Reallokation, hat aber Zeigeroverhead und Cache-Misses.</p>]]></text>
+    </graderinfo>
+  </question>
+
+  <!-- 25. ESSAY: Divide and Conquer in Mergesort -->
+  <question type="essay">
+    <name><text>CS_Q25_Divide_and_Conquer_Prinzip</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Erlaeutern Sie das Prinzip von Divide-and-Conquer anhand des Mergesort-Algorithmus. Beschreiben Sie praezise die drei Phasen: Teilen (Divide), Beherrschen (Conquer) und Verschmelzen (Combine).</p>]]></text>
+    </questiontext>
+    <responseformat>editor</responseformat>
+    <responserequired>1</responserequired>
+    <responsefieldlines>12</responsefieldlines>
+    <graderinfo format="html">
+      <text><![CDATA[<p>Divide: Array in der Mitte halbieren O(1). Conquer: Beide Teilarrays rekursiv sortieren. Combine: Die zwei sortierten Teillisten in O(n) durch 2-Zeiger-Verfahren zusammenfuegen.</p>]]></text>
+    </graderinfo>
+  </question>
+</quiz>

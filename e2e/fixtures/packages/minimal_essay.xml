@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+  <question type="category">
+    <category><text>$course$/top/Default/Essay</text></category>
+  </question>
+  <question type="essay">
+    <name><text>ESSAY Valid</text></name>
+    <questiontext format="html"><text><![CDATA[<p>Beschreiben Sie die Funktion des Schweizer Bundesrats.</p>]]></text></questiontext>
+    <responseformat>editor</responseformat>
+    <responserequired>1</responserequired>
+    <responsefieldlines>15</responsefieldlines>
+    <graderinfo format="html"><text><![CDATA[<p>Kriterien: Kollegialitaetsprinzip, 7 Mitglieder, Zauberformel.</p>]]></text></graderinfo>
+  </question>
+</quiz>

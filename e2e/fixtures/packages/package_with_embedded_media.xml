@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+  <question type="category">
+    <category><text>$course$/top/Default/MediaTest</text></category>
+  </question>
+  <question type="multichoice">
+    <name><text>MC With Embedded Images</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Betrachten Sie das folgende Diagramm:<br /><img src="@@PLUGINFILE@@/diagram.png" alt="Diagramm" /><br /><img src="@@PLUGINFILE@@/shape.svg" alt="Vektor" /></p>]]></text>
+      <file name="diagram.png" encoding="base64">iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=</file>
+      <file name="shape.svg" encoding="base64">PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIj48Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI0MCIgc3Ryb2tlPSJncmVlbiIgc3Ryb2tlLXdpZHRoPSI0IiBmaWxsPSJ5ZWxsb3ciIC8+PC9zdmc+</file>
+    </questiontext>
+    <single>true</single>
+    <answer fraction="100" format="html">
+      <text><![CDATA[<p>Korrekt</p>]]></text>
+    </answer>
+    <answer fraction="0" format="html">
+      <text><![CDATA[<p>Inkorrekt</p>]]></text>
+    </answer>
+  </question>
+</quiz>

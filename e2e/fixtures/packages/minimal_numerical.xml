@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+  <question type="category">
+    <category><text>$course$/top/Default/Numerical</text></category>
+  </question>
+  <question type="numerical">
+    <name><text>NUM Valid</text></name>
+    <questiontext format="html"><text><![CDATA[<p>Berechnen Sie die Kreiszahl Pi auf zwei Nachkommastellen gerundet.</p>]]></text></questiontext>
+    <answer fraction="100">
+      <text>3.14</text>
+      <tolerance>0.01</tolerance>
+      <tolerancetype>1</tolerancetype>
+      <feedback><text><![CDATA[<p>Richtig!</p>]]></text></feedback>
+    </answer>
+  </question>
+</quiz>

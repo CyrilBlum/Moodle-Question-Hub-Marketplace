@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+  <question type="category">
+    <category><text>$course$/top/Default/MultichoiceSingle</text></category>
+  </question>
+  <question type="multichoice">
+    <name><text>MC Single Valid</text></name>
+    <questiontext format="html"><text><![CDATA[<p>Was ist die Hauptstadt der Schweiz?</p>]]></text></questiontext>
+    <single>true</single>
+    <shuffleanswers>true</shuffleanswers>
+    <answernumbering>abc</answernumbering>
+    <answer fraction="100" format="html">
+      <text><![CDATA[<p>Bern</p>]]></text>
+      <feedback><text><![CDATA[<p>Richtig!</p>]]></text></feedback>
+    </answer>
+    <answer fraction="0" format="html">
+      <text><![CDATA[<p>Zuerich</p>]]></text>
+      <feedback><text><![CDATA[<p>Falsch, Zuerich ist die groesste Stadt, aber nicht die Bundesstadt.</p>]]></text></feedback>
+    </answer>
+    <answer fraction="0" format="html">
+      <text><![CDATA[<p>Genf</p>]]></text>
+      <feedback><text><![CDATA[<p>Falsch.</p>]]></text></feedback>
+    </answer>
+  </question>
+</quiz>

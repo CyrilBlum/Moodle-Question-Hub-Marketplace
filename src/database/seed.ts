@@ -1,3 +1,4 @@
+import { randomBytes } from 'crypto';
 import { getDatabase, closeDatabase } from './connection';
 import { CryptoService } from '../services/crypto.service';
 
@@ -10,7 +11,9 @@ export async function runSeeds(): Promise<void> {
   const userId = '11111111-2222-3333-4444-555555555555';
 
   if (!existingUser) {
-    const passwordHash = CryptoService.hashPassword('MoodleHub2026!');
+    // The seed password comes from the environment; without it a random one is generated and shown once.
+    const seedPassword = process.env.SEED_TEACHER_PASSWORD || randomBytes(18).toString('base64url');
+    const passwordHash = CryptoService.hashPassword(seedPassword);
     await knex('users').insert({
       id: userId,
       email: 'teacher@kanti.ch',
@@ -22,7 +25,11 @@ export async function runSeeds(): Promise<void> {
       created_at: new Date(),
       updated_at: new Date(),
     });
-    console.log('Standard-Lehrperson angelegt: teacher@kanti.ch / MoodleHub2026!');
+    if (process.env.SEED_TEACHER_PASSWORD) {
+      console.log('Standard-Lehrperson angelegt: teacher@kanti.ch (Passwort aus SEED_TEACHER_PASSWORD)');
+    } else {
+      console.log(`Standard-Lehrperson angelegt: teacher@kanti.ch / ${seedPassword} (einmalig angezeigt)`);
+    }
   }
 
   // 2. Default OAuth Client for Moodle Plugins

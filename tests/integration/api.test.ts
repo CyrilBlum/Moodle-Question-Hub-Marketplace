@@ -5,7 +5,7 @@ import { FastifyInstance } from 'fastify';
 import { buildServer } from '../../src/server';
 import { runMigrations } from '../../src/database/migrate';
 import { runSeeds } from '../../src/database/seed';
-import { closeDatabase } from '../../src/database/connection';
+import { closeDatabase, getDatabase } from '../../src/database/connection';
 import { CryptoService } from '../../src/services/crypto.service';
 
 describe('Marketplace REST API Endpoints Integration Tests', () => {
@@ -16,9 +16,14 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
   let patId: string;
 
   beforeAll(async () => {
+    process.env.SEED_TEACHER_PASSWORD = 'integration-test-only-pw';
     // Run DB migrations and seed
     await runMigrations();
     await runSeeds();
+    // A persistent local test DB may already contain the user from an earlier seed: pin the test password.
+    await getDatabase()('users')
+      .where({ email: 'teacher@kanti.ch' })
+      .update({ password_hash: CryptoService.hashPassword(process.env.SEED_TEACHER_PASSWORD as string) });
 
     app = await buildServer();
     await app.ready();
@@ -85,7 +90,7 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
       url: '/api/v1/auth/login',
       payload: {
         email: 'teacher@kanti.ch',
-        password: 'MoodleHub2026!',
+        password: 'integration-test-only-pw',
       },
     });
 

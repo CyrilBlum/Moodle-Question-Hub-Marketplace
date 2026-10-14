@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+  <question type="category">
+    <category><text>$course$/top/Default/TrueFalse</text></category>
+  </question>
+  <question type="truefalse">
+    <name><text>TF Valid</text></name>
+    <questiontext format="html"><text><![CDATA[<p>Der Mount Everest ist der hoechste Berg der Erde.</p>]]></text></questiontext>
+    <answer fraction="100" format="html">
+      <text>true</text>
+      <feedback><text><![CDATA[<p>Korrekt!</p>]]></text></feedback>
+    </answer>
+    <answer fraction="0" format="html">
+      <text>false</text>
+      <feedback><text><![CDATA[<p>Falsch.</p>]]></text></feedback>
+    </answer>
+  </question>
+</quiz>

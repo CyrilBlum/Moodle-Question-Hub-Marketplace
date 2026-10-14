@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+  <question type="category">
+    <category><text>$course$/top/Gymnasium_AG/Mathematik_GF/Differential_und_Integralrechnung</text></category>
+  </question>
+
+  <!-- 1. NUM: Area under sin(x) in [0, pi] -->
+  <question type="numerical">
+    <name><text>MATH_Q01_Integral_Sinus_Flaeche</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Berechnen Sie den Flaecheninhalt der Flaeche, die vom Graphen \( f(x) = \sin(x) \) und der \( x \)-Achse im Intervall \( [0, \pi] \) eingeschlossen wird. \( \int_0^\pi \sin(x) dx = [-\cos(x)]_0^\pi = -(-1) - (-1) = 2.0 \).</p>]]></text>
+    </questiontext>
+    <answer fraction="100" format="moodle_auto_format">
+      <text>2.0</text>
+      <tolerance>0.05</tolerance>
+    </answer>
+  </question>
+
+  <!-- 2. NUM: Tangent slope -->
+  <question type="numerical">
+    <name><text>MATH_Q02_Tangentensteigung_Exp</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Bestimmen Sie die Steigung der Tangente an den Graphen von \( f(x) = e^{-0.5 x^2} \) an der Stelle \( x = 1 \). Es gilt \( f'(1) = -1 \cdot e^{-0.5} \approx -0.6065 \).</p>]]></text>
+    </questiontext>
+    <answer fraction="100" format="moodle_auto_format">
+      <text>-0.6065</text>
+      <tolerance>0.01</tolerance>
+    </answer>
+  </question>
+
+  <!-- 3. NUM: Integral 1/x from 1 to 3 -->
+  <question type="numerical">
+    <name><text>MATH_Q03_Bestimmtes_Integral_Kehrwert</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Berechnen Sie den numerischen Wert des Integrals \( \int_1^3 \frac{1}{x} dx = \ln(3) \).</p>]]></text>
+    </questiontext>
+    <answer fraction="100" format="moodle_auto_format">
+      <text>1.0986</text>
+      <tolerance>0.02</tolerance>
+    </answer>
+  </question>
+
+  <!-- 4. NUM: Volume of revolution -->
+  <question type="numerical">
+    <name><text>MATH_Q04_Rotationskoerper_Volumen</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Berechnen Sie das Volumen des Rotationskoerpers bei Rotation von \( f(x) = \sqrt{x} \) um die \( x \)-Achse im Intervall \( [0, 2] \): \( V = \pi \int_0^2 x dx = \pi \left[ \frac{x^2}{2} \right]_0^2 = 2\pi \approx 6.283 \).</p>]]></text>
+    </questiontext>
+    <answer fraction="100" format="moodle_auto_format">
+      <text>6.283</text>
+      <tolerance>0.05</tolerance>
+    </answer>
+  </question>
+
+  <!-- 5. MC Single: Product rule derivative -->
+  <question type="multichoice">
+    <name><text>MATH_Q05_Ableitung_Produktregel</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Welche Funktion entspricht der ersten Ableitung von \( f(x) = x^2 \cdot \ln(x) \) fuer \( x &gt; 0 \)?</p>]]></text>
+    </questiontext>
+    <single>true</single>
+    <shuffleanswers>true</shuffleanswers>
+    <answernumbering>abc</answernumbering>
+    <answer fraction="100" format="html"><text><![CDATA[<p>\( 2x \ln(x) + x \)</p>]]></text></answer>
+    <answer fraction="0" format="html"><text><![CDATA[<p>\( 2x \cdot \frac{1}{x} = 2 \)</p>]]></text></answer>
+    <answer fraction="0" format="html"><text><![CDATA[<p>\( 2x \ln(x) + 2x \)</p>]]></text></answer>
+    <answer fraction="0" format="html"><text><![CDATA[<p>\( x^2 \ln(x) + x \)</p>]]></text></answer>
+  </question>
+
+  <!-- 6. MC Single: Limit sin(x)/x -->
+  <question type="multichoice">
+    <name><text>MATH_Q06_Grenzwert_Sinus_LHopital</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Welcher Grenzwert ergibt sich fuer \( \lim_{x \to 0} \frac{\sin(x)}{x} \)?</p>]]></text>
+    </questiontext>
+    <single>true</single>
+    <shuffleanswers>true</shuffleanswers>
+    <answernumbering>abc</answernumbering>
+    <answer fraction="100" format="html"><text><![CDATA[<p>\( 1 \)</p>]]></text></answer>
+    <answer fraction="0" format="html"><text><![CDATA[<p>\( 0 \)</p>]]></text></answer>
+    <answer fraction="0" format="html"><text><![CDATA[<p>\( \infty \)</p>]]></text></answer>
+    <answer fraction="0" format="html"><text><![CDATA[<p>Der Grenzwert existiert nicht.</p>]]></text></answer>
+  </question>
+
+  <!-- 7. MC Multi: Extremum conditions -->
+  <question type="multichoice">
+    <name><text>MATH_Q07_Extremum_Bedingungen</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Welche Bedingungen sichern hinreichend ein striktes lokales Maximum an der Stelle \( x_0 \) fuer eine zweimal stetig differenzierbare Funktion \( f \)?</p>]]></text>
+    </questiontext>
+    <single>false</single>
+    <shuffleanswers>true</shuffleanswers>
+    <answernumbering>abc</answernumbering>
+    <answer fraction="50" format="html"><text><![CDATA[<p>\( f'(x_0) = 0 \)</p>]]></text></answer>
+    <answer fraction="50" format="html"><text><![CDATA[<p>\( f''(x_0) &lt; 0 \)</p>]]></text></answer>
+    <answer fraction="-50" format="html"><text><![CDATA[<p>\( f''(x_0) &gt; 0 \)</p>]]></text></answer>
+  </question>
+
+  <!-- 8. MC Single: Antiderivative e^(2x) -->
+  <question type="multichoice">
+    <name><text>MATH_Q08_Stammfunktion_Exp</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Geben Sie die allgemeine Stammfunktion von \( g(x) = e^{2x} \) an:</p>]]></text>
+    </questiontext>
+    <single>true</single>
+    <shuffleanswers>true</shuffleanswers>
+    <answernumbering>abc</answernumbering>
+    <answer fraction="100" format="html"><text><![CDATA[<p>\( \frac{1}{2} e^{2x} + C \)</p>]]></text></answer>
+    <answer fraction="0" format="html"><text><![CDATA[<p>\( 2 e^{2x} + C \)</p>]]></text></answer>
+    <answer fraction="0" format="html"><text><![CDATA[<p>\( e^{2x} + C \)</p>]]></text></answer>
+  </question>
+
+  <!-- 9. TF: Differentiable implies continuous -->
+  <question type="truefalse">
+    <name><text>MATH_Q09_Differenzierbarkeit_Impliziert_Stetigkeit</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Jede an einer Stelle \( x_0 \) differenzierbare reelle Funktion ist an dieser Stelle auch stetig.</p>]]></text>
+    </questiontext>
+    <answer fraction="100" format="moodle_auto_format"><text>true</text></answer>
+    <answer fraction="0" format="moodle_auto_format"><text>false</text></answer>
+  </question>
+
+  <!-- 10. TF: f'(x0) = 0 implies extremum -->
+  <question type="truefalse">
+    <name><text>MATH_Q10_Notwendige_Bedingung_Extremum</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Wenn fuer eine differenzierbare Funktion \( f'(x_0) = 0 \) gilt, liegt an der Stelle \( x_0 \) garantiert ein lokales Extremum vor.</p>]]></text>
+    </questiontext>
+    <answer fraction="0" format="moodle_auto_format"><text>true</text></answer>
+    <answer fraction="100" format="moodle_auto_format"><text>false</text></answer>
+  </question>
+
+  <!-- 11. TF: Definite integral linear transformation -->
+  <question type="truefalse">
+    <name><text>MATH_Q11_Integral_Linearitaet</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Fuer integrierbare Funktionen gilt: \( \int_a^b (f(x) + g(x)) dx = \int_a^b f(x) dx + \int_a^b g(x) dx \).</p>]]></text>
+    </questiontext>
+    <answer fraction="100" format="moodle_auto_format"><text>true</text></answer>
+    <answer fraction="0" format="moodle_auto_format"><text>false</text></answer>
+  </question>
+
+  <!-- 12. SA: Second derivative cos(x) -->
+  <question type="shortanswer">
+    <name><text>MATH_Q12_Zweite_Ableitung_Cosinus</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Geben Sie die zweite Ableitung der Funktion \( f(x) = \cos(x) \) an:</p>]]></text>
+    </questiontext>
+    <usecase>0</usecase>
+    <answer fraction="100" format="moodle_auto_format"><text>-cos(x)</text></answer>
+    <answer fraction="100" format="moodle_auto_format"><text>-\cos(x)</text></answer>
+  </question>
+
+  <!-- 13. SA: Curvature change point -->
+  <question type="shortanswer">
+    <name><text>MATH_Q13_Kruemmungswechsel_Punkt</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Wie heisst der Punkt auf einem Funktionsgraphen, an dem sich das Kruemmungsverhalten von links- nach rechtsgekruemmt (oder umgekehrt) aendert?</p>]]></text>
+    </questiontext>
+    <usecase>0</usecase>
+    <answer fraction="100" format="moodle_auto_format"><text>Wendepunkt</text></answer>
+    <answer fraction="100" format="moodle_auto_format"><text>Wendestelle</text></answer>
+  </question>
+
+  <!-- 14. SA: Asymptote equation -->
+  <question type="shortanswer">
+    <name><text>MATH_Q14_Waagrechte_Asymptote_Gleichung</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Geben Sie die Gleichung der waagrechten Asymptote von \( f(x) = \frac{1}{x} + 2 \) fuer \( x \to \infty \) an (z. B. y = 2):</p>]]></text>
+    </questiontext>
+    <usecase>0</usecase>
+    <answer fraction="100" format="moodle_auto_format"><text>y = 2</text></answer>
+    <answer fraction="100" format="moodle_auto_format"><text>y=2</text></answer>
+  </question>
+
+  <!-- 15. CLOZE: Infimum and limit -->
+  <question type="cloze">
+    <name><text>MATH_Q15_Mengen_Infimum_Lueckentext</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Fuer die reelle Zahlenmenge \( M = (0, 1] \) ist das Infimum {1:NUMERICAL:=0:0}.<br/>
+Die Folge \( a_n = 1/n \) ist {1:MC:=konvergent~divergent}.
+</p>]]></text>
+    </questiontext>
+  </question>
+
+  <!-- 16. CLOZE: Integration by parts rule -->
+  <question type="cloze">
+    <name><text>MATH_Q16_Partielle_Integration_Lueckentext</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Ergaenzen Sie die Formel der partiellen Integration:<br/>
+\( \int u(x) v'(x) dx = u(x) v(x) - \int \) {1:SA:=u'(x) v(x)~u' v~v(x) u'(x)} \( dx \).
+</p>]]></text>
+    </questiontext>
+  </question>
+
+  <!-- 17. ESSAY: Rolle's theorem and MVT -->
+  <question type="essay">
+    <name><text>MATH_Q17_Satz_Von_Rolle_Beweis</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Formulieren Sie den Satz von Rolle und leiten Sie daraus den Mittelwertsatz der Differentialrechnung fuer eine auf \( [a, b] \) stetige und auf \( (a, b) \) differenzierbare Funktion her.</p>]]></text>
+    </questiontext>
+    <responseformat>editor</responseformat>
+    <responserequired>1</responserequired>
+    <responsefieldlines>15</responsefieldlines>
+    <graderinfo format="html">
+      <text><![CDATA[<p>Kriterien:<br/>
+1. Praezise Voraussetzungen: stetig auf [a, b], diffbar auf (a, b), f(a)=f(b) (30%).<br/>
+2. Existenz eines Maximums/Minimums nach Weierstras und f'(xi)=0 (40%).<br/>
+3. Konstruktion der Hilfsfunktion g(x) = f(x) - [f(a) + (f(b)-f(a))/(b-a)*(x-a)] (30%).</p>]]></text>
+    </graderinfo>
+  </question>
+
+  <!-- 18. ESSAY: Kurvendiskussion -->
+  <question type="essay">
+    <name><text>MATH_Q18_Vollstaendige_Kurvendiskussion</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Fuehren Sie eine Kurvendiskussion fuer die rationale Funktion \( f(x) = \frac{x^3}{x^2 - 1} \) durch. Bestimmen Sie Definitionsbereich, Symmetrie, Nullstellen, Polstellen und die schiefe Asymptote via Polynomdivision.</p>]]></text>
+    </questiontext>
+    <responseformat>editor</responseformat>
+    <responserequired>1</responserequired>
+    <responsefieldlines>15</responsefieldlines>
+    <graderinfo format="html">
+      <text><![CDATA[<p>D = R ohne {-1, 1}. Punktsymmetrisch zum Ursprung f(-x) = -f(x). Nullstelle x=0 (dreifach). Polstellen bei x=1 und x=-1. Polynomdivision: f(x) = x + x/(x^2 - 1), folglich schiefe Asymptote y = x.</p>]]></text>
+    </graderinfo>
+  </question>
+</quiz>

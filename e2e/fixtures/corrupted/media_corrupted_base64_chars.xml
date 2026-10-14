@@ -1,0 +1,1 @@
+<quiz><question type="description"><name><text>Bad B64</text></name><questiontext><file name="bad.png" encoding="base64">!@#$%^&amp;*()_+</file></questiontext></question></quiz>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE quiz [
+  <!ENTITY xxe SYSTEM "file:///etc/hosts">
+]>
+<quiz>
+  <question type="description">
+    <name><text>XXE Hosts</text></name>
+    <questiontext format="html"><text><![CDATA[<p>&xxe;</p>]]></text></questiontext>
+  </question>
+</quiz>
