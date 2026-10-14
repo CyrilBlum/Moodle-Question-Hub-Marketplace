@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Download, Copy, Check, Eye, Layers, ShieldCheck, Calendar, BookOpen, ArrowLeft } from 'lucide-react';
-import { api } from '../api/client';
+import { api, getStoredUser, getToken } from '../api/client';
+import { PackageSettings } from '../components/PackageSettings';
 import { sanitizeQuestionHtml } from '../utils/sanitize';
 import { buildCategoryTree, CategoryNode } from '../utils/categoryTree';
 
@@ -27,7 +28,7 @@ export const PackageDetailPage: React.FC = () => {
   const [pkg, setPkg] = useState<any>(null);
   const [preview, setPreview] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'categories' | 'preview' | 'versions'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'categories' | 'preview' | 'versions' | 'settings'>('overview');
   const [copiedUrl, setCopiedUrl] = useState(false);
 
   useEffect(() => {
@@ -36,8 +37,8 @@ export const PackageDetailPage: React.FC = () => {
     }
   }, [id]);
 
-  const loadData = async (packageId: string) => {
-    setLoading(true);
+  const loadData = async (packageId: string, quiet = false) => {
+    if (!quiet) setLoading(true);
     try {
       const data = await api.getPackage(packageId);
       setPkg(data);
@@ -60,6 +61,9 @@ export const PackageDetailPage: React.FC = () => {
     setCopiedUrl(true);
     setTimeout(() => setCopiedUrl(false), 2500);
   };
+
+  const currentUser = getStoredUser();
+  const isOwner = !!getToken() && !!currentUser?.id && pkg?.author?.id === currentUser.id;
 
   if (loading) {
     return (
@@ -180,6 +184,7 @@ export const PackageDetailPage: React.FC = () => {
               ? [{ id: 'preview', label: `Sichere Vorschau (${pkg.stats?.question_count || 0})` }]
               : []),
             { id: 'versions', label: `Versionen (${pkg.releases?.length || 0})` },
+            ...(isOwner ? [{ id: 'settings', label: 'Einstellungen' }] : []),
           ].map(tab => (
             <button
               key={tab.id}
@@ -298,6 +303,10 @@ export const PackageDetailPage: React.FC = () => {
             ))}
           </div>
         </div>
+      )}
+
+      {activeTab === 'settings' && isOwner && (
+        <PackageSettings key={`${pkg.updated_at}`} pkg={pkg} onChanged={() => loadData(pkg.id, true)} />
       )}
 
       {activeTab === 'versions' && (
