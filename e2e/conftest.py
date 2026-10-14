@@ -315,6 +315,9 @@ def moodle_test_data_cleanup():
     Set QHUB_KEEP_TEST_DATA=1 to keep the data for debugging.
     """
     snapshots = {name: run_harness(name, "snapshot", {}) for name in MOODLE_INSTANCES}
+    for name in MOODLE_INSTANCES:
+        # Export tests need at least one exportable question; do not depend on leftovers.
+        print(f"\n[seed] {name}: {run_harness(name, 'seed_default_question', {'courseid': 2})}")
     yield
     if os.environ.get("QHUB_KEEP_TEST_DATA") == "1":
         return

@@ -243,6 +243,41 @@ try {
             }
             break;
 
+        case 'seed_default_question':
+            // Makes the suite independent of leftover data: puts one short-answer question into the
+            // categories the export tests pick (first non-top category of the course question
+            // context, and the first non-top category in the whole database). cleanup_since removes it.
+            \core\session\manager::set_user(get_admin());
+            $courseid = (int)($payload['courseid'] ?? 2);
+            $course = $DB->get_record('course', ['id' => $courseid], '*', MUST_EXIST);
+            $context = \qbank_questionhub\package_exporter::resolve_course_question_context($course);
+            $targets = [];
+            foreach ($DB->get_records('question_categories', ['contextid' => $context->id], 'id ASC') as $cat) {
+                if ($cat->name !== 'top') {
+                    $targets[(int)$cat->id] = true;
+                    break;
+                }
+            }
+            $first = $DB->get_records_select('question_categories', "name <> 'top'", [], 'id ASC', 'id', 0, 1);
+            foreach ($first as $cat) {
+                $targets[(int)$cat->id] = true;
+            }
+            $xml = '<?xml version="1.0" encoding="UTF-8"?><quiz><question type="shortanswer">'
+                . '<name><text>E2E Seed Frage</text></name>'
+                . '<questiontext format="html"><text><![CDATA[<p>Wie heisst die Hauptstadt der Schweiz?</p>]]></text></questiontext>'
+                . '<generalfeedback format="html"><text></text></generalfeedback>'
+                . '<defaultgrade>1</defaultgrade><penalty>0.3333333</penalty><hidden>0</hidden><usecase>0</usecase>'
+                . '<answer fraction="100" format="plain_text"><text>Bern</text><feedback format="html"><text></text></feedback></answer>'
+                . '</question></quiz>';
+            $seeded = [];
+            foreach (array_keys($targets) as $catid) {
+                $importer = new \qbank_questionhub\package_importer($courseid, $catid);
+                $res = $importer->import_package($xml, false, ['id' => 'e2e-seed', 'version' => '0.0.1', 'title' => 'E2E seed']);
+                $seeded[$catid] = $res->questioncount;
+            }
+            echo json_encode(['status' => 'ok', 'seeded' => $seeded]);
+            break;
+
         case 'snapshot':
             // Highest existing IDs; everything above them afterwards was created by the test run.
             echo json_encode([

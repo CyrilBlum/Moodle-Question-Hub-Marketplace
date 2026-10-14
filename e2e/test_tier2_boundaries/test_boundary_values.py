@@ -513,7 +513,7 @@ def test_bnd_31_cloze_extra_closing_brace(hub_client, teacher_jwt):
 
 
 def test_bnd_32_cloze_invalid_token_syntax_plugin(remote_php):
-    """BND-32: Cloze with non-token curly content triggers ERR_CLOZE_SYNTAX_INVALID in plugin."""
+    """BND-32: Curly braces that are not Cloze tokens (LaTeX, code) are literal and NOT a Cloze error."""
     xml = """<quiz><question type="cloze">
       <name><text>Cloze Bad Token</text></name>
       <questiontext><text>Gegeben sei {not a valid cloze token}</text></questiontext>
@@ -529,5 +529,4 @@ def test_bnd_32_cloze_invalid_token_syntax_plugin(remote_php):
     res = remote_php(php_code)
     assert res.returncode == 0
     data = json.loads(res.stdout[res.stdout.find("{"):])
-    assert data["valid"] is False
-    assert "ERR_CLOZE_SYNTAX_INVALID" in data["errors"]
+    assert "ERR_CLOZE_SYNTAX_INVALID" not in data["errors"]

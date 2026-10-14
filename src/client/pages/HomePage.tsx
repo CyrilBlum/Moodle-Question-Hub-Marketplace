@@ -1,3 +1,4 @@
+import { buildCategoryTree } from '../utils/categoryTree';
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Filter, Download, Eye, FileQuestion, BookOpen, Layers, CheckCircle } from 'lucide-react';

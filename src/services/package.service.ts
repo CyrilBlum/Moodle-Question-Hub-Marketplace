@@ -325,6 +325,7 @@ export class PackageService {
 
       const latestRelease = pkgReleases.find(r => r.version === row.latest_version) || pkgReleases[0];
       let categoriesCount = 0;
+      let categoryPaths: string[] = [];
       let questionCount = 0;
       let qtypesBreakdown: Record<string, number> = {};
 
@@ -333,6 +334,7 @@ export class PackageService {
         try {
           const cats = JSON.parse(latestRelease.categories_json);
           categoriesCount = Array.isArray(cats) ? cats.length : 1;
+          categoryPaths = Array.isArray(cats) ? cats : [];
         } catch {}
         try {
           qtypesBreakdown = JSON.parse(latestRelease.qtypes_json);
@@ -364,6 +366,7 @@ export class PackageService {
         latest_version: row.latest_version,
         versions: pkgReleases.map(r => r.version),
         preview_enabled: !!row.preview_enabled,
+        categories: categoryPaths,
         stats: {
           question_count: questionCount,
           categories_count: categoriesCount,

@@ -3,6 +3,24 @@ import { useParams, Link } from 'react-router-dom';
 import { Download, Copy, Check, Eye, Layers, ShieldCheck, Calendar, BookOpen, ArrowLeft } from 'lucide-react';
 import { api } from '../api/client';
 import { sanitizeQuestionHtml } from '../utils/sanitize';
+import { buildCategoryTree, CategoryNode } from '../utils/categoryTree';
+
+const CategoryBranch: React.FC<{ nodes: CategoryNode[]; depth?: number }> = ({ nodes, depth = 0 }) => (
+  <ul className={depth === 0 ? 'space-y-1' : 'mt-1 ml-5 pl-3 border-l-2 border-slate-200 space-y-1'}>
+    {nodes.map(n => (
+      <li key={n.name}>
+        <div className="flex items-center space-x-2 text-slate-700">
+          <Layers className={`w-4 h-4 shrink-0 ${n.children.length ? 'text-red-500' : 'text-slate-400'}`} />
+          <span className={n.children.length ? 'font-semibold' : ''}>{n.name}</span>
+          {n.children.length > 0 && (
+            <span className="text-slate-400">({n.children.length})</span>
+          )}
+        </div>
+        {n.children.length > 0 && <CategoryBranch nodes={n.children} depth={depth + 1} />}
+      </li>
+    ))}
+  </ul>
+);
 
 export const PackageDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -226,13 +244,8 @@ export const PackageDetailPage: React.FC = () => {
       {activeTab === 'categories' && (
         <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
           <h2 className="text-base font-bold text-slate-900 mb-4">Kategorie-Hierarchie in Moodle</h2>
-          <div className="space-y-2 font-mono text-xs bg-slate-50 p-4 rounded-lg border border-slate-200">
-            {pkg.categories?.map((cat: string, i: number) => (
-              <div key={i} className="flex items-center space-x-2 text-slate-700">
-                <Layers className="w-4 h-4 text-slate-400 shrink-0" />
-                <span>{cat}</span>
-              </div>
-            ))}
+          <div className="text-sm bg-slate-50 p-4 rounded-lg border border-slate-200">
+            <CategoryBranch nodes={buildCategoryTree(pkg.categories || [])} />
           </div>
         </div>
       )}

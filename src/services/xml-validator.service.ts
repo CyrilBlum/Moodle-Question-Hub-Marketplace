@@ -40,12 +40,17 @@ export class SafeXmlValidatorService {
    * unescaped `}`. Other braces are literal text and never reported.
    */
   public static findClozeProblem(text: string): string | null {
+    let remainder = '';
     for (let i = 0; i < text.length; i++) {
       if (text[i] === '\\') {
+        remainder += text.slice(i, i + 2);
         i++;
         continue;
       }
-      if (text[i] !== '{') continue;
+      if (text[i] !== '{') {
+        remainder += text[i];
+        continue;
+      }
       const rest = text.slice(i, i + 80);
       const full = /^\{\d*:[A-Za-z_]+:/.exec(rest);
       if (full) {
@@ -67,7 +72,14 @@ export class SafeXmlValidatorService {
         i = j;
       } else if (/^\{\d+:/.test(rest)) {
         return `Cloze-Element '${rest.slice(0, 30)}' hat keinen gültigen Typ (z. B. {1:SHORTANSWER:=Antwort}).`;
+      } else {
+        remainder += '{';
       }
+    }
+    // A `}` that closes something like `1:SA:=answer` without an opening `{`.
+    const orphan = /(?<![{\d])\d+:[A-Za-z_]+:[^{}]*\}/.exec(remainder);
+    if (orphan) {
+      return `Cloze-Element '${orphan[0].slice(0, 30)}' fehlt die öffnende Klammer {.`;
     }
     return null;
   }

@@ -72,6 +72,8 @@ export interface PackageSearchResult {
   latest_version: string;
   versions: string[];
   preview_enabled: boolean;
+  /** Category paths of the latest release, e.g. $course$/top/Informatik/Bäume. */
+  categories?: string[];
   stats: {
     question_count: number;
     categories_count: number;

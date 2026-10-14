@@ -181,6 +181,10 @@ describe('SafeXmlValidatorService Unit Tests', () => {
       ).toBeNull();
     });
 
+    it('reports a closing brace without an opening one', () => {
+      expect(SafeXmlValidatorService.findClozeProblem('Gegeben sei 1:SA:=answer}')).toMatch(/öffnende/);
+    });
+
     it('reports an unterminated token and a token without type', () => {
       expect(SafeXmlValidatorService.findClozeProblem('Text {1:SHORTANSWER:=offen')).toMatch(/abgeschlossen/);
       expect(SafeXmlValidatorService.findClozeProblem('Text {1:=Antwort}')).toMatch(/Typ/);
