@@ -24,13 +24,16 @@ export async function buildServer(): Promise<FastifyInstance> {
       level: config.NODE_ENV === 'production' ? 'info' : 'debug',
     },
     disableRequestLogging: config.NODE_ENV === 'test',
+    // JSON publish bodies carry the whole XML package (base64 media included). Fastify's default
+    // is 1 MiB; keep this in line with nginx client_max_body_size (64M) and the 50 MB XML limit.
+    bodyLimit: 64 * 1024 * 1024,
   });
 
   // 1. Core security & HTTP plugins
   await app.register(fastifyCors, {
     origin: true,
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'If-None-Match'],
     exposedHeaders: ['ETag', 'Content-Disposition', 'X-Package-Sha256'],
   });

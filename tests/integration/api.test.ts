@@ -617,4 +617,21 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
 
     await app.inject({ method: 'DELETE', url: `/api/v1/packages/${id}`, headers: auth });
   });
+
+  it('accepts JSON publish bodies larger than 1 MiB (whole-category packages)', async () => {
+    const padding = 'a'.repeat(3 * 1024 * 1024);
+    const xml = `<?xml version="1.0" encoding="UTF-8"?><quiz>
+      <question type="category"><category><text>$course$/top/Gross</text></category></question>
+      <question type="shortanswer"><name><text>Gross</text></name>
+      <questiontext format="html"><text><![CDATA[<p>${padding}</p>]]></text></questiontext>
+      <answer fraction="100"><text>x</text></answer></question></quiz>`;
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/packages/preflight',
+      headers: { authorization: `Bearer ${teacherJwtToken}` },
+      payload: { xml },
+    });
+    expect(res.statusCode).not.toBe(413);
+    expect(res.statusCode).toBe(200);
+  });
 });
