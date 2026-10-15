@@ -893,6 +893,8 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
       // Admins see the link and the commit; anonymous visitors of the public package do not.
       const owned = JSON.parse((await app.inject({ method: 'GET', url: `/api/v1/packages/${id}`, headers: auth })).body);
       expect(owned.github_repo).toBe('git@github.com:octo/questions.git');
+      const listed = JSON.parse((await app.inject({ method: 'GET', url: '/api/v1/account/packages', headers: auth })).body).data;
+      expect(listed.find((p: any) => p.id === id)).toMatchObject({ github_repo: 'git@github.com:octo/questions.git', github_linked: true });
       expect(owned.releases[0].github_commit_url).toBe('https://github.com/octo/questions/commit/abc123');
       const anonymous = JSON.parse((await app.inject({ method: 'GET', url: `/api/v1/packages/${id}` })).body);
       expect(anonymous.github_repo).toBeUndefined();

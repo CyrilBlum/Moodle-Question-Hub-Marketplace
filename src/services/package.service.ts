@@ -879,7 +879,7 @@ export class PackageService {
     subject: string; subject_category: string; grades: string[]; tags: string[];
     latest_version: string; versions: string[];
     preview_enabled: boolean; downloads_count: number; updated_at: string; my_role: PackageRole; is_creator: boolean;
-    github_repo: string | null;
+    github_repo: string | null; github_linked: boolean;
   }>> {
     const knex = getDatabase();
     const rows = await knex('packages')
@@ -912,6 +912,8 @@ export class PackageService {
       my_role: roles.get(r.id) || 'editor',
       is_creator: r.owner_id === ownerId,
       github_repo: roles.get(r.id) === 'admin' ? r.github_repo || null : null,
+      // Editors only learn that new versions also go to GitHub, not where.
+      github_linked: !!r.github_repo,
     }));
   }
 
