@@ -157,6 +157,30 @@ export class PreviewSanitizerService {
   }
 
   /**
+   * Replaces @@PLUGINFILE@@ references in html with data URIs of the container's <file> elements.
+   * Moodle stores files next to the text they belong to (question text, each answer, ...).
+   */
+  private static embedFiles(container: any, html: string, mediaFiles: Record<string, string>): string {
+    if (!container || typeof container !== 'object' || !container.file) {
+      return html;
+    }
+    const fileList: any[] = Array.isArray(container.file) ? container.file : [container.file];
+    for (const f of fileList) {
+      const fName = f['@_name'] || f.name || 'image.png';
+      const fContent = this.extractText(f);
+      const val = SafeXmlValidatorService.validateMediaFile(fName, fContent);
+      if (!val.valid || !val.mime) continue;
+      const dataUri = `data:${val.mime};base64,${fContent.replace(/\s+/g, '')}`;
+      mediaFiles[fName] = dataUri;
+      const regex = new RegExp(`@@PLUGINFILE@@\\/${fName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'g');
+      const encodedName = encodeURIComponent(fName).replace(/\(/g, '%28').replace(/\)/g, '%29');
+      const encodedRegex = new RegExp(`@@PLUGINFILE@@\\/${encodedName}(?:\\?[^"'\\s>]*)?`, 'g');
+      html = html.replace(regex, dataUri).replace(encodedRegex, dataUri);
+    }
+    return html;
+  }
+
+  /**
    * Sanitizes Moodle XML into a pedagogical preview stripping all answer keys and feedback.
    */
   public static sanitizeXmlToPreview(
@@ -217,31 +241,9 @@ export class PreviewSanitizerService {
       const qName = this.extractText(q.name) || `Frage ${qCounter}`;
       const qId = `q_${qCounter++}`;
 
-      // Extract media files in questiontext
+      // Embed media files of the question text as data URIs
       const mediaFiles: Record<string, string> = {};
-      const qTextContainer = q.questiontext;
-      let rawQuestionHtml = this.extractText(qTextContainer);
-
-      if (qTextContainer && qTextContainer.file) {
-        const fileList: any[] = Array.isArray(qTextContainer.file) ? qTextContainer.file : [qTextContainer.file];
-        for (const f of fileList) {
-          const fName = f['@_name'] || f.name || 'image.png';
-          const fContent = this.extractText(f);
-          const val = SafeXmlValidatorService.validateMediaFile(fName, fContent);
-          if (val.valid && val.mime) {
-            const dataUri = `data:${val.mime};base64,${fContent.replace(/\s+/g, '')}`;
-            mediaFiles[fName] = dataUri;
-            // Rewrite @@PLUGINFILE@@/fName in HTML
-            const regex = new RegExp(`@@PLUGINFILE@@\\/${fName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'g');
-            const encodedName = encodeURIComponent(fName).replace(/\(/g, '%28').replace(/\)/g, '%29');
-            const encodedRegex = new RegExp(
-              `@@PLUGINFILE@@\\/${encodedName}(?:\\?[^"'\\s>]*)?`,
-              'g'
-            );
-            rawQuestionHtml = rawQuestionHtml.replace(regex, dataUri).replace(encodedRegex, dataUri);
-          }
-        }
-      }
+      const rawQuestionHtml = this.embedFiles(q.questiontext, this.extractText(q.questiontext), mediaFiles);
 
       // If Cloze / multianswer, strip solutions before HTML sanitization
       let processedQuestionHtml = rawQuestionHtml;
@@ -262,9 +264,10 @@ export class PreviewSanitizerService {
       if (qtype === 'multichoice') {
         const answersRaw = q.answer;
         const answers: any[] = Array.isArray(answersRaw) ? answersRaw : (answersRaw ? [answersRaw] : []);
+        // Options carry their own <file> elements (e.g. an image as answer).
         const options: SanitizedOption[] = answers.map((ans, idx) => ({
           id: `opt_${idx + 1}`,
-          textHtml: this.sanitizeHtml(this.extractText(ans)),
+          textHtml: this.sanitizeHtml(this.embedFiles(ans, this.extractText(ans), mediaFiles)),
         }));
         sanitizedQ.options = options;
       } else if (qtype === 'truefalse') {
@@ -277,10 +280,17 @@ export class PreviewSanitizerService {
         const subqs: any[] = Array.isArray(subqsRaw) ? subqsRaw : (subqsRaw ? [subqsRaw] : []);
         // Shuffle or present subquestions without linking correct answers
         const subList = subqs.map((sq) => {
-          const stem = this.extractText(sq.text || sq);
+          const stem = this.embedFiles(sq, this.extractText(sq.text || sq), mediaFiles);
           return { textHtml: this.sanitizeHtml(stem) };
         });
         sanitizedQ.subquestions = subList;
+      } else if (qtype === 'coderunner') {
+        // The answer template (preloaded code students start from) is part of the task, unlike the
+        // sample answer and the grader template, which are never exposed.
+        const preload = this.extractText(q.answerpreload);
+        if (preload.trim() !== '') {
+          sanitizedQ.answerPreload = preload;
+        }
       }
 
       sanitizedQuestions.push(sanitizedQ);

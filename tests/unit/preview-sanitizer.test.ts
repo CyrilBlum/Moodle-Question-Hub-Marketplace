@@ -370,4 +370,46 @@ describe('PreviewSanitizerService Unit Tests', () => {
       expect(subq.textHtml).toContain('<p>Begriff 1</p>');
     });
   });
+
+  describe('media in options and CodeRunner answer templates', () => {
+    const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+
+    it('embeds images that belong to a multiple-choice answer', () => {
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+  <question type="multichoice">
+    <name><text>Bildantwort</text></name>
+    <questiontext format="html"><text>Welches Bild?</text></questiontext>
+    <answer fraction="100" format="html">
+      <text><![CDATA[<p><img src="@@PLUGINFILE@@/a.png" alt="A"></p>]]></text>
+      <file name="a.png" path="/" encoding="base64">${png}</file>
+      <feedback><text>Richtig</text></feedback>
+    </answer>
+    <answer fraction="0" format="html"><text>Keines</text></answer>
+  </question>
+</quiz>`;
+      const q = PreviewSanitizerService.sanitizeXmlToPreview('t.img', '1.0.0', 'T', xml).questions[0];
+      expect(q.options![0].textHtml).toContain('src="data:image/png;base64,');
+      expect(q.options![0].textHtml).not.toContain('@@PLUGINFILE@@');
+      expect(JSON.stringify(q.options)).not.toContain('Richtig');
+    });
+
+    it('shows the CodeRunner answer template but never the sample answer or grader template', () => {
+      const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+  <question type="coderunner">
+    <name><text>Summe</text></name>
+    <questiontext format="html"><text>Schreiben Sie summe(a, b).</text></questiontext>
+    <answerpreload>def summe(a, b):
+    pass</answerpreload>
+    <answer>def summe(a, b): return a + b # SOLUTION</answer>
+    <template>GRADER_TEMPLATE</template>
+  </question>
+</quiz>`;
+      const q = PreviewSanitizerService.sanitizeXmlToPreview('t.cr', '1.0.0', 'T', xml).questions[0];
+      expect(q.answerPreload).toContain('def summe(a, b):');
+      expect(JSON.stringify(q)).not.toContain('SOLUTION');
+      expect(JSON.stringify(q)).not.toContain('GRADER_TEMPLATE');
+    });
+  });
 });

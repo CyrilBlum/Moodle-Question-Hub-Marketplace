@@ -333,6 +333,16 @@ export const PackageDetailPage: React.FC = () => {
                 {/* Question HTML with Base64 embedded images */}
                 <QuestionHtml html={q.questiontextHtml} className="prose prose-sm max-w-none text-slate-800 text-sm" />
 
+                {/* CodeRunner: the code the answer box starts with (plain text, rendered as text) */}
+                {q.answerPreload && (
+                  <div className="space-y-1.5 pt-2">
+                    <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
+                      Antwortvorlage:
+                    </span>
+                    <pre className="text-xs font-mono bg-slate-900 text-slate-100 rounded-lg p-3 overflow-x-auto whitespace-pre">{q.answerPreload}</pre>
+                  </div>
+                )}
+
                 {/* Answer choices if options exist */}
                 {q.options && q.options.length > 0 && (
                   <div className="space-y-1.5 pt-2">

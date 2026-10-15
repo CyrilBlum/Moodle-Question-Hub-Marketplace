@@ -40,6 +40,8 @@ export interface SanitizedQuestion {
   generalfeedbackHtml?: string;
   options?: SanitizedOption[];
   subquestions?: Array<{ textHtml: string; answerHtml?: string }>;
+  /** CodeRunner: code the answer box starts with (plain text). */
+  answerPreload?: string;
   mediaFiles: Record<string, string>; // filename -> data URI
 }
 
