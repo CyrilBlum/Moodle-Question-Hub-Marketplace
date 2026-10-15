@@ -52,6 +52,13 @@ and an obsolete `tests/` folder (old copy with credentials: delete, never reuse)
 - **Mustache**: output is already escaped. Never run `format_string()` (escaped) into a template variable; use `['escape' => false]`.
 - **Hub data**: titles are stored as plain text; the Hub decodes HTML entities on publish/edit.
 - **Moodle plugin caching**: after copying plugin files run `purge_caches.php` on that instance.
+- **Admin role**: `users.role = 'admin'` (no UI grants it; set in the DB after a dump and a dry-run count).
+  The role is read from the DB on every request (`AdminService.isAdmin`), not from the JWT, so a change applies without a new login.
+  Admins edit/withdraw any package and use the web page `/admin` with the API under `/api/v1/admin/*`:
+  `GET overview` (all accounts, their packages, withdrawn packages), `DELETE withdrawn/:id` (final deletion: removes the
+  tombstone and frees the ID; Moodles then get 404 instead of 410), `DELETE users/:id` (refused for the own account and for
+  accounts that still own active packages; tokens and access requests cascade), `POST users/:id/email` (needs `SMTP_*` in the
+  env file, otherwise 503 and the page falls back to a mailto link; SMTP is not configured on production as of 2026-10-15).
 
 ## 4. Build and deploy
 Hub (this repo):
@@ -92,7 +99,10 @@ Lint PHP on the server (`php8.2 -l`); there is no PHP on the usual dev laptop.
 - The registration tests create throw-away Hub users (`teacher_reg_<ts>@kanti.ch`); they are not cleaned automatically.
 
 ## 6. Accounts (no passwords here)
-- Hub test teacher: `c@cblum.ch` (`QHUB_TEACHER_PASSWORD`). The old `teacher@kanti.ch` was removed.
+- Hub test teacher and Hub admin: `c@cblum.ch` (`QHUB_TEACHER_PASSWORD`; role `admin` since 2026-10-15). E2E cleanup
+  only withdraws the account's own packages, so the admin role does not widen what tests touch.
+- `teacher@kanti.ch` (seed account) and throw-away `teacher_reg_*`/`teacher_b_*` accounts still exist on the Hub;
+  delete them in `/admin` if no longer needed.
 - Moodle: teacher `teacher1`, admins on both instances (ask the owner or use the env vars above).
 - A separate agent workflow (repo `Moodle-Questions`, "qbase") imports a private question bank into both Moodles with `cli/import.php`;
   coordinate before touching the instances (its data is real).

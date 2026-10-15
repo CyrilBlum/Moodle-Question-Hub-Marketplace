@@ -162,6 +162,10 @@ export const api = {
   // Administration (admins only)
   getAdminOverview: () => request('/admin/overview'),
   purgeWithdrawnPackage: (id: string) => request(`/admin/withdrawn/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  deleteUser: (id: string) => request(`/admin/users/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  emailUser: (id: string, subject: string, message: string) => request(`/admin/users/${encodeURIComponent(id)}/email`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subject, message }),
+  }),
   updatePackage: (id: string, patch: Record<string, unknown>) =>
     request(`/packages/${encodeURIComponent(id)}`, {
       method: 'PATCH',

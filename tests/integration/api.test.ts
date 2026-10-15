@@ -680,6 +680,20 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
       expect((await app.inject({ method: 'DELETE', url: `/api/v1/admin/withdrawn/${lifecycleId}`, headers: auth })).statusCode).toBe(204);
       expect((await app.inject({ method: 'GET', url: `/api/v1/packages/${lifecycleId}` })).statusCode).toBe(404);
       expect((await app.inject({ method: 'DELETE', url: `/api/v1/admin/withdrawn/${lifecycleId}`, headers: auth })).statusCode).toBe(404);
+
+      // Accounts: not the own one, not one that still owns packages; others with their tokens.
+      expect((await app.inject({ method: 'DELETE', url: `/api/v1/admin/users/${me.id}`, headers: auth })).statusCode).toBe(409);
+      const temp = JSON.parse((await app.inject({
+        method: 'POST', url: '/api/v1/auth/register',
+        payload: { email: `delete-me-${Date.now()}@example.ch`, password: 'Delete-Me-Pass-123!', full_name: 'Wegwerf Konto', institution: 'Kanti X', canton: 'BE' },
+      })).body);
+      expect((await app.inject({ method: 'POST', url: `/api/v1/admin/users/${temp.user.id}/email`, headers: auth,
+        payload: { subject: 'Hallo', message: 'Test' } })).statusCode).toBe(503);
+      expect((await app.inject({ method: 'POST', url: `/api/v1/admin/users/${temp.user.id}/email`, headers: auth,
+        payload: { subject: '', message: 'Test' } })).statusCode).toBe(400);
+      expect((await app.inject({ method: 'DELETE', url: `/api/v1/admin/users/${temp.user.id}`, headers: auth })).statusCode).toBe(204);
+      expect(await getDatabase()('users').where({ id: temp.user.id }).first()).toBeUndefined();
+      expect((await app.inject({ method: 'DELETE', url: `/api/v1/admin/users/${temp.user.id}`, headers: auth })).statusCode).toBe(404);
     } finally {
       await getDatabase()('users').where({ id: me.id }).update({ role: 'teacher' });
     }

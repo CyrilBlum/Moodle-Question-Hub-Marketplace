@@ -1,14 +1,19 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Shield, Trash2, Archive, Search, AlertCircle } from 'lucide-react';
-import { api, getToken } from '../api/client';
+import { Shield, Trash2, Archive, Search, AlertCircle, Mail, UserX, Check } from 'lucide-react';
+import { api, getToken, getStoredUser } from '../api/client';
 
 const formatDate = (iso: string) => new Date(iso).toLocaleDateString('de-CH');
 
 export const AdminPage: React.FC = () => {
   const navigate = useNavigate();
-  const [data, setData] = useState<{ users: any[]; withdrawn: any[] } | null>(null);
+  const [data, setData] = useState<{ users: any[]; withdrawn: any[]; email_enabled: boolean } | null>(null);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [composeFor, setComposeFor] = useState('');
+  const [subject, setSubject] = useState('');
+  const [message, setMessage] = useState('');
+  const currentUserId = getStoredUser()?.id;
   const [query, setQuery] = useState('');
   const [busy, setBusy] = useState('');
 
@@ -55,6 +60,36 @@ export const AdminPage: React.FC = () => {
     }
   };
 
+  const deleteUser = async (u: any) => {
+    if (!window.confirm(`Konto ${u.full_name} (${u.email}) endgültig löschen? Zugangstokens und Zugriffsanfragen werden mitgelöscht. Dies kann nicht rückgängig gemacht werden.`)) return;
+    setBusy(u.id);
+    try {
+      await api.deleteUser(u.id);
+      setNotice(`Konto ${u.email} wurde gelöscht.`);
+      await load();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const sendEmail = async (event: React.FormEvent, u: any) => {
+    event.preventDefault();
+    setBusy(u.id);
+    try {
+      await api.emailUser(u.id, subject, message);
+      setNotice(`E-Mail an ${u.email} wurde versendet.`);
+      setComposeFor('');
+      setSubject('');
+      setMessage('');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setBusy('');
+    }
+  };
+
   const q = query.trim().toLowerCase();
   const users = useMemo(() => (data?.users || []).filter(u => !q
     || [u.email, u.full_name, u.institution].some((v: string) => (v || '').toLowerCase().includes(q))
@@ -76,20 +111,23 @@ export const AdminPage: React.FC = () => {
         </div>
       )}
 
+      {notice && (
+        <div className="flex items-start gap-2 bg-green-50 border border-green-200 text-green-800 rounded-lg p-4 text-sm">
+          <Check className="w-5 h-5 shrink-0" />
+          <span>{notice}</span>
+        </div>
+      )}
+
       {data && (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {[['Benutzerkonten', data.users.length], ['Aktive Pakete', packageCount], ['Zurückgezogene Pakete', data.withdrawn.length]].map(([label, value]) => (
-              <div key={label as string} className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
-                <div className="text-sm text-slate-500">{label}</div>
-                <div className="text-2xl font-bold text-slate-900">{value}</div>
-              </div>
-            ))}
-          </div>
-
           <section className="bg-white rounded-xl border border-slate-200 shadow-sm">
             <div className="p-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-lg font-semibold text-slate-900">Benutzerkonten und ihre Pakete</h2>
+              <div>
+                <h2 className="text-lg font-semibold text-slate-900">Benutzerkonten und ihre Pakete</h2>
+                <p className="text-xs text-slate-500">
+                  {data.users.length} Benutzerkonten · {packageCount} aktive Pakete · {data.withdrawn.length} zurückgezogene Pakete
+                </p>
+              </div>
               <label className="relative">
                 <Search className="w-4 h-4 text-slate-400 absolute left-2.5 top-2.5" />
                 <input value={query} onChange={e => setQuery(e.target.value)} placeholder="E-Mail, Name oder Paket suchen"
@@ -104,7 +142,40 @@ export const AdminPage: React.FC = () => {
                     <span className="text-sm text-slate-600">{u.email}</span>
                     {u.role === 'admin' && <span className="text-xs font-medium bg-red-100 text-red-700 px-2 py-0.5 rounded">Admin</span>}
                     <span className="text-xs text-slate-500">{u.institution} · {u.canton} · seit {formatDate(u.created_at)}</span>
+                    <span className="ml-auto flex gap-2">
+                      {data.email_enabled ? (
+                        <button onClick={() => setComposeFor(composeFor === u.id ? '' : u.id)}
+                                className="inline-flex items-center gap-1 text-xs border border-slate-300 rounded px-2 py-1 hover:border-slate-500">
+                          <Mail className="w-3.5 h-3.5" />E-Mail
+                        </button>
+                      ) : (
+                        <a href={`mailto:${u.email}`} title="Öffnet Ihr E-Mail-Programm (der Hub hat keinen E-Mail-Versand konfiguriert)"
+                           className="inline-flex items-center gap-1 text-xs border border-slate-300 rounded px-2 py-1 hover:border-slate-500">
+                          <Mail className="w-3.5 h-3.5" />E-Mail
+                        </a>
+                      )}
+                      {u.id !== currentUserId && (
+                        <button onClick={() => deleteUser(u)} disabled={busy === u.id || u.packages.length > 0}
+                                title={u.packages.length > 0 ? 'Zuerst die aktiven Pakete zurückziehen' : 'Konto löschen'}
+                                className="inline-flex items-center gap-1 text-xs border border-slate-300 rounded px-2 py-1 hover:border-red-400 hover:text-red-700 disabled:opacity-40 disabled:hover:border-slate-300 disabled:hover:text-inherit">
+                          <UserX className="w-3.5 h-3.5" />Konto löschen
+                        </button>
+                      )}
+                    </span>
                   </div>
+                  {composeFor === u.id && (
+                    <form onSubmit={e => sendEmail(e, u)} className="mt-3 space-y-2 bg-slate-50 border border-slate-200 rounded-lg p-3">
+                      <div className="text-xs text-slate-500">An {u.email}; Antworten gehen an Ihre Adresse.</div>
+                      <input required value={subject} onChange={e => setSubject(e.target.value)} placeholder="Betreff"
+                             className="border rounded-md px-2 py-1.5 text-sm w-full" />
+                      <textarea required value={message} onChange={e => setMessage(e.target.value)} rows={5} placeholder="Nachricht"
+                                className="border rounded-md px-2 py-1.5 text-sm w-full" />
+                      <div className="flex justify-end gap-2">
+                        <button type="button" onClick={() => setComposeFor('')} className="text-xs px-3 py-1.5 rounded border border-slate-300">Abbrechen</button>
+                        <button type="submit" disabled={busy === u.id} className="text-xs px-3 py-1.5 rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-50">Senden</button>
+                      </div>
+                    </form>
+                  )}
                   {u.packages.length === 0 && u.withdrawn.length === 0 && (
                     <p className="text-sm text-slate-400 mt-1">Keine Pakete.</p>
                   )}

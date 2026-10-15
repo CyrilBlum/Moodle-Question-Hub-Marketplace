@@ -1,4 +1,5 @@
 import { getDatabase } from '../database/connection';
+import { EmailService } from './email.service';
 import { PackageStorageService } from './package-storage.service';
 
 export interface AdminPackageSummary {
@@ -49,7 +50,7 @@ export class AdminService {
     return row?.role === 'admin';
   }
 
-  public async overview(): Promise<{ users: AdminUserSummary[]; withdrawn: AdminWithdrawnPackage[] }> {
+  public async overview(): Promise<{ users: AdminUserSummary[]; withdrawn: AdminWithdrawnPackage[]; email_enabled: boolean }> {
     const knex = getDatabase();
     const users = await knex('users')
       .select('id', 'email', 'full_name', 'institution', 'canton', 'role', 'created_at')
@@ -94,7 +95,41 @@ export class AdminService {
         withdrawn: withdrawn.filter(w => w.owner_id === u.id),
       })),
       withdrawn,
+      email_enabled: EmailService.isConfigured(),
     };
+  }
+
+  /**
+   * Deletes an account with its tokens and access requests (cascade). Accounts that still own active
+   * packages are refused, so no package is left without an owner; withdrawn ones keep their tombstone.
+   */
+  public async deleteUser(adminId: string, userId: string): Promise<void> {
+    const knex = getDatabase();
+    if (adminId === userId) {
+      throw new Error('CONFLICT: Ihr eigenes Konto können Sie hier nicht löschen.');
+    }
+    const user = await knex('users').where({ id: userId }).first('id');
+    if (!user) {
+      throw new Error('NOT_FOUND: Konto nicht gefunden.');
+    }
+    const packages = await knex('packages').where({ owner_id: userId }).pluck('id');
+    if (packages.length > 0) {
+      throw new Error(`CONFLICT: Das Konto besitzt noch ${packages.length} aktive(s) Paket(e) (${packages.join(', ')}). Ziehen Sie diese zuerst zurück.`);
+    }
+    await knex('users').where({ id: userId }).del();
+  }
+
+  /** Sends a plain-text message from the Hub to an account; replies go to the admin. */
+  public async emailUser(adminId: string, userId: string, subject: string, message: string): Promise<void> {
+    const knex = getDatabase();
+    const [admin, user] = await Promise.all([
+      knex('users').where({ id: adminId }).first('email', 'full_name'),
+      knex('users').where({ id: userId }).first('email'),
+    ]);
+    if (!user) {
+      throw new Error('NOT_FOUND: Konto nicht gefunden.');
+    }
+    await EmailService.sendMessage({ to: user.email, replyTo: admin?.email, subject, text: message, senderName: admin?.full_name });
   }
 
   /**
