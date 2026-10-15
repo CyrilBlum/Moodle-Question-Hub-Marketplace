@@ -185,6 +185,39 @@ export class GitHubService {
   }
 
   /**
+   * Creates a new private repository (with an initial commit) in the user's own GitHub account, for the
+   * explicit "create repository" button. Throws CONFLICT when the name is taken, BAD_REQUEST otherwise.
+   */
+  public async createOwnRepo(userId: string, name: string): Promise<{ repo: string; html_url: string }> {
+    if (!/^[A-Za-z0-9_.-]{1,100}$/.test(name) || name === '.' || name === '..' || name.endsWith('.git')) {
+      throw new Error('BAD_REQUEST: Ungültiger Repository-Name. Erlaubt sind Buchstaben, Ziffern, Punkt, Bindestrich und Unterstrich.');
+    }
+    let token: string;
+    try {
+      token = await this.tokenOf(userId);
+    } catch (err: any) {
+      throw new Error(`BAD_REQUEST: ${err.message}`);
+    }
+    const created = await this.call(token, 'POST', '/user/repos', {
+      name,
+      private: true,
+      auto_init: true,
+      description: 'Fragenpaket aus dem Moodle Question Hub',
+    });
+    if (created.status === 422) {
+      throw new Error(`CONFLICT: Ein Repository mit dem Namen ${name} existiert in Ihrem GitHub-Konto bereits.`);
+    }
+    if (created.status !== 201 || !created.data?.full_name) {
+      throw new Error(
+        `BAD_REQUEST: Das Repository konnte nicht angelegt werden (GitHub ${created.status}). Zum Anlegen braucht der Token ` +
+        'Zugriff auf alle Repositorys und die Berechtigung «Administration: Read and write».'
+      );
+    }
+    const ref = GitHubService.parseRepoUrl(`https://github.com/${created.data.full_name}`)!;
+    return { repo: GitHubService.canonicalUrl(ref), html_url: created.data.html_url || `https://github.com/${created.data.full_name}` };
+  }
+
+  /**
    * Commits the release file to the repository's default branch and tags the commit `v<version>`.
    * Returns the commit URL; a failed tag is reported in `warning` (the commit stays).
    */

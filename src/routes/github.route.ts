@@ -30,6 +30,29 @@ export async function githubRoutes(app: FastifyInstance): Promise<void> {
     }
   });
 
+  // POST /api/v1/account/github/repos (create a private repository in the own GitHub account)
+  app.post('/account/github/repos', {
+    preHandler: [app.authenticate],
+    config: { rateLimit: { max: 10, timeWindow: '1 hour' } },
+  }, async (req, reply) => {
+    const name = (req.body as any)?.name;
+    if (typeof name !== 'string') {
+      return reply.status(400).send({ statusCode: 400, error: 'Bad Request', message: 'Bitte geben Sie einen Namen für das Repository an.' });
+    }
+    try {
+      return reply.status(201).send(await github.createOwnRepo((req as any).user.id, name.trim()));
+    } catch (err: any) {
+      const msg: string = err.message || '';
+      if (msg.startsWith('BAD_REQUEST:')) {
+        return reply.status(400).send({ statusCode: 400, error: 'Bad Request', message: msg.replace('BAD_REQUEST: ', '') });
+      }
+      if (msg.startsWith('CONFLICT:')) {
+        return reply.status(409).send({ statusCode: 409, error: 'Conflict', message: msg.replace('CONFLICT: ', '') });
+      }
+      return reply.status(502).send({ statusCode: 502, error: 'Bad Gateway', message: msg });
+    }
+  });
+
   // DELETE /api/v1/account/github
   app.delete('/account/github', { preHandler: [app.authenticate] }, async (req, reply) => {
     await github.disconnect((req as any).user.id);

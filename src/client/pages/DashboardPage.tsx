@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Key, Plus, Trash2, Copy, Check, AlertCircle, Shield, User } from 'lucide-react';
 import { api, getToken, getStoredUser, setStoredUser } from '../api/client';
 import { PackageEditForm } from '../components/PackageEditForm';
@@ -16,6 +16,8 @@ export const CANTONS = [
 
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
+  // Deep links such as /dashboard#github (from the Moodle plugin) land on that section.
+  const { hash } = useLocation();
   const [user, setUser] = useState<any>(null);
   const [tokens, setTokens] = useState<any[]>([]);
   const [myPackages, setMyPackages] = useState<any[]>([]);
@@ -34,7 +36,7 @@ export const DashboardPage: React.FC = () => {
 
   useEffect(() => {
     if (!getToken()) {
-      navigate('/login');
+      navigate(`/login?return_to=${encodeURIComponent('/dashboard' + hash)}`);
       return;
     }
     const stored = getStoredUser();
@@ -43,6 +45,13 @@ export const DashboardPage: React.FC = () => {
     loadTokens();
     loadMyPackages();
   }, []);
+
+  useEffect(() => {
+    // The target section renders after its own data loads; wait a moment before scrolling.
+    if (!hash) return;
+    const timer = setTimeout(() => document.getElementById(decodeURIComponent(hash.slice(1)))?.scrollIntoView(), 300);
+    return () => clearTimeout(timer);
+  }, [hash]);
 
   const loadTokens = async () => {
     setLoading(true);

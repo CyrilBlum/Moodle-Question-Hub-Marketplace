@@ -837,8 +837,9 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
       if (init.headers?.Authorization !== `Bearer ${ghToken}`) return json(401, { message: 'Bad credentials' });
       if (url.pathname === '/user') return json(200, { login: 'octo' });
       if (url.pathname === '/user/repos' && method === 'POST') {
+        if (repos.has(body.name)) return json(422, { message: 'name already exists on this account' });
         repos.add(body.name);
-        return json(201, {});
+        return json(201, { full_name: `octo/${body.name}`, html_url: `https://github.com/octo/${body.name}` });
       }
       if (url.pathname === '/orgs/acme/repos') return json(403, { message: 'Resource not accessible by personal access token' });
       const repo = url.pathname.match(/^\/repos\/octo\/([^/]+)(\/.*)?$/);
@@ -938,8 +939,18 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
       expect(JSON.parse(refused.body).message).toContain('Administration');
       expect(JSON.parse((await app.inject({ method: 'GET', url: `/api/v1/packages/${id}`, headers: auth })).body).github_repo).toBe(`git@github.com:octo/${id}.git`);
 
+      // The explicit "create repository" call (Moodle plugin button): private, refuses taken and invalid names.
+      const createRepo = (name: string) => app.inject({ method: 'POST', url: '/api/v1/account/github/repos', headers: auth, payload: { name } });
+      const made = await createRepo('fragen-neu');
+      expect(made.statusCode).toBe(201);
+      expect(JSON.parse(made.body)).toEqual({ repo: 'git@github.com:octo/fragen-neu.git', html_url: 'https://github.com/octo/fragen-neu' });
+      expect(calls.filter(c => c.path === '/user/repos').pop()!.body.private).toBe(true);
+      expect((await createRepo('fragen-neu')).statusCode).toBe(409);
+      expect((await createRepo('../x')).statusCode).toBe(400);
+
       expect((await app.inject({ method: 'DELETE', url: '/api/v1/account/github', headers: auth })).statusCode).toBe(204);
       expect(JSON.parse((await app.inject({ method: 'GET', url: '/api/v1/account/github', headers: auth })).body).connected).toBe(false);
+      expect((await createRepo('fragen-ohne-token')).statusCode).toBe(400);
     } finally {
       fetchMock.mockRestore();
       await app.inject({ method: 'DELETE', url: `/api/v1/packages/${id}`, headers: auth });

@@ -40,7 +40,7 @@ export const GitHubConnection: React.FC = () => {
   };
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-4">
+    <div id="github" className="bg-white rounded-xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-4 scroll-mt-20">
       <div>
         <h2 className="text-lg font-bold text-slate-900 flex items-center space-x-2">
           <Github className="w-5 h-5 text-red-600" />
