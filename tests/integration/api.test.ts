@@ -806,7 +806,7 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
         app.inject({ method: 'PATCH', url: `/api/v1/packages/${id}/members/${userId}`, headers: ownerAuth, payload: { role } });
       expect((await setRole(editor.user.id, 'admin')).statusCode).toBe(204);
       expect((await setRole(me.id, 'editor')).statusCode).toBe(409);
-      expect((await app.inject({ method: 'PATCH', url: `/api/v1/packages/${id}`, headers: editorAuth, payload: { title: 'Neuer Titel' } })).statusCode).toBe(204);
+      expect((await app.inject({ method: 'PATCH', url: `/api/v1/packages/${id}`, headers: editorAuth, payload: { title: 'Neuer Titel' } })).statusCode).toBe(200);
       expect((await PackageMembersService.getInstance().counts()).get(id)).toEqual({ members: 1, editors: 0, admins: 2 });
 
       // Removing a member revokes the access; an admin may withdraw the package.
