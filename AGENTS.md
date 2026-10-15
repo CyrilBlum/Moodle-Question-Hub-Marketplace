@@ -58,6 +58,13 @@ and an obsolete `tests/` folder (old copy with credentials: delete, never reuse)
   withdrawal. API: `GET/POST /packages/:id/members`, `PATCH/DELETE /packages/:id/members/:userId`; web tab «Mitwirkende».
   `GET /account/packages` lists packages the user created or edits, with `my_role`; the plugin shows Push only for
   those and package settings/withdrawal only for `my_role = admin`. Hub admins pass every package-admin check.
+- **GitHub mirror (optional)**: a user stores a GitHub token via `PUT/GET/DELETE /account/github` (dashboard section
+  «GitHub-Verbindung»; checked with `GET /user`, stored AES-256-GCM-encrypted in `users.github_token_enc` with a key derived
+  from `JWT_SECRET`, or `GITHUB_TOKEN_KEY`; changing that key invalidates stored tokens). A package admin links a package with
+  `github_repo` (SSH or HTTPS URL, in the publish manifest or `PATCH /packages/:id`, `''` unlinks; write access is checked).
+  Every later release, also from editors or the plugin, is committed with the linking admin's token as `<package-id>.xml` on the
+  default branch (commit message = release notes) and tagged `v<version>` via the REST API (HTTPS, no SSH key on the server).
+  A failed commit never fails the publish: it is returned as `github` and stored in `releases.github_error`.
 - **Admin role**: `users.role = 'admin'` (set in the DB after a dump and a dry-run count, or by an admin creating an account).
   The role is read from the DB on every request (`AdminService.isAdmin`), not from the JWT, so a change applies without a new login.
   Admins edit/withdraw any package and use the web page `/admin` with the API under `/api/v1/admin/*`:

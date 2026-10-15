@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
@@ -818,6 +818,111 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
     } finally {
       await app.inject({ method: 'DELETE', url: `/api/v1/packages/${id}`, headers: ownerAuth });
       await getDatabase()('users').whereIn('id', [editor.user.id, reader.user.id]).del();
+    }
+  });
+
+  it('GitHub link: optional token, every release and a new link are committed with the release notes as message', async () => {
+    const auth = { authorization: `Bearer ${teacherJwtToken}` };
+    const id = `ch.gym.inf.github-test-${Date.now()}`;
+    const ghToken = 'github_pat_integration_test_token_0123456789';
+    const calls: Array<{ method: string; path: string; body: any }> = [];
+    let failCommit = false;
+    const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: any, init: any = {}) => {
+      const url = new URL(String(input));
+      const method = init.method || 'GET';
+      const body = init.body ? JSON.parse(init.body) : undefined;
+      calls.push({ method, path: url.pathname, body });
+      if (init.headers?.Authorization !== `Bearer ${ghToken}`) return json(401, { message: 'Bad credentials' });
+      if (url.pathname === '/user') return json(200, { login: 'octo' });
+      if (url.pathname === '/repos/octo/questions') return json(200, { permissions: { push: true } });
+      if (url.pathname.startsWith('/repos/octo/questions/contents/')) {
+        if (method === 'GET') return json(404, { message: 'Not Found' });
+        if (failCommit) return json(500, { message: 'Server Error' });
+        return json(201, { commit: { sha: 'abc123', html_url: 'https://github.com/octo/questions/commit/abc123' } });
+      }
+      if (url.pathname === '/repos/octo/questions/git/refs') return json(201, {});
+      return json(404, { message: 'Not Found' });
+    });
+    const publish = (version: string, extra: object = {}) => app.inject({
+      method: 'POST', url: '/api/v1/packages', headers: auth,
+      payload: {
+        metadata: {
+          id, version, title: 'GitHub Test', summary: 'Paket fuer den GitHub-Spiegel.', language: 'de-CH', license: 'CC-BY-4.0',
+          taxonomy: { subject: 'Informatik', subject_category: 'SF' }, release_notes: `Notes ${version}`, ...extra,
+        },
+        xml: validXml,
+      },
+    });
+    try {
+      expect(JSON.parse((await app.inject({ method: 'GET', url: '/api/v1/account/github', headers: auth })).body).connected).toBe(false);
+      // Linking needs a connected GitHub account.
+      expect((await publish('1.0.0', { github_repo: 'git@github.com:octo/questions.git' })).statusCode).toBe(400);
+
+      // A token GitHub rejects is not stored; an accepted one is stored encrypted and never returned.
+      const put = (token: string) => app.inject({ method: 'PUT', url: '/api/v1/account/github', headers: auth, payload: { token } });
+      expect((await put('github_pat_wrong_token_000000000000')).statusCode).toBe(400);
+      const connected = await put(ghToken);
+      expect(connected.statusCode).toBe(200);
+      expect(JSON.parse(connected.body)).toEqual({ connected: true, login: 'octo' });
+      const me = JSON.parse((await app.inject({ method: 'GET', url: '/api/v1/auth/me', headers: auth })).body);
+      const stored = await getDatabase()('users').where({ id: me.id }).first('github_token_enc');
+      expect(stored.github_token_enc).not.toContain(ghToken);
+      expect(JSON.stringify(me)).not.toContain('github_token');
+
+      expect((await publish('1.0.0', { github_repo: 'https://gitlab.com/octo/questions' })).statusCode).toBe(400);
+      calls.length = 0;
+      const first = await publish('1.0.0', { github_repo: 'git@github.com:octo/questions.git' });
+      expect(first.statusCode).toBe(201);
+      expect(JSON.parse(first.body).github).toEqual({ status: 'ok', commit_url: 'https://github.com/octo/questions/commit/abc123', warning: null });
+      const commit = calls.find(c => c.method === 'PUT')!;
+      expect(commit.path).toBe(`/repos/octo/questions/contents/${id}.xml`);
+      expect(commit.body.message).toBe('Notes 1.0.0');
+      expect(Buffer.from(commit.body.content, 'base64').toString('utf8')).toBe(validXml);
+      expect(calls.find(c => c.path.endsWith('/git/refs'))!.body).toEqual({ ref: 'refs/tags/v1.0.0', sha: 'abc123' });
+
+      // Admins see the link and the commit; anonymous visitors of the public package do not.
+      const owned = JSON.parse((await app.inject({ method: 'GET', url: `/api/v1/packages/${id}`, headers: auth })).body);
+      expect(owned.github_repo).toBe('git@github.com:octo/questions.git');
+      expect(owned.releases[0].github_commit_url).toBe('https://github.com/octo/questions/commit/abc123');
+      const anonymous = JSON.parse((await app.inject({ method: 'GET', url: `/api/v1/packages/${id}` })).body);
+      expect(anonymous.github_repo).toBeUndefined();
+      expect(anonymous.releases[0].github_commit_url).toBeUndefined();
+
+      // A failed commit never undoes the publish: the release exists and carries the error.
+      failCommit = true;
+      const second = await publish('1.1.0');
+      expect(second.statusCode).toBe(201);
+      expect(JSON.parse(second.body).github.status).toBe('error');
+      const afterFail = JSON.parse((await app.inject({ method: 'GET', url: `/api/v1/packages/${id}`, headers: auth })).body);
+      expect(afterFail.latest_version).toBe('1.1.0');
+      expect(afterFail.releases.find((r: any) => r.version === '1.1.0').github_error).toContain('GitHub 500');
+
+      // Clearing the field in the settings unlinks: the next release makes no GitHub call.
+      expect((await app.inject({ method: 'PATCH', url: `/api/v1/packages/${id}`, headers: auth, payload: { github_repo: '' } })).statusCode).toBe(200);
+      calls.length = 0;
+      const third = await publish('1.2.0');
+      expect(JSON.parse(third.body).github).toBeNull();
+      expect(calls).toHaveLength(0);
+
+      // Linking again in the settings commits the current version right away; saving it unchanged does not.
+      failCommit = false;
+      const patchRepo = () => app.inject({ method: 'PATCH', url: `/api/v1/packages/${id}`, headers: auth, payload: { github_repo: 'https://github.com/octo/questions' } });
+      const relinked = await patchRepo();
+      expect(relinked.statusCode).toBe(200);
+      expect(JSON.parse(relinked.body)).toMatchObject({ github_repo: 'git@github.com:octo/questions.git', github_sync: { status: 'ok' } });
+      expect(calls.find(c => c.method === 'PUT')!.body.message).toBe('Notes 1.2.0');
+      expect(calls.find(c => c.path.endsWith('/git/refs'))!.body.ref).toBe('refs/tags/v1.2.0');
+      calls.length = 0;
+      expect(JSON.parse((await patchRepo()).body).github_sync).toBeNull();
+      expect(calls.some(c => c.method === 'PUT')).toBe(false);
+
+      expect((await app.inject({ method: 'DELETE', url: '/api/v1/account/github', headers: auth })).statusCode).toBe(204);
+      expect(JSON.parse((await app.inject({ method: 'GET', url: '/api/v1/account/github', headers: auth })).body).connected).toBe(false);
+    } finally {
+      fetchMock.mockRestore();
+      await app.inject({ method: 'DELETE', url: `/api/v1/packages/${id}`, headers: auth });
+      await app.inject({ method: 'DELETE', url: '/api/v1/account/github', headers: auth });
     }
   });
 

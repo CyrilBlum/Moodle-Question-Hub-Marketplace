@@ -480,6 +480,14 @@ export const PackageDetailPage: React.FC = () => {
                   {rel.release_notes && (
                     <p className="text-xs text-slate-600 mt-1">{rel.release_notes}</p>
                   )}
+                  {rel.github_commit_url && (
+                    <a href={rel.github_commit_url} target="_blank" rel="noopener noreferrer" className="text-xs text-red-600 hover:underline mt-1 inline-block">
+                      Commit auf GitHub
+                    </a>
+                  )}
+                  {rel.github_error && (
+                    <p className="text-xs text-amber-700 mt-1">GitHub: {rel.github_error}</p>
+                  )}
                   <div className="text-xs font-mono text-slate-400 mt-1 truncate max-w-md">
                     SHA-256: {rel.sha256}
                   </div>

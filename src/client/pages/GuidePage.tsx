@@ -138,6 +138,12 @@ export const GuidePage: React.FC = () => {
             dem eigenen Moodle) oder <em>Admin</em> (verwaltet zusätzlich Einstellungen, Mitwirkende und Rückzug).
           </p>
         </Step>
+        <Step n={5} title="Mit GitHub verknüpfen (optional)">
+          <p>
+            Wer die Versionen zusätzlich in einem GitHub-Repository haben möchte, verknüpft das Paket damit, siehe{' '}
+            <a href="#github" className="text-red-600 hover:underline">unten</a>. Für den Hub ist das nicht nötig.
+          </p>
+        </Step>
       </ol>
 
       <div id="pat" className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-2 scroll-mt-20">
@@ -156,6 +162,33 @@ export const GuidePage: React.FC = () => {
         </ol>
         <p className="text-xs text-slate-500">
           Behandeln Sie den Token wie ein Passwort. Nicht mehr benötigte Tokens widerrufen Sie im selben Abschnitt.
+        </p>
+      </div>
+
+      <div id="github" className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-2 scroll-mt-20">
+        <h3 className="font-semibold text-slate-900 text-sm">Paket mit GitHub verknüpfen (optional)</h3>
+        <p className="text-sm text-slate-700">
+          Jede neue Version wird dann als Datei <code>Paket-ID.xml</code> in das Repository committet, mit den
+          Versionshinweisen (Release-Notiz) als Commit-Nachricht, und mit <code>v</code> plus Versionsnummer getaggt
+          (z.B. <code>v1.2.0</code>). Das gilt auch für Versionen, die Mitwirkende veröffentlichen.
+        </p>
+        <ol className="list-decimal pl-5 text-sm text-slate-700 space-y-1">
+          <li>
+            Auf GitHub unter Settings › Developer settings › Fine-grained tokens einen Token erstellen: nur für das gewünschte
+            Repository, Berechtigung «Contents: Read and write».
+          </li>
+          <li>Im Hub oben rechts auf Ihren Namen klicken, Abschnitt «GitHub-Verbindung», Token einfügen und verbinden.</li>
+          <li>
+            Die Adresse des Repositorys (z.B. <code>git@github.com:konto/fragen.git</code>) beim Veröffentlichen eintragen, im
+            Hub unter <Link to="/upload" className="text-red-600 hover:underline">Paket hochladen</Link> oder in Moodle im Feld{' '}
+            <Ui de="GitHub-Repository (optional)" en="GitHub repository (optional)" />. Bei einem bestehenden Paket tragen Sie
+            sie in den Paket-Einstellungen ein: Die aktuelle Version wird dann sofort committet.
+          </li>
+        </ol>
+        <p className="text-xs text-slate-500">
+          Der Hub speichert den Token verschlüsselt und zeigt ihn nie wieder an. Committet wird mit dem Token der Person, die
+          das Repository verknüpft hat. Scheitert ein Commit, bleibt die Version im Hub trotzdem veröffentlicht; den Fehler
+          sehen Admins des Pakets im Reiter «Versionen». Ein leeres Feld in den Einstellungen löst die Verknüpfung.
         </p>
       </div>
 

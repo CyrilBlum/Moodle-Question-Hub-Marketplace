@@ -29,6 +29,9 @@ export const UploadPage: React.FC = () => {
   const [previewEnabled, setPreviewEnabled] = useState(true);
   const [visibility, setVisibility] = useState<'public' | 'private'>('public');
   const [releaseNotes, setReleaseNotes] = useState('Erstveröffentlichung');
+  const [githubRepo, setGithubRepo] = useState('');
+  const [github, setGithub] = useState<{ connected: boolean; login: string | null } | null>(null);
+  const [publishedId, setPublishedId] = useState('');
 
   useEffect(() => {
     if (!getToken()) {
@@ -36,6 +39,7 @@ export const UploadPage: React.FC = () => {
       return;
     }
     api.getTaxonomy().then(setTaxonomy).catch(console.error);
+    api.getGitHubConnection().then(setGithub).catch(() => setGithub(null));
   }, []);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -113,10 +117,17 @@ export const UploadPage: React.FC = () => {
       release_notes: releaseNotes.trim(),
       preview_enabled: previewEnabled,
       visibility,
+      ...(githubRepo.trim() ? { github_repo: githubRepo.trim() } : {}),
     };
 
     try {
       const res = await api.publishPackage(metadata, xmlContent);
+      // The release is published in any case; a failed GitHub commit is shown before leaving the page.
+      if (res.github?.status === 'error') {
+        setPublishedId(res.package_id);
+        setErrorMessage(`Version ${res.version} ist veröffentlicht, aber der Commit auf GitHub ist fehlgeschlagen: ${res.github.message}`);
+        return;
+      }
       navigate(`/packages/${res.package_id}`);
     } catch (err: any) {
       setErrorMessage(err.message || 'Veröffentlichung fehlgeschlagen.');
@@ -181,7 +192,12 @@ export const UploadPage: React.FC = () => {
       {errorMessage && (
         <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-sm text-red-700 flex items-start space-x-2">
           <XCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
-          <span>{errorMessage}</span>
+          <span>
+            {errorMessage}
+            {publishedId && (
+              <Link to={`/packages/${publishedId}`} className="block mt-1 underline">Zum veröffentlichten Paket</Link>
+            )}
+          </span>
         </div>
       )}
 
@@ -495,6 +511,37 @@ export const UploadPage: React.FC = () => {
                 <option value="private">Privat – nur mit Freigabe</option>
               </select>
               <span className="block mt-1 text-xs font-normal text-slate-500">Private Pakete erscheinen mit begrenzten Angaben in der Suche. Andere Hub-Konten können Zugriff anfragen.</span>
+            </label>
+            <label className="md:col-span-2 block text-sm font-medium text-slate-700">
+              Versionshinweise
+              <textarea
+                rows={2}
+                value={releaseNotes}
+                onChange={e => setReleaseNotes(e.target.value)}
+                className="mt-1 w-full text-sm border-slate-300 rounded-lg p-2.5 bg-slate-50 border focus:bg-white"
+              />
+              <span className="block mt-1 text-xs font-normal text-slate-500">Bei einem mit GitHub verbundenen Paket ist das die Commit-Nachricht.</span>
+            </label>
+            <label className="md:col-span-2 block text-sm font-medium text-slate-700">
+              GitHub-Repository (optional)
+              <input
+                type="text"
+                value={githubRepo}
+                onChange={e => setGithubRepo(e.target.value)}
+                disabled={!github?.connected}
+                placeholder="git@github.com:konto/repository.git"
+                className="mt-1 w-full text-sm border-slate-300 rounded-lg p-2.5 bg-slate-50 border font-mono focus:bg-white disabled:opacity-60"
+              />
+              <span className="block mt-1 text-xs font-normal text-slate-500">
+                {github?.connected ? (
+                  <>Freiwillig. Jede neue Version wird als Datei <span className="font-mono">{packageId || '<Paket-ID>'}.xml</span> in
+                  dieses Repository committet (Commit-Nachricht = Versionshinweise) und mit <span className="font-mono">v&lt;Version&gt;</span> getaggt.
+                  Verbunden als <span className="font-mono">{github.login}</span>.</>
+                ) : (
+                  <>Freiwillig. Dafür verbinden Sie zuerst im <Link to="/dashboard" className="underline">Dashboard</Link> (Abschnitt «GitHub-Verbindung») ein GitHub-Konto.
+                  Ohne GitHub funktioniert der Hub unverändert.</>
+                )}
+              </span>
             </label>
           </div>
 

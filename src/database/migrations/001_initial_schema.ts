@@ -194,6 +194,28 @@ export async function up(knex: Knex): Promise<void> {
       await knex('package_members').insert({ package_id: row.package_id, user_id: row.requester_id, role: 'member' });
     }
   }
+
+  // Optional GitHub link: a user's encrypted GitHub token, the repository a package is mirrored to
+  // (with the package admin whose token pushes), and the outcome of each release's commit.
+  if (!(await knex.schema.hasColumn('users', 'github_token_enc'))) {
+    await knex.schema.alterTable('users', table => {
+      table.text('github_token_enc').nullable();
+      table.string('github_login', 100).nullable();
+      table.timestamp('github_connected_at').nullable();
+    });
+  }
+  if (!(await knex.schema.hasColumn('packages', 'github_repo'))) {
+    await knex.schema.alterTable('packages', table => {
+      table.string('github_repo', 255).nullable();
+      table.string('github_linked_by', 36).nullable();
+    });
+  }
+  if (!(await knex.schema.hasColumn('releases', 'github_commit_url'))) {
+    await knex.schema.alterTable('releases', table => {
+      table.string('github_commit_url', 512).nullable();
+      table.text('github_error').nullable();
+    });
+  }
 }
 
 export async function down(knex: Knex): Promise<void> {

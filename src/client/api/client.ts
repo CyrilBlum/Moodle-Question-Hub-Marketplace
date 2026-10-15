@@ -173,6 +173,11 @@ export const api = {
     });
   },
   getMyPackages: () => request('/account/packages'),
+  getGitHubConnection: () => request('/account/github'),
+  connectGitHub: (token: string) => request('/account/github', {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }),
+  }),
+  disconnectGitHub: () => request('/account/github', { method: 'DELETE' }),
   getPackageMembers: (id: string) => request(`/packages/${encodeURIComponent(id)}/members`),
   addPackageMember: (id: string, email: string, role: 'member' | 'editor' | 'admin') =>
     request(`/packages/${encodeURIComponent(id)}/members`, {

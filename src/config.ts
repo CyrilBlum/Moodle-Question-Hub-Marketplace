@@ -40,6 +40,11 @@ const ConfigSchema = z.object({
     .default(true),
   CAPTCHA_HMAC_KEY: z.string().optional(),
 
+  // Optional GitHub link of packages: users store a GitHub token (encrypted with a key derived from
+  // JWT_SECRET unless GITHUB_TOKEN_KEY is set); every new release is committed to the linked repository.
+  GITHUB_API_URL: z.string().default('https://api.github.com'),
+  GITHUB_TOKEN_KEY: z.string().optional(),
+
   // Pluggable Monetisation
   MONETISATION_ENABLED: z
     .preprocess(val => val === 'true' || val === true || val === '1' || val === 1, z.boolean())

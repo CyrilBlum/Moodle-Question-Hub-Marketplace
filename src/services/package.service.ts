@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import fs from 'fs';
 import semver from 'semver';
 import { PackageMembersService, PackageRole } from './package-members.service';
 import { getDatabase } from '../database/connection';
@@ -6,6 +7,7 @@ import { AdminService } from './admin.service';
 import { SafeXmlValidatorService } from './xml-validator.service';
 import { PackageStorageService } from './package-storage.service';
 import { TaxonomyService } from './taxonomy.service';
+import { GitHubService } from './github.service';
 import {
   PackageManifest,
   PackageSearchResult,
@@ -24,6 +26,12 @@ export interface PackageSearchFilters {
   page?: number;
   limit?: number;
 }
+
+/** Outcome of committing a release to the linked GitHub repository; null when none is linked. */
+export type GitHubSyncResult =
+  | { status: 'ok'; commit_url: string; warning: string | null }
+  | { status: 'error'; message: string }
+  | null;
 
 /** Decodes HTML entities in plain-text metadata (older plugin versions sent "Computer &amp; X"). */
 export function decodeEntities(text: string): string {
@@ -70,6 +78,7 @@ export class PackageService {
     qtypes_breakdown: Record<string, number>;
     download_url: string;
     created_at: string;
+    github: GitHubSyncResult;
   }> {
     const knex = getDatabase();
 
@@ -143,6 +152,13 @@ export class PackageService {
       throw new Error(`BAD_REQUEST: Taxonomie-Validierung fehlgeschlagen: ${taxCheck.errors.join('; ')}`);
     }
 
+    // Optional GitHub link: only package admins set it (editors' manifests keep the package settings).
+    // undefined keeps the current link, '' or null removes it.
+    const mayLinkGitHub = !existingPackage || publisherRole === 'admin';
+    const githubLink = mayLinkGitHub && manifest.github_repo !== undefined
+      ? await this.resolveGitHubLink(ownerId, manifest.github_repo)
+      : undefined;
+
     // 5. Stage upload and compute SHA-256
     const staged = await this.storage.stageUpload(rawXml);
 
@@ -181,6 +197,8 @@ export class PackageService {
           is_monetised: false,
           preview_enabled: manifest.preview_enabled !== false,
           visibility: manifest.visibility === 'private' ? 'private' : 'public',
+          github_repo: githubLink?.github_repo ?? null,
+          github_linked_by: githubLink?.github_linked_by ?? null,
           created_at: now,
           updated_at: now,
         });
@@ -226,6 +244,7 @@ export class PackageService {
               manifest.visibility === undefined
                 ? existingPackage.visibility || 'public'
                 : manifest.visibility === 'private' ? 'private' : 'public',
+            ...(githubLink ?? {}),
             updated_at: now,
           });
       }
@@ -247,6 +266,8 @@ export class PackageService {
       });
     });
 
+    const github = await this.syncReleaseToGitHub(manifest.id, manifest.version, rawXml, manifest.release_notes);
+
     return {
       package_id: manifest.id,
       version: manifest.version,
@@ -256,7 +277,57 @@ export class PackageService {
       qtypes_breakdown: report.stats.qtypes_breakdown,
       download_url: `/api/v1/packages/${manifest.id}/releases/${manifest.version}/download`,
       created_at: now.toISOString(),
+      github,
     };
+  }
+
+  /**
+   * Columns for a GitHub link set by `userId`: null values unlink. Throws BAD_REQUEST for an invalid URL
+   * or when the user's GitHub token cannot write to the repository.
+   */
+  private async resolveGitHubLink(
+    userId: string,
+    input: string | null
+  ): Promise<{ github_repo: string | null; github_linked_by: string | null }> {
+    if (input === null || String(input).trim() === '') return { github_repo: null, github_linked_by: null };
+    const ref = GitHubService.parseRepoUrl(String(input));
+    if (!ref) {
+      throw new Error('BAD_REQUEST: Ungültige GitHub-Adresse. Erwartet wird z.B. git@github.com:konto/repository.git.');
+    }
+    await GitHubService.getInstance().assertRepoWritable(userId, ref);
+    return { github_repo: GitHubService.canonicalUrl(ref), github_linked_by: userId };
+  }
+
+  /**
+   * Commits a just published release to the package's GitHub repository, if one is linked. The release is
+   * already stored, so a failure never undoes the publish: it is recorded on the release and returned.
+   */
+  private async syncReleaseToGitHub(
+    packageId: string,
+    version: string,
+    rawXml: string,
+    releaseNotes?: string
+  ): Promise<GitHubSyncResult> {
+    const knex = getDatabase();
+    const pkg = await knex('packages').where({ id: packageId }).first('github_repo', 'github_linked_by');
+    if (!pkg?.github_repo) return null;
+    try {
+      const pushed = await GitHubService.getInstance().pushRelease({
+        userId: pkg.github_linked_by,
+        repoUrl: pkg.github_repo,
+        packageId,
+        version,
+        xml: rawXml,
+        message: releaseNotes?.trim() || `Version ${version}`,
+      });
+      await knex('releases').where({ package_id: packageId, version })
+        .update({ github_commit_url: pushed.commit_url, github_error: pushed.warning });
+      return { status: 'ok', ...pushed };
+    } catch (err: any) {
+      const message = String(err?.message || 'Unbekannter Fehler bei GitHub.');
+      await knex('releases').where({ package_id: packageId, version }).update({ github_error: message });
+      return { status: 'error', message };
+    }
   }
 
   /**
@@ -519,6 +590,7 @@ export class PackageService {
       can_access: canAccess,
       my_role: myRole,
       can_manage: myRole === 'admin' || isHubAdmin,
+      github_repo: myRole === 'admin' || isHubAdmin ? row.github_repo || null : undefined,
       stats: {
         question_count: canAccess && latestRelease ? latestRelease.question_count : 0,
         categories_count: canAccess ? categories.length : 0,
@@ -534,6 +606,9 @@ export class PackageService {
         release_notes: r.release_notes || undefined,
         download_url: `/api/v1/packages/${packageId}/releases/${r.version}/download`,
         created_at: new Date(r.created_at).toISOString(),
+        ...(myRole === 'admin' || isHubAdmin
+          ? { github_commit_url: r.github_commit_url || null, github_error: r.github_error || null }
+          : {}),
       })) : [],
       compatibility: {
         min_moodle_version: '4.5',
@@ -704,8 +779,9 @@ export class PackageService {
       tags?: string[];
       preview_enabled?: boolean;
       visibility?: 'public' | 'private';
+      github_repo?: string | null;
     }
-  ): Promise<void> {
+  ): Promise<{ github: GitHubSyncResult }> {
     const knex = getDatabase();
     const pkg = await knex('packages').where({ id: packageId }).first();
     if (!pkg) throw new Error('NOT_FOUND: Paket nicht gefunden.');
@@ -739,6 +815,13 @@ export class PackageService {
     if (patch.canton !== undefined) update.canton = patch.canton ? String(patch.canton).toUpperCase() : null;
     if (patch.subject !== undefined) update.subject = patch.subject;
     if (patch.subject_category !== undefined) update.subject_category = patch.subject_category;
+    let linkedNewRepo = false;
+    if (patch.github_repo !== undefined) {
+      const link = await this.resolveGitHubLink(ownerId, patch.github_repo);
+      // Saving the unchanged repository keeps whose token pushes.
+      if (link.github_repo !== pkg.github_repo || !link.github_repo) Object.assign(update, link);
+      linkedNewRepo = !!link.github_repo && link.github_repo !== pkg.github_repo;
+    }
 
     const check = this.taxonomy.validateTaxonomy({
       subject: (update.subject as string) || pkg.subject,
@@ -767,6 +850,18 @@ export class PackageService {
         }
       }
     });
+
+    // A newly linked repository starts with the current version instead of waiting for the next one.
+    if (!linkedNewRepo) return { github: null };
+    const latest = await knex('releases').where({ package_id: packageId, version: pkg.latest_version, is_yanked: false }).first();
+    if (!latest) return { github: null };
+    let xml: string;
+    try {
+      xml = await fs.promises.readFile(this.storage.getReleaseFilePath(packageId, latest.version), 'utf-8');
+    } catch {
+      return { github: { status: 'error', message: `Die Datei der Version ${latest.version} ist nicht lesbar.` } };
+    }
+    return { github: await this.syncReleaseToGitHub(packageId, latest.version, xml, latest.release_notes || undefined) };
   }
 
   /**
@@ -778,6 +873,7 @@ export class PackageService {
     subject: string; subject_category: string; grades: string[]; tags: string[];
     latest_version: string; versions: string[];
     preview_enabled: boolean; downloads_count: number; updated_at: string; my_role: PackageRole; is_creator: boolean;
+    github_repo: string | null;
   }>> {
     const knex = getDatabase();
     const rows = await knex('packages')
@@ -809,6 +905,7 @@ export class PackageService {
       updated_at: new Date(r.updated_at).toISOString(),
       my_role: roles.get(r.id) || 'editor',
       is_creator: r.owner_id === ownerId,
+      github_repo: roles.get(r.id) === 'admin' ? r.github_repo || null : null,
     }));
   }
 

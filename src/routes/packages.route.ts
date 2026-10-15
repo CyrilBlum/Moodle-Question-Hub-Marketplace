@@ -283,7 +283,7 @@ export async function packageRoutes(app: FastifyInstance): Promise<void> {
     const user = (req as any).user;
     const { id } = req.params as { id: string };
     const body = (req.body || {}) as Record<string, unknown>;
-    const allowed = ['title', 'summary', 'license', 'canton', 'topic', 'subject', 'subject_category', 'grades', 'tags', 'preview_enabled', 'visibility'];
+    const allowed = ['title', 'summary', 'license', 'canton', 'topic', 'subject', 'subject_category', 'grades', 'tags', 'preview_enabled', 'visibility', 'github_repo'];
     const patch: Record<string, unknown> = {};
     for (const k of allowed) if (k in body) patch[k] = body[k];
     if ('version' in body || 'latest_version' in body) {
@@ -294,8 +294,9 @@ export async function packageRoutes(app: FastifyInstance): Promise<void> {
       });
     }
     try {
-      await packageService.updatePackage(user.id, id, patch as any);
-      return reply.status(200).send(await packageService.getPackage(id, user.id));
+      const { github } = await packageService.updatePackage(user.id, id, patch as any);
+      // github_sync: outcome of the initial commit when a repository was newly linked, else null.
+      return reply.status(200).send({ ...(await packageService.getPackage(id, user.id)), github_sync: github });
     } catch (err: any) {
       if ((err.message || '').startsWith('BAD_REQUEST:')) {
         return reply.status(400).send({ statusCode: 400, error: 'Bad Request', message: err.message.replace('BAD_REQUEST: ', '') });

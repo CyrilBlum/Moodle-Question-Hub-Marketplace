@@ -23,6 +23,8 @@ export interface PackageManifest {
   visibility?: 'public' | 'private';
   /** Version the client's content is based on; a newer Hub release rejects the update (pull first). */
   base_version?: string;
+  /** Optional GitHub repository (SSH or HTTPS URL) every release is committed to; '' or null unlinks. */
+  github_repo?: string | null;
 }
 
 export interface PackageRecord {
@@ -83,6 +85,8 @@ export interface PackageSearchResult {
   my_role?: 'admin' | 'editor' | 'member' | null;
   /** Package admin or Hub admin: may edit settings, members, access requests and withdraw. */
   can_manage?: boolean;
+  /** Linked GitHub repository (git@github.com:owner/repo.git); only shown to package admins. */
+  github_repo?: string | null;
   access_requests?: Array<{
     id: string;
     requester: { id: string; name: string; email: string | null; institution: string | null };
@@ -119,5 +123,8 @@ export interface PackageDetailResult extends PackageSearchResult {
     release_notes?: string;
     download_url: string;
     created_at: string;
+    /** Only for package admins: the GitHub commit of this release, or why it failed. */
+    github_commit_url?: string | null;
+    github_error?: string | null;
   }>;
 }

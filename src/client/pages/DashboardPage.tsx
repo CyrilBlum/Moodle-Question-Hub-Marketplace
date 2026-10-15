@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Key, Plus, Trash2, Copy, Check, AlertCircle, Shield, User } from 'lucide-react';
 import { api, getToken, getStoredUser, setStoredUser } from '../api/client';
 import { PackageEditForm } from '../components/PackageEditForm';
+import { GitHubConnection } from '../components/GitHubConnection';
 
 export const CANTONS = [
   ['AG', 'Aargau'], ['AI', 'Appenzell Innerrhoden'], ['AR', 'Appenzell Ausserrhoden'],
@@ -291,6 +292,8 @@ export const DashboardPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      <GitHubConnection />
 
       {/* New Token Modal */}
       {modalOpen && (

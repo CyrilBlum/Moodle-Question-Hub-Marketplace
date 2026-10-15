@@ -19,6 +19,7 @@ export const PackageEditForm: React.FC<Props> = ({ pkg, onSaved, onCancel, showH
   const [tags, setTags] = useState<string>((pkg.taxonomy?.tags || pkg.tags || []).join(', '));
   const [previewEnabled, setPreviewEnabled] = useState<boolean>(pkg.preview_enabled !== false);
   const [visibility, setVisibility] = useState<'public' | 'private'>(pkg.visibility === 'private' ? 'private' : 'public');
+  const [githubRepo, setGithubRepo] = useState<string>(pkg.github_repo || '');
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -29,7 +30,7 @@ export const PackageEditForm: React.FC<Props> = ({ pkg, onSaved, onCancel, showH
     setBusy(true);
     setMessage(null);
     try {
-      await api.updatePackage(pkg.id, {
+      const res = await api.updatePackage(pkg.id, {
         title,
         summary,
         license,
@@ -38,8 +39,16 @@ export const PackageEditForm: React.FC<Props> = ({ pkg, onSaved, onCancel, showH
         tags: tags.split(',').map(tag => tag.trim()).filter(Boolean),
         preview_enabled: previewEnabled,
         visibility,
+        // Only sent when changed: saving re-checks access with the saving admin's GitHub token.
+        ...(githubRepo.trim() !== (pkg.github_repo || '') ? { github_repo: githubRepo.trim() } : {}),
       });
-      setMessage({ ok: true, text: 'Einstellungen gespeichert.' });
+      // A newly linked repository receives the current version right away.
+      // On a failed commit the form stays open (onSaved reloads and remounts it), so the error remains visible.
+      if (res?.github_sync?.status === 'error') {
+        setMessage({ ok: false, text: `Einstellungen gespeichert, aber der erste Commit auf GitHub ist fehlgeschlagen: ${res.github_sync.message}` });
+        return;
+      }
+      setMessage({ ok: true, text: res?.github_sync ? 'Einstellungen gespeichert. Die aktuelle Version ist auf GitHub committet.' : 'Einstellungen gespeichert.' });
       await onSaved();
     } catch (err: any) {
       setMessage({ ok: false, text: err.message || 'Speichern fehlgeschlagen.' });
@@ -134,6 +143,22 @@ export const PackageEditForm: React.FC<Props> = ({ pkg, onSaved, onCancel, showH
           <span className="block text-xs text-slate-500">
             Musterlösungen und Feedback werden nie angezeigt. Ohne Vorschau entfällt das Tab «Vorschau» und das Etikett.
           </span>
+        </span>
+      </label>
+
+      <label className="block text-xs font-semibold text-slate-700">
+        GitHub-Repository (optional)
+        <input
+          className={`${inputCls} font-mono`}
+          value={githubRepo}
+          onChange={e => setGithubRepo(e.target.value)}
+          placeholder="git@github.com:konto/repository.git"
+        />
+        <span className="block text-xs font-normal text-slate-500 mt-1">
+          Freiwillig. Ist ein Repository eingetragen, wird jede neue Version als <span className="font-mono">{pkg.id}.xml</span> dorthin
+          committet (Commit-Nachricht = Versionshinweise) und mit <span className="font-mono">v&lt;Version&gt;</span> getaggt; beim Verknüpfen
+          sofort auch die aktuelle Version. Dafür braucht
+          Ihr Konto eine GitHub-Verbindung (Dashboard, Abschnitt «GitHub-Verbindung») mit Schreibrecht auf das Repository. Leeren Sie das Feld, um die Verbindung zu lösen.
         </span>
       </label>
 
