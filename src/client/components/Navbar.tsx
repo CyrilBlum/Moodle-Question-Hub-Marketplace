@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { BookOpen, Upload, Key, User, LogOut, LogIn, Menu, X } from 'lucide-react';
-import { getToken, getStoredUser, clearToken } from '../api/client';
+import { BookOpen, Upload, Key, User, LogOut, LogIn, Menu, X, Shield } from 'lucide-react';
+import { api, getToken, getStoredUser, setStoredUser, clearToken } from '../api/client';
 
 export const Navbar: React.FC = () => {
   const [user, setUser] = useState<any>(null);
@@ -12,6 +12,8 @@ export const Navbar: React.FC = () => {
     const token = getToken();
     if (token) {
       setUser(getStoredUser());
+      // Refresh the stored profile, so a changed role (e.g. admin) shows without logging in again.
+      api.getMe().then(me => { setStoredUser(me); setUser(me); }).catch(() => undefined);
     } else {
       setUser(null);
     }
@@ -52,6 +54,12 @@ export const Navbar: React.FC = () => {
 
             {user ? (
               <div className="flex items-center space-x-4 pl-4 border-l border-slate-200">
+                {user.role === 'admin' && (
+                  <Link to="/admin" className="text-sm font-medium text-slate-700 hover:text-red-600 flex items-center space-x-1.5 transition">
+                    <Shield className="w-4 h-4" />
+                    <span>Administration</span>
+                  </Link>
+                )}
                 <Link to="/dashboard" className="text-sm font-medium text-slate-700 hover:text-red-600 flex items-center space-x-1.5 transition">
                   <User className="w-4 h-4" />
                   <span>{user.full_name || 'Dashboard'}</span>
@@ -116,6 +124,15 @@ export const Navbar: React.FC = () => {
           </Link>
           {user ? (
             <>
+              {user.role === 'admin' && (
+                <Link
+                  to="/admin"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block py-2 text-base font-medium text-slate-700 hover:text-red-600"
+                >
+                  Administration
+                </Link>
+              )}
               <Link
                 to="/dashboard"
                 onClick={() => setMobileMenuOpen(false)}

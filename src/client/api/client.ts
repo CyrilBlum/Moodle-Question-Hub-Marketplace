@@ -158,6 +158,10 @@ export const api = {
     });
   },
   getMyPackages: () => request('/account/packages'),
+
+  // Administration (admins only)
+  getAdminOverview: () => request('/admin/overview'),
+  purgeWithdrawnPackage: (id: string) => request(`/admin/withdrawn/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   updatePackage: (id: string, patch: Record<string, unknown>) =>
     request(`/packages/${encodeURIComponent(id)}`, {
       method: 'PATCH',

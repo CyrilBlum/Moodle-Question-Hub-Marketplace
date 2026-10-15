@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import fs from 'fs';
 import { PackageService, PackageSearchFilters } from '../services/package.service';
+import { AdminService } from '../services/admin.service';
 import { SafeXmlValidatorService } from '../services/xml-validator.service';
 import { PackageStorageService } from '../services/package-storage.service';
 import { PreviewSanitizerService } from '../services/preview-sanitizer.service';
@@ -293,7 +294,7 @@ export async function packageRoutes(app: FastifyInstance): Promise<void> {
       });
     }
     try {
-      await packageService.updatePackage(user.id, user.role === 'admin', id, patch as any);
+      await packageService.updatePackage(user.id, await AdminService.getInstance().isAdmin(user.id), id, patch as any);
       return reply.status(200).send(await packageService.getPackage(id, user.id));
     } catch (err: any) {
       if ((err.message || '').startsWith('BAD_REQUEST:')) {
@@ -373,7 +374,7 @@ export async function packageRoutes(app: FastifyInstance): Promise<void> {
     const user = (req as any).user;
     const { id } = req.params as { id: string };
     try {
-      await packageService.withdrawPackage(user.id, user.role === 'admin', id);
+      await packageService.withdrawPackage(user.id, await AdminService.getInstance().isAdmin(user.id), id);
       return reply.status(204).send();
     } catch (err) {
       return withdrawErrors(err, reply);
@@ -385,7 +386,7 @@ export async function packageRoutes(app: FastifyInstance): Promise<void> {
     const user = (req as any).user;
     const { id, version } = req.params as { id: string; version: string };
     try {
-      await packageService.withdrawRelease(user.id, user.role === 'admin', id, version);
+      await packageService.withdrawRelease(user.id, await AdminService.getInstance().isAdmin(user.id), id, version);
       return reply.status(204).send();
     } catch (err) {
       return withdrawErrors(err, reply);

@@ -14,6 +14,7 @@ import { packageRoutes } from './routes/packages.route';
 import { taxonomyRoutes } from './routes/taxonomy.route';
 import { authRoutes } from './routes/auth.route';
 import { tokenRoutes } from './routes/tokens.route';
+import { adminRoutes } from './routes/admin.route';
 import { oauthRoutes } from './routes/oauth.route';
 
 export async function buildServer(): Promise<FastifyInstance> {
@@ -68,6 +69,7 @@ export async function buildServer(): Promise<FastifyInstance> {
       await apiV1.register(taxonomyRoutes);
       await apiV1.register(authRoutes);
       await apiV1.register(tokenRoutes);
+      await apiV1.register(adminRoutes);
       await apiV1.register(oauthRoutes, { prefix: '/oauth' });
     },
     { prefix: '/api/v1' }
