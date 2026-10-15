@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AlertCircle, Check, Save } from 'lucide-react';
 import { api } from '../api/client';
 
@@ -20,6 +20,10 @@ export const PackageEditForm: React.FC<Props> = ({ pkg, onSaved, onCancel, showH
   const [previewEnabled, setPreviewEnabled] = useState<boolean>(pkg.preview_enabled !== false);
   const [visibility, setVisibility] = useState<'public' | 'private'>(pkg.visibility === 'private' ? 'private' : 'public');
   const [githubRepo, setGithubRepo] = useState<string>(pkg.github_repo || '');
+  const [githubLogin, setGithubLogin] = useState<string | null>(null);
+  useEffect(() => {
+    api.getGitHubConnection().then(c => setGithubLogin(c?.connected ? c.login : null)).catch(() => setGithubLogin(null));
+  }, []);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -48,7 +52,12 @@ export const PackageEditForm: React.FC<Props> = ({ pkg, onSaved, onCancel, showH
         setMessage({ ok: false, text: `Einstellungen gespeichert, aber der erste Commit auf GitHub ist fehlgeschlagen: ${res.github_sync.message}` });
         return;
       }
-      setMessage({ ok: true, text: res?.github_sync ? 'Einstellungen gespeichert. Die aktuelle Version ist auf GitHub committet.' : 'Einstellungen gespeichert.' });
+      setMessage({
+        ok: true,
+        text: !res?.github_sync ? 'Einstellungen gespeichert.'
+          : res.github_sync.repo_created ? 'Einstellungen gespeichert. Das private GitHub-Repository ist angelegt und die aktuelle Version committet.'
+          : 'Einstellungen gespeichert. Die aktuelle Version ist auf GitHub committet.',
+      });
       await onSaved();
     } catch (err: any) {
       setMessage({ ok: false, text: err.message || 'Speichern fehlgeschlagen.' });
@@ -155,9 +164,18 @@ export const PackageEditForm: React.FC<Props> = ({ pkg, onSaved, onCancel, showH
           placeholder="git@github.com:konto/repository.git"
         />
         <span className="block text-xs font-normal text-slate-500 mt-1">
+          {githubLogin && (
+            <button
+              type="button"
+              onClick={() => setGithubRepo(`git@github.com:${githubLogin}/${pkg.id}.git`)}
+              className="mb-1 mr-2 px-2 py-1 text-xs font-medium rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+            >
+              Neues Repository vorschlagen
+            </button>
+          )}
           Freiwillig. Ist ein Repository eingetragen, wird jede neue Version als <span className="font-mono">{pkg.id}.xml</span> dorthin
           committet (Commit-Nachricht = Versionshinweise) und mit <span className="font-mono">v&lt;Version&gt;</span> getaggt; beim Verknüpfen
-          sofort auch die aktuelle Version. Dafür braucht
+          sofort auch die aktuelle Version. Ein noch nicht existierendes Repository legt der Hub privat an. Dafür braucht
           Ihr Konto eine GitHub-Verbindung (Dashboard, Abschnitt «GitHub-Verbindung») mit Schreibrecht auf das Repository. Leeren Sie das Feld, um die Verbindung zu lösen.
         </span>
       </label>

@@ -16,7 +16,7 @@ const REPO_PATTERNS = [
 
 /**
  * Optional mirror of packages to GitHub. A user stores a GitHub token (encrypted at rest); a package
- * admin links a package to a repository, and every new release is committed there as `<package-id>.xml`
+ * admin links a package to a repository (created if missing), and every new release is committed there as `<package-id>.xml`
  * with the release notes as commit message and tagged `v<version>`. The Hub talks to the GitHub REST API
  * over HTTPS with the token; the SSH URL only names the repository.
  */
@@ -140,22 +140,48 @@ export class GitHubService {
     return token;
   }
 
-  /** Throws BAD_REQUEST unless the user has a GitHub token with write access to the repository. */
-  public async assertRepoWritable(userId: string, ref: GitHubRepoRef): Promise<void> {
+  /**
+   * Makes sure the user's GitHub token can write to the repository. A repository the token cannot see is
+   * created (private, with an initial commit) in the user's account or, for another owner, in that
+   * organisation. Throws BAD_REQUEST when that is not possible.
+   */
+  public async ensureRepo(userId: string, ref: GitHubRepoRef): Promise<{ created: boolean }> {
     let token: string;
     try {
       token = await this.tokenOf(userId);
     } catch (err: any) {
       throw new Error(`BAD_REQUEST: ${err.message}`);
     }
-    const res = await this.call(token, 'GET', `/repos/${ref.owner}/${ref.repo}`);
-    if (res.status === 404 || res.status === 403) {
-      throw new Error(`BAD_REQUEST: Das GitHub-Repository ${ref.owner}/${ref.repo} existiert nicht oder Ihr Token hat keinen Zugriff darauf.`);
+    const name = `${ref.owner}/${ref.repo}`;
+    const res = await this.call(token, 'GET', `/repos/${name}`);
+    if (res.status === 200) {
+      if (res.data?.permissions && res.data.permissions.push === false) {
+        throw new Error(`BAD_REQUEST: Ihr GitHub-Token darf nicht in ${name} schreiben.`);
+      }
+      return { created: false };
     }
-    if (res.status !== 200) throw new Error(`BAD_REQUEST: ${GitHubService.apiError('Prüfen des Repositorys', res).message}`);
-    if (res.data?.permissions && res.data.permissions.push === false) {
-      throw new Error(`BAD_REQUEST: Ihr GitHub-Token darf nicht in ${ref.owner}/${ref.repo} schreiben.`);
+    if (res.status !== 404 && res.status !== 403) {
+      throw new Error(`BAD_REQUEST: ${GitHubService.apiError('Prüfen des Repositorys', res).message}`);
     }
+
+    // Not visible to the token: create it. Private, because packages may contain solutions.
+    const user = await getDatabase()('users').where({ id: userId }).first('github_login');
+    const own = String(user?.github_login || '').toLowerCase() === ref.owner.toLowerCase();
+    const created = await this.call(token, 'POST', own ? '/user/repos' : `/orgs/${ref.owner}/repos`, {
+      name: ref.repo,
+      private: true,
+      auto_init: true,
+      description: 'Fragenpaket aus dem Moodle Question Hub',
+    });
+    if (created.status === 201) return { created: true };
+    if (created.status === 422) {
+      throw new Error(`BAD_REQUEST: Das GitHub-Repository ${name} existiert bereits, aber Ihr Token hat keinen Zugriff darauf.`);
+    }
+    throw new Error(
+      `BAD_REQUEST: Das GitHub-Repository ${name} existiert nicht und konnte nicht angelegt werden (GitHub ${created.status}). ` +
+      'Zum Anlegen braucht der Token Zugriff auf alle Repositorys und die Berechtigung «Administration: Read and write»; ' +
+      'sonst legen Sie das Repository selbst auf GitHub an.'
+    );
   }
 
   /**
@@ -176,15 +202,22 @@ export class GitHubService {
     const repoPath = `/repos/${ref.owner}/${ref.repo}`;
     const filePath = `${encodeURIComponent(params.packageId)}.xml`;
 
-    const existing = await this.call(token, 'GET', `${repoPath}/contents/${filePath}`);
-    if (existing.status !== 200 && existing.status !== 404) {
-      throw GitHubService.apiError('Lesen der bisherigen Datei', existing);
+    const content = Buffer.from(params.xml, 'utf8').toString('base64');
+    // A just created repository can answer 404/409 for a moment, and a concurrent commit changes the file's sha: retry.
+    let put: { status: number; data: any } = { status: 0, data: null };
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (attempt > 0) await new Promise(resolve => setTimeout(resolve, 1500));
+      const existing = await this.call(token, 'GET', `${repoPath}/contents/${filePath}`);
+      if (existing.status !== 200 && existing.status !== 404) {
+        throw GitHubService.apiError('Lesen der bisherigen Datei', existing);
+      }
+      put = await this.call(token, 'PUT', `${repoPath}/contents/${filePath}`, {
+        message: params.message,
+        content,
+        ...(existing.status === 200 && existing.data?.sha ? { sha: existing.data.sha } : {}),
+      });
+      if (put.status !== 404 && put.status !== 409) break;
     }
-    const put = await this.call(token, 'PUT', `${repoPath}/contents/${filePath}`, {
-      message: params.message,
-      content: Buffer.from(params.xml, 'utf8').toString('base64'),
-      ...(existing.status === 200 && existing.data?.sha ? { sha: existing.data.sha } : {}),
-    });
     if (put.status !== 200 && put.status !== 201) throw GitHubService.apiError('Commit', put);
     const commitSha: string = put.data?.commit?.sha;
     const commitUrl: string = put.data?.commit?.html_url || `https://github.com/${ref.owner}/${ref.repo}/commit/${commitSha}`;

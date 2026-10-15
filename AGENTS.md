@@ -61,7 +61,9 @@ and an obsolete `tests/` folder (old copy with credentials: delete, never reuse)
 - **GitHub mirror (optional)**: a user stores a GitHub token via `PUT/GET/DELETE /account/github` (dashboard section
   «GitHub-Verbindung»; checked with `GET /user`, stored AES-256-GCM-encrypted in `users.github_token_enc` with a key derived
   from `JWT_SECRET`, or `GITHUB_TOKEN_KEY`; changing that key invalidates stored tokens). A package admin links a package with
-  `github_repo` (SSH or HTTPS URL, in the publish manifest or `PATCH /packages/:id`, `''` unlinks; write access is checked).
+  `github_repo` (SSH or HTTPS URL, in the publish manifest or `PATCH /packages/:id`, `''` unlinks; write access is checked;
+  a repository the token cannot see is created private with `auto_init` in the own account or the named org, which needs a token
+  with all repositories + Administration write; a new link via PATCH commits the current version at once, `github_sync`).
   Every later release, also from editors or the plugin, is committed with the linking admin's token as `<package-id>.xml` on the
   default branch (commit message = release notes) and tagged `v<version>` via the REST API (HTTPS, no SSH key on the server).
   A failed commit never fails the publish: it is returned as `github` and stored in `releases.github_error`.

@@ -29,7 +29,7 @@ export interface PackageSearchFilters {
 
 /** Outcome of committing a release to the linked GitHub repository; null when none is linked. */
 export type GitHubSyncResult =
-  | { status: 'ok'; commit_url: string; warning: string | null }
+  | { status: 'ok'; commit_url: string; warning: string | null; repo_created?: boolean }
   | { status: 'error'; message: string }
   | null;
 
@@ -244,7 +244,7 @@ export class PackageService {
               manifest.visibility === undefined
                 ? existingPackage.visibility || 'public'
                 : manifest.visibility === 'private' ? 'private' : 'public',
-            ...(githubLink ?? {}),
+            ...(githubLink ? { github_repo: githubLink.github_repo, github_linked_by: githubLink.github_linked_by } : {}),
             updated_at: now,
           });
       }
@@ -266,7 +266,8 @@ export class PackageService {
       });
     });
 
-    const github = await this.syncReleaseToGitHub(manifest.id, manifest.version, rawXml, manifest.release_notes);
+    const synced = await this.syncReleaseToGitHub(manifest.id, manifest.version, rawXml, manifest.release_notes);
+    const github = synced?.status === 'ok' && githubLink?.repoCreated ? { ...synced, repo_created: true } : synced;
 
     return {
       package_id: manifest.id,
@@ -288,14 +289,14 @@ export class PackageService {
   private async resolveGitHubLink(
     userId: string,
     input: string | null
-  ): Promise<{ github_repo: string | null; github_linked_by: string | null }> {
-    if (input === null || String(input).trim() === '') return { github_repo: null, github_linked_by: null };
+  ): Promise<{ github_repo: string | null; github_linked_by: string | null; repoCreated: boolean }> {
+    if (input === null || String(input).trim() === '') return { github_repo: null, github_linked_by: null, repoCreated: false };
     const ref = GitHubService.parseRepoUrl(String(input));
     if (!ref) {
       throw new Error('BAD_REQUEST: Ungültige GitHub-Adresse. Erwartet wird z.B. git@github.com:konto/repository.git.');
     }
-    await GitHubService.getInstance().assertRepoWritable(userId, ref);
-    return { github_repo: GitHubService.canonicalUrl(ref), github_linked_by: userId };
+    const { created } = await GitHubService.getInstance().ensureRepo(userId, ref);
+    return { github_repo: GitHubService.canonicalUrl(ref), github_linked_by: userId, repoCreated: created };
   }
 
   /**
@@ -816,11 +817,15 @@ export class PackageService {
     if (patch.subject !== undefined) update.subject = patch.subject;
     if (patch.subject_category !== undefined) update.subject_category = patch.subject_category;
     let linkedNewRepo = false;
+    let repoCreated = false;
     if (patch.github_repo !== undefined) {
       const link = await this.resolveGitHubLink(ownerId, patch.github_repo);
       // Saving the unchanged repository keeps whose token pushes.
-      if (link.github_repo !== pkg.github_repo || !link.github_repo) Object.assign(update, link);
+      if (link.github_repo !== pkg.github_repo || !link.github_repo) {
+        Object.assign(update, { github_repo: link.github_repo, github_linked_by: link.github_linked_by });
+      }
       linkedNewRepo = !!link.github_repo && link.github_repo !== pkg.github_repo;
+      repoCreated = link.repoCreated;
     }
 
     const check = this.taxonomy.validateTaxonomy({
@@ -861,7 +866,8 @@ export class PackageService {
     } catch {
       return { github: { status: 'error', message: `Die Datei der Version ${latest.version} ist nicht lesbar.` } };
     }
-    return { github: await this.syncReleaseToGitHub(packageId, latest.version, xml, latest.release_notes || undefined) };
+    const synced = await this.syncReleaseToGitHub(packageId, latest.version, xml, latest.release_notes || undefined);
+    return { github: synced?.status === 'ok' && repoCreated ? { ...synced, repo_created: true } : synced };
   }
 
   /**

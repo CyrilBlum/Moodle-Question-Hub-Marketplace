@@ -85,9 +85,11 @@ export const GitHubConnection: React.FC = () => {
             />
           </label>
           <p className="text-xs text-slate-500">
-            Erstellen Sie auf GitHub unter Settings › Developer settings › Fine-grained tokens einen Token, beschränkt auf die
-            gewünschten Repositorys, mit der Berechtigung «Contents: Read and write». Der Hub speichert ihn verschlüsselt, zeigt
-            ihn nie wieder an und nutzt ihn nur für Commits in verknüpfte Repositorys.
+            Erstellen Sie auf GitHub unter Settings › Developer settings › Fine-grained tokens einen Token mit der
+            Berechtigung «Contents: Read and write». Soll der Hub neue Repositorys selbst anlegen, wählen Sie «All repositories»
+            und zusätzlich «Administration: Read and write»; sonst genügen die ausgewählten, bereits bestehenden Repositorys.
+            Der Hub speichert den Token verschlüsselt, zeigt ihn nie wieder an und nutzt ihn nur, um verknüpfte Repositorys
+            anzulegen und dorthin zu committen.
           </p>
           <button
             type="submit"

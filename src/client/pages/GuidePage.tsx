@@ -174,15 +174,18 @@ export const GuidePage: React.FC = () => {
         </p>
         <ol className="list-decimal pl-5 text-sm text-slate-700 space-y-1">
           <li>
-            Auf GitHub unter Settings › Developer settings › Fine-grained tokens einen Token erstellen: nur für das gewünschte
-            Repository, Berechtigung «Contents: Read and write».
+            Auf GitHub unter Settings › Developer settings › Fine-grained tokens einen Token erstellen mit der Berechtigung
+            «Contents: Read and write». Damit der Hub neue Repositorys selbst anlegt: «All repositories» und zusätzlich
+            «Administration: Read and write». Sonst genügt der Zugriff auf ein bereits bestehendes Repository.
           </li>
           <li>Im Hub oben rechts auf Ihren Namen klicken, Abschnitt «GitHub-Verbindung», Token einfügen und verbinden.</li>
           <li>
             Die Adresse des Repositorys (z.B. <code>git@github.com:konto/fragen.git</code>) beim Veröffentlichen eintragen, im
             Hub unter <Link to="/upload" className="text-red-600 hover:underline">Paket hochladen</Link> oder in Moodle im Feld{' '}
-            <Ui de="GitHub-Repository (optional)" en="GitHub repository (optional)" />. Bei einem bestehenden Paket tragen Sie
-            sie in den Paket-Einstellungen ein: Die aktuelle Version wird dann sofort committet.
+            <Ui de="GitHub-Repository (optional)" en="GitHub repository (optional)" />. Im Hub füllt «Neues Repository
+            vorschlagen» die Adresse <code>git@github.com:Ihr-Konto/Paket-ID.git</code> aus. Existiert das Repository noch
+            nicht, legt der Hub es als privates Repository an. Bei einem bestehenden Paket tragen Sie die Adresse in den
+            Paket-Einstellungen ein: Die aktuelle Version wird dann sofort committet.
           </li>
         </ol>
         <p className="text-xs text-slate-500">

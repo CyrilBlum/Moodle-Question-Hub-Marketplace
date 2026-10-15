@@ -827,6 +827,7 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
     const ghToken = 'github_pat_integration_test_token_0123456789';
     const calls: Array<{ method: string; path: string; body: any }> = [];
     let failCommit = false;
+    const repos = new Set(['questions']);
     const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input: any, init: any = {}) => {
       const url = new URL(String(input));
@@ -835,13 +836,20 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
       calls.push({ method, path: url.pathname, body });
       if (init.headers?.Authorization !== `Bearer ${ghToken}`) return json(401, { message: 'Bad credentials' });
       if (url.pathname === '/user') return json(200, { login: 'octo' });
-      if (url.pathname === '/repos/octo/questions') return json(200, { permissions: { push: true } });
-      if (url.pathname.startsWith('/repos/octo/questions/contents/')) {
+      if (url.pathname === '/user/repos' && method === 'POST') {
+        repos.add(body.name);
+        return json(201, {});
+      }
+      if (url.pathname === '/orgs/acme/repos') return json(403, { message: 'Resource not accessible by personal access token' });
+      const repo = url.pathname.match(/^\/repos\/octo\/([^/]+)(\/.*)?$/);
+      if (!repo || !repos.has(repo[1])) return json(404, { message: 'Not Found' });
+      if (!repo[2]) return json(200, { permissions: { push: true } });
+      if (repo[2].startsWith('/contents/')) {
         if (method === 'GET') return json(404, { message: 'Not Found' });
         if (failCommit) return json(500, { message: 'Server Error' });
-        return json(201, { commit: { sha: 'abc123', html_url: 'https://github.com/octo/questions/commit/abc123' } });
+        return json(201, { commit: { sha: 'abc123', html_url: `https://github.com/octo/${repo[1]}/commit/abc123` } });
       }
-      if (url.pathname === '/repos/octo/questions/git/refs') return json(201, {});
+      if (repo[2] === '/git/refs') return json(201, {});
       return json(404, { message: 'Not Found' });
     });
     const publish = (version: string, extra: object = {}) => app.inject({
@@ -916,6 +924,19 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
       calls.length = 0;
       expect(JSON.parse((await patchRepo()).body).github_sync).toBeNull();
       expect(calls.some(c => c.method === 'PUT')).toBe(false);
+
+      // A repository that does not exist yet is created privately in the own account, then receives the version.
+      calls.length = 0;
+      const createdRepo = await app.inject({ method: 'PATCH', url: `/api/v1/packages/${id}`, headers: auth, payload: { github_repo: `git@github.com:octo/${id}.git` } });
+      expect(createdRepo.statusCode).toBe(200);
+      expect(JSON.parse(createdRepo.body).github_sync).toMatchObject({ status: 'ok', repo_created: true });
+      expect(calls.find(c => c.path === '/user/repos')!.body).toMatchObject({ name: id, private: true, auto_init: true });
+      expect(calls.find(c => c.method === 'PUT')!.path).toBe(`/repos/octo/${id}/contents/${id}.xml`);
+      // Another owner is created as an organisation repository; refused there, the link is not changed.
+      const refused = await app.inject({ method: 'PATCH', url: `/api/v1/packages/${id}`, headers: auth, payload: { github_repo: 'git@github.com:acme/fragen.git' } });
+      expect(refused.statusCode).toBe(400);
+      expect(JSON.parse(refused.body).message).toContain('Administration');
+      expect(JSON.parse((await app.inject({ method: 'GET', url: `/api/v1/packages/${id}`, headers: auth })).body).github_repo).toBe(`git@github.com:octo/${id}.git`);
 
       expect((await app.inject({ method: 'DELETE', url: '/api/v1/account/github', headers: auth })).statusCode).toBe(204);
       expect(JSON.parse((await app.inject({ method: 'GET', url: '/api/v1/account/github', headers: auth })).body).connected).toBe(false);

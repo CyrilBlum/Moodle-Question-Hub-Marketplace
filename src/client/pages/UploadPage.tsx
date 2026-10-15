@@ -534,8 +534,18 @@ export const UploadPage: React.FC = () => {
               />
               <span className="block mt-1 text-xs font-normal text-slate-500">
                 {github?.connected ? (
-                  <>Freiwillig. Jede neue Version wird als Datei <span className="font-mono">{packageId || '<Paket-ID>'}.xml</span> in
+                  <>{github.login && packageId.trim() && (
+                    <button
+                      type="button"
+                      onClick={() => setGithubRepo(`git@github.com:${github.login}/${packageId.trim()}.git`)}
+                      className="mt-1 mr-2 px-2 py-1 text-xs font-medium rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                    >
+                      Neues Repository vorschlagen
+                    </button>
+                  )}
+                  Freiwillig. Jede neue Version wird als Datei <span className="font-mono">{packageId || '<Paket-ID>'}.xml</span> in
                   dieses Repository committet (Commit-Nachricht = Versionshinweise) und mit <span className="font-mono">v&lt;Version&gt;</span> getaggt.
+                  Existiert das Repository noch nicht, legt der Hub es als privates Repository an.
                   Verbunden als <span className="font-mono">{github.login}</span>.</>
                 ) : (
                   <>Freiwillig. Dafür verbinden Sie zuerst im <Link to="/dashboard" className="underline">Dashboard</Link> (Abschnitt «GitHub-Verbindung») ein GitHub-Konto.
