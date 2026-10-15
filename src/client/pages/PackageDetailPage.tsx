@@ -231,7 +231,7 @@ export const PackageDetailPage: React.FC = () => {
             { id: 'overview', label: 'Übersicht' },
             ...(pkg.can_access !== false ? [{ id: 'categories', label: `Kategorien (${pkg.categories?.length || 0})` }] : []),
             ...(pkg.can_access !== false && pkg.preview_enabled !== false
-              ? [{ id: 'preview', label: `Sichere Vorschau (${pkg.stats?.question_count || 0})` }]
+              ? [{ id: 'preview', label: `Vorschau (${pkg.stats?.question_count || 0})` }]
               : []),
             ...(pkg.can_access !== false ? [{ id: 'versions', label: `Versionen (${pkg.releases?.length || 0})` }] : []),
             ...(isOwner ? [{ id: 'settings', label: 'Einstellungen' }] : []),

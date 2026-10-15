@@ -74,6 +74,7 @@ export class AuthService {
       institution: user.institution,
       canton: user.canton,
       role: user.role,
+      profile_role: user.profile_role,
     };
   }
 
@@ -89,6 +90,18 @@ export class AuthService {
       institution: user.institution,
       canton: user.canton,
       role: user.role,
+      profile_role: user.profile_role,
     };
+  }
+
+  public async updateProfile(userId: string, data: { email: string; full_name: string; institution: string; canton: string; profile_role?: string; password?: string }): Promise<UserPublicProfile> {
+    const knex = getDatabase();
+    const email = data.email.trim().toLowerCase();
+    const existing = await knex('users').where({ email }).whereNot({ id: userId }).first();
+    if (existing) throw new Error('CONFLICT: Ein Benutzer mit dieser E-Mail-Adresse existiert bereits.');
+    const update: any = { email, full_name: data.full_name.trim(), institution: data.institution.trim(), canton: data.canton.trim().toUpperCase(), profile_role: data.profile_role?.trim() || null, updated_at: new Date() };
+    if (data.password) update.password_hash = CryptoService.hashPassword(data.password);
+    await knex('users').where({ id: userId }).update(update);
+    return (await this.getUserById(userId))!;
   }
 }

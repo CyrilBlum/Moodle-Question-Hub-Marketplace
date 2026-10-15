@@ -146,6 +146,7 @@ export const api = {
   },
 
   getMe: () => request('/auth/me'),
+  updateProfile: (data: Record<string, string>) => request('/auth/me', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
 
   // Tokens
   getTokens: () => request('/account/tokens'),

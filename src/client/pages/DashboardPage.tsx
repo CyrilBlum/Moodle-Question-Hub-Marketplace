@@ -1,7 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Key, Plus, Trash2, Copy, Check, AlertCircle, Shield, User } from 'lucide-react';
-import { api, getToken, getStoredUser } from '../api/client';
+import { api, getToken, getStoredUser, setStoredUser } from '../api/client';
+import { PackageEditForm } from '../components/PackageEditForm';
+
+const CANTONS = [
+  ['AG', 'Aargau'], ['AI', 'Appenzell Innerrhoden'], ['AR', 'Appenzell Ausserrhoden'],
+  ['BE', 'Bern'], ['BL', 'Basel-Landschaft'], ['BS', 'Basel-Stadt'], ['FR', 'Freiburg'],
+  ['GE', 'Genf'], ['GL', 'Glarus'], ['GR', 'Graubünden'], ['JU', 'Jura'], ['LU', 'Luzern'],
+  ['NE', 'Neuenburg'], ['NW', 'Nidwalden'], ['OW', 'Obwalden'], ['SG', 'St. Gallen'],
+  ['SH', 'Schaffhausen'], ['SO', 'Solothurn'], ['SZ', 'Schwyz'], ['TG', 'Thurgau'],
+  ['TI', 'Tessin'], ['UR', 'Uri'], ['VD', 'Waadt'], ['VS', 'Wallis'], ['ZG', 'Zug'], ['ZH', 'Zürich'],
+] as const;
 
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
@@ -9,7 +19,6 @@ export const DashboardPage: React.FC = () => {
   const [tokens, setTokens] = useState<any[]>([]);
   const [myPackages, setMyPackages] = useState<any[]>([]);
   const [editing, setEditing] = useState<any | null>(null);
-  const [editError, setEditError] = useState('');
   const [loading, setLoading] = useState(true);
 
   // New Token Modal State
@@ -19,13 +28,17 @@ export const DashboardPage: React.FC = () => {
   const [createdSecretToken, setCreatedSecretToken] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [profile, setProfile] = useState<any>({});
 
   useEffect(() => {
     if (!getToken()) {
       navigate('/login');
       return;
     }
-    setUser(getStoredUser());
+    const stored = getStoredUser();
+    setUser(stored);
+    setProfile(stored || {});
     loadTokens();
     loadMyPackages();
   }, []);
@@ -42,6 +55,17 @@ export const DashboardPage: React.FC = () => {
     }
   };
 
+  const saveProfile = async (event: React.FormEvent) => {
+    event.preventDefault();
+    try {
+      const updated = await api.updateProfile(profile);
+      setStoredUser(updated);
+      setUser(updated);
+      setProfile(updated);
+      setEditingProfile(false);
+    } catch (err: any) { setErrorMsg(err.message || 'Profil konnte nicht gespeichert werden.'); }
+  };
+
   const loadMyPackages = async () => {
     try {
       const res = await api.getMyPackages();
@@ -52,35 +76,7 @@ export const DashboardPage: React.FC = () => {
   };
 
   const startEdit = (pkg: any) => {
-    setEditError('');
-    setEditing({
-      id: pkg.id,
-      title: pkg.title,
-      summary: pkg.summary || '',
-      license: pkg.license || 'CC-BY-4.0',
-      grades: pkg.grades || [],
-      tags: (pkg.tags || []).join(', '),
-      preview_enabled: pkg.preview_enabled !== false,
-    });
-  };
-
-  const saveEdit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editing) return;
-    try {
-      await api.updatePackage(editing.id, {
-        title: editing.title,
-        summary: editing.summary,
-        license: editing.license,
-        grades: editing.grades,
-        tags: editing.tags.split(',').map((t: string) => t.trim()).filter(Boolean),
-        preview_enabled: editing.preview_enabled,
-      });
-      setEditing(null);
-      loadMyPackages();
-    } catch (err: any) {
-      setEditError(err.message || 'Speichern fehlgeschlagen.');
-    }
+    setEditing(pkg);
   };
 
   const handleWithdrawPackage = async (pkg: any) => {
@@ -149,7 +145,8 @@ export const DashboardPage: React.FC = () => {
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       {/* Profile Card */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm flex items-center justify-between">
+      <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+        <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center text-red-600 font-bold text-lg">
             {user?.full_name?.charAt(0) || <User className="w-6 h-6" />}
@@ -161,9 +158,20 @@ export const DashboardPage: React.FC = () => {
             </p>
           </div>
         </div>
-        <span className="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-xs font-semibold">
-          Gymnasial-Lehrperson
-        </span>
+        <button onClick={() => setEditingProfile(!editingProfile)} className="px-3 py-1 border border-slate-300 rounded text-xs">Profil bearbeiten</button>
+        </div>
+        {editingProfile && <form onSubmit={saveProfile} className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+          <input required value={profile.full_name || ''} onChange={e => setProfile({...profile, full_name: e.target.value})} placeholder="Name" className="border rounded p-2" />
+          <input required type="email" value={profile.email || ''} onChange={e => setProfile({...profile, email: e.target.value})} placeholder="E-Mail" className="border rounded p-2" />
+          <input required value={profile.institution || ''} onChange={e => setProfile({...profile, institution: e.target.value})} placeholder="Institution" className="border rounded p-2" />
+          <select required value={profile.canton || ''} onChange={e => setProfile({...profile, canton: e.target.value})} className="border rounded p-2 bg-white">
+            <option value="" disabled>Kanton wählen</option>
+            {CANTONS.map(([code, name]) => <option key={code} value={code}>{code} — {name}</option>)}
+          </select>
+          <input value={profile.profile_role || ''} onChange={e => setProfile({...profile, profile_role: e.target.value})} placeholder="Rolle, z. B. Lehrperson" className="border rounded p-2" />
+          <input type="password" value={profile.password || ''} onChange={e => setProfile({...profile, password: e.target.value})} placeholder="Neues Passwort (optional)" className="border rounded p-2" />
+          <div className="md:col-span-2"><button className="bg-red-600 text-white rounded px-3 py-2 text-xs">Profil speichern</button></div>
+        </form>}
       </div>
 
       {/* My published packages */}
@@ -220,61 +228,20 @@ export const DashboardPage: React.FC = () => {
       </div>
 
       {editing && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
-          <form onSubmit={saveEdit} className="bg-white rounded-xl p-6 w-full max-w-lg space-y-3 shadow-xl">
-            <h3 className="font-bold text-slate-900">Paket-Einstellungen</h3>
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div role="dialog" aria-modal="true" aria-labelledby="package-edit-title" className="bg-white rounded-xl border border-slate-200 p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl">
+            <h3 id="package-edit-title" className="font-bold text-slate-900 mb-2">Paket-Einstellungen</h3>
             <p className="text-xs text-slate-500 font-mono">{editing.id}</p>
-            {editError && <p className="text-xs text-red-600">{editError}</p>}
-            <label className="block text-xs font-semibold text-slate-700">Titel
-              <input className="mt-1 w-full border rounded-lg p-2 text-sm" value={editing.title}
-                onChange={e => setEditing({ ...editing, title: e.target.value })} required />
-            </label>
-            <label className="block text-xs font-semibold text-slate-700">Beschreibung
-              <textarea className="mt-1 w-full border rounded-lg p-2 text-sm" rows={3} value={editing.summary}
-                onChange={e => setEditing({ ...editing, summary: e.target.value })} required />
-            </label>
-            <label className="block text-xs font-semibold text-slate-700">Lizenz
-              <select className="mt-1 w-full border rounded-lg p-2 text-sm" value={editing.license}
-                onChange={e => setEditing({ ...editing, license: e.target.value })}>
-                <option value="CC-BY-4.0">CC-BY-4.0</option>
-                <option value="CC-BY-SA-4.0">CC-BY-SA-4.0</option>
-                <option value="CC0-1.0">CC0-1.0</option>
-              </select>
-            </label>
-            <fieldset className="text-xs font-semibold text-slate-700">Zielstufen
-              <div className="flex gap-4 mt-1 font-normal">
-                {['GYM1', 'GYM2', 'GYM3', 'GYM4'].map(g => (
-                  <label key={g} className="flex items-center gap-1">
-                    <input type="checkbox" checked={editing.grades.includes(g)}
-                      onChange={e => setEditing({
-                        ...editing,
-                        grades: e.target.checked ? [...editing.grades, g] : editing.grades.filter((x: string) => x !== g),
-                      })} />
-                    {g}
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-            <label className="block text-xs font-semibold text-slate-700">Schlagwörter (Komma-getrennt)
-              <input className="mt-1 w-full border rounded-lg p-2 text-sm" value={editing.tags}
-                onChange={e => setEditing({ ...editing, tags: e.target.value })} />
-            </label>
-            <label className="flex items-center gap-2 text-sm text-slate-700">
-              <input type="checkbox" checked={editing.preview_enabled}
-                onChange={e => setEditing({ ...editing, preview_enabled: e.target.checked })} />
-              Öffentliche Vorschau anzeigen
-            </label>
-            <p className="text-xs text-slate-500">
-              Versionsnummern sind unveränderlich: Für Änderungen am Inhalt veröffentlichen Sie eine neue Version
-              oder ziehen eine bestehende zurück.
-            </p>
-            <div className="flex justify-end gap-2 pt-2">
-              <button type="button" onClick={() => setEditing(null)} className="px-3 py-1.5 text-xs border rounded-lg">
-                Abbrechen
-              </button>
-              <button type="submit" className="px-3 py-1.5 text-xs bg-red-600 text-white rounded-lg">Speichern</button>
-            </div>
-          </form>
+            <PackageEditForm
+              pkg={editing}
+              showHeading={false}
+              onCancel={() => setEditing(null)}
+              onSaved={async () => {
+                setEditing(null);
+                await loadMyPackages();
+              }}
+            />
+          </div>
         </div>
       )}
 

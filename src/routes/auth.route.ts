@@ -14,6 +14,7 @@ const LoginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
 });
+const ProfileSchema = z.object({ email: z.string().email(), full_name: z.string().min(2), institution: z.string().min(2), canton: z.string().length(2), profile_role: z.string().max(100).optional(), password: z.string().min(8).optional().or(z.literal('')) });
 
 export async function authRoutes(app: FastifyInstance): Promise<void> {
   const authService = AuthService.getInstance();
@@ -111,5 +112,15 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       });
     }
     return reply.status(200).send(user);
+  });
+
+  app.patch('/auth/me', { preHandler: [app.authenticate] }, async (req, reply) => {
+    const parsed = ProfileSchema.safeParse(req.body);
+    if (!parsed.success) return reply.status(400).send({ message: 'Ungültige Profildaten.' });
+    try {
+      return reply.send(await authService.updateProfile((req as any).user.id, parsed.data));
+    } catch (err: any) {
+      return reply.status(err.message?.startsWith('CONFLICT:') ? 409 : 500).send({ message: err.message?.replace('CONFLICT: ', '') || 'Profil konnte nicht gespeichert werden.' });
+    }
   });
 }

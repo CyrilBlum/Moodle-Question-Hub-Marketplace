@@ -6,6 +6,7 @@ export interface User {
   institution: string;
   canton: string;
   role: 'teacher' | 'admin';
+  profile_role?: string | null;
   created_at?: string | Date;
   updated_at?: string | Date;
 }
@@ -17,6 +18,7 @@ export interface UserPublicProfile {
   institution: string;
   canton: string;
   role: 'teacher' | 'admin';
+  profile_role?: string | null;
   created_at?: string;
 }
 

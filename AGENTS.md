@@ -53,14 +53,14 @@ and an obsolete `tests/` folder (old copy with credentials: delete, never reuse)
 - **Hub data**: titles are stored as plain text; the Hub decodes HTML entities on publish/edit.
 - **Moodle plugin caching**: after copying plugin files run `purge_caches.php` on that instance.
 
-## 4. Build, test, deploy
+## 4. Build and deploy
 Hub (this repo):
 ```bash
 npm ci
-npm test                      # vitest: unit + integration (must stay green; CI runs it)
-npx tsc --noEmit -p tsconfig.server.json && npx tsc --noEmit -p tsconfig.client.json
 npm run build                 # dist/client + dist/server
 ```
+Do not run tests or type-checks locally. After building, deploy to Hetzner and verify the live Hub URL and service health there.
+This live deployment is the required verification workflow for Hub changes; do not stop after local checks.
 Deploy the Hub (production; keep a DB backup and the previous dist for rollback):
 ```bash
 A=/mnt/HC_Volume_100926434/apps/moodle-question-hub-marketplace

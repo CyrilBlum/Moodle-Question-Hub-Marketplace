@@ -137,6 +137,12 @@ export async function up(knex: Knex): Promise<void> {
     });
   }
 
+  if (!(await knex.schema.hasColumn('users', 'profile_role'))) {
+    await knex.schema.alterTable('users', table => {
+      table.string('profile_role', 100).nullable();
+    });
+  }
+
   if (!(await knex.schema.hasTable('package_access_requests'))) {
     await knex.schema.createTable('package_access_requests', table => {
       table.string('id', 36).primary();
