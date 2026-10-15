@@ -52,10 +52,11 @@ and an obsolete `tests/` folder (old copy with credentials: delete, never reuse)
 - **Mustache**: output is already escaped. Never run `format_string()` (escaped) into a template variable; use `['escape' => false]`.
 - **Hub data**: titles are stored as plain text; the Hub decodes HTML entities on publish/edit.
 - **Moodle plugin caching**: after copying plugin files run `purge_caches.php` on that instance.
-- **Admin role**: `users.role = 'admin'` (no UI grants it; set in the DB after a dump and a dry-run count).
+- **Admin role**: `users.role = 'admin'` (set in the DB after a dump and a dry-run count, or by an admin creating an account).
   The role is read from the DB on every request (`AdminService.isAdmin`), not from the JWT, so a change applies without a new login.
   Admins edit/withdraw any package and use the web page `/admin` with the API under `/api/v1/admin/*`:
-  `GET overview` (all accounts, their packages, withdrawn packages), `DELETE withdrawn/:id` (final deletion: removes the
+  `GET overview` (all accounts, their packages, withdrawn packages), `POST users` (create an account, role teacher or
+  admin; without a password a random initial password is returned once and never emailed), `DELETE withdrawn/:id` (final deletion: removes the
   tombstone and frees the ID; Moodles then get 404 instead of 410), `DELETE users/:id` (refused for the own account and for
   accounts that still own active packages; tokens and access requests cascade), `POST users/:id/email` (needs `SMTP_*` in the
   env file, otherwise 503 and the page falls back to a mailto link; SMTP is not configured on production as of 2026-10-15).

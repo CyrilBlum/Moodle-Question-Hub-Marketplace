@@ -694,6 +694,24 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
       expect((await app.inject({ method: 'DELETE', url: `/api/v1/admin/users/${temp.user.id}`, headers: auth })).statusCode).toBe(204);
       expect(await getDatabase()('users').where({ id: temp.user.id }).first()).toBeUndefined();
       expect((await app.inject({ method: 'DELETE', url: `/api/v1/admin/users/${temp.user.id}`, headers: auth })).statusCode).toBe(404);
+
+      // Creating an account without password returns a generated initial password once; it works for login.
+      const newEmail = `created-${Date.now()}@example.ch`;
+      const created = await app.inject({ method: 'POST', url: '/api/v1/admin/users', headers: auth,
+        payload: { email: newEmail, full_name: 'Neue Lehrperson', institution: 'Kanti Y', canton: 'ZH', role: 'teacher' } });
+      expect(created.statusCode).toBe(201);
+      const createdBody = JSON.parse(created.body);
+      expect(createdBody.user.email).toBe(newEmail);
+      expect(createdBody.user.role).toBe('teacher');
+      expect(createdBody.initial_password.length).toBeGreaterThanOrEqual(12);
+      const login = await app.inject({ method: 'POST', url: '/api/v1/auth/login',
+        payload: { email: newEmail, password: createdBody.initial_password } });
+      expect(login.statusCode).toBe(200);
+      expect((await app.inject({ method: 'POST', url: '/api/v1/admin/users', headers: auth,
+        payload: { email: newEmail, full_name: 'Doppelt', institution: 'Kanti Y', canton: 'ZH' } })).statusCode).toBe(409);
+      expect((await app.inject({ method: 'POST', url: '/api/v1/admin/users', headers: auth,
+        payload: { email: 'kein-mail', full_name: 'X Y', institution: 'Kanti Y', canton: 'ZH' } })).statusCode).toBe(400);
+      await app.inject({ method: 'DELETE', url: `/api/v1/admin/users/${createdBody.user.id}`, headers: auth });
     } finally {
       await getDatabase()('users').where({ id: me.id }).update({ role: 'teacher' });
     }

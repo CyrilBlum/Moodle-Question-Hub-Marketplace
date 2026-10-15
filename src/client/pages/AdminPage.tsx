@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Shield, Trash2, Archive, Search, AlertCircle, Mail, UserX, Check } from 'lucide-react';
+import { Shield, Trash2, Archive, Search, AlertCircle, Mail, UserX, Check, UserPlus } from 'lucide-react';
 import { api, getToken, getStoredUser } from '../api/client';
+import { CANTONS } from './DashboardPage';
 
 const formatDate = (iso: string) => new Date(iso).toLocaleDateString('de-CH');
 
@@ -14,6 +15,10 @@ export const AdminPage: React.FC = () => {
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const currentUserId = getStoredUser()?.id;
+  const emptyAccount = { email: '', full_name: '', institution: '', canton: '', role: 'teacher', password: '' };
+  const [creating, setCreating] = useState(false);
+  const [account, setAccount] = useState<Record<string, string>>(emptyAccount);
+  const [initialPassword, setInitialPassword] = useState<{ email: string; password: string } | null>(null);
   const [query, setQuery] = useState('');
   const [busy, setBusy] = useState('');
 
@@ -90,6 +95,24 @@ export const AdminPage: React.FC = () => {
     }
   };
 
+  const createAccount = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setBusy('create');
+    setError('');
+    try {
+      const res = await api.createUser(account);
+      setNotice(`Konto ${res.user.email} wurde erstellt.`);
+      setInitialPassword(res.initial_password ? { email: res.user.email, password: res.initial_password } : null);
+      setAccount(emptyAccount);
+      setCreating(false);
+      await load();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setBusy('');
+    }
+  };
+
   const q = query.trim().toLowerCase();
   const users = useMemo(() => (data?.users || []).filter(u => !q
     || [u.email, u.full_name, u.institution].some((v: string) => (v || '').toLowerCase().includes(q))
@@ -118,6 +141,15 @@ export const AdminPage: React.FC = () => {
         </div>
       )}
 
+      {initialPassword && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-lg p-4 text-sm space-y-1">
+          <div>Startpasswort für {initialPassword.email} (nur jetzt sichtbar, bitte sicher weitergeben):</div>
+          <code className="block font-mono text-base select-all bg-white border border-amber-200 rounded px-2 py-1 w-fit">{initialPassword.password}</code>
+          <div className="text-xs">Die Person kann das Passwort nach der Anmeldung im Dashboard ändern.</div>
+          <button onClick={() => setInitialPassword(null)} className="text-xs underline">Ausblenden</button>
+        </div>
+      )}
+
       {data && (
         <>
           <section className="bg-white rounded-xl border border-slate-200 shadow-sm">
@@ -128,12 +160,39 @@ export const AdminPage: React.FC = () => {
                   {data.users.length} Benutzerkonten · {packageCount} aktive Pakete · {data.withdrawn.length} zurückgezogene Pakete
                 </p>
               </div>
-              <label className="relative">
-                <Search className="w-4 h-4 text-slate-400 absolute left-2.5 top-2.5" />
-                <input value={query} onChange={e => setQuery(e.target.value)} placeholder="E-Mail, Name oder Paket suchen"
-                       className="border rounded-md pl-8 pr-3 py-1.5 text-sm w-72 max-w-full" />
-              </label>
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="relative">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-2.5 top-2.5" />
+                  <input value={query} onChange={e => setQuery(e.target.value)} placeholder="E-Mail, Name oder Paket suchen"
+                         className="border rounded-md pl-8 pr-3 py-1.5 text-sm w-72 max-w-full" />
+                </label>
+                <button onClick={() => setCreating(!creating)}
+                        className="inline-flex items-center gap-1 text-sm bg-red-600 text-white rounded-md px-3 py-1.5 hover:bg-red-700">
+                  <UserPlus className="w-4 h-4" />Konto hinzufügen
+                </button>
+              </div>
             </div>
+            {creating && (
+              <form onSubmit={createAccount} className="p-4 border-b border-slate-200 bg-slate-50 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                <input required type="email" value={account.email} onChange={e => setAccount({ ...account, email: e.target.value })} placeholder="E-Mail" className="border rounded-md px-2 py-1.5" />
+                <input required minLength={2} value={account.full_name} onChange={e => setAccount({ ...account, full_name: e.target.value })} placeholder="Vor- und Nachname" className="border rounded-md px-2 py-1.5" />
+                <input required minLength={2} value={account.institution} onChange={e => setAccount({ ...account, institution: e.target.value })} placeholder="Schule" className="border rounded-md px-2 py-1.5" />
+                <select required value={account.canton} onChange={e => setAccount({ ...account, canton: e.target.value })} className="border rounded-md px-2 py-1.5 bg-white">
+                  <option value="">Kanton wählen</option>
+                  {CANTONS.map(([code, name]) => <option key={code} value={code}>{name}</option>)}
+                </select>
+                <select value={account.role} onChange={e => setAccount({ ...account, role: e.target.value })} className="border rounded-md px-2 py-1.5 bg-white">
+                  <option value="teacher">Lehrperson</option>
+                  <option value="admin">Administrator/in</option>
+                </select>
+                <input type="password" minLength={8} value={account.password} onChange={e => setAccount({ ...account, password: e.target.value })}
+                       placeholder="Passwort (leer lassen: wird erzeugt)" autoComplete="new-password" className="border rounded-md px-2 py-1.5" />
+                <div className="sm:col-span-2 flex justify-end gap-2">
+                  <button type="button" onClick={() => setCreating(false)} className="text-xs px-3 py-1.5 rounded border border-slate-300">Abbrechen</button>
+                  <button type="submit" disabled={busy === 'create'} className="text-xs px-3 py-1.5 rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-50">Konto erstellen</button>
+                </div>
+              </form>
+            )}
             <ul className="divide-y divide-slate-100">
               {users.map(u => (
                 <li key={u.id} className="p-4">

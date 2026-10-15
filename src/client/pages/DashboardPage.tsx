@@ -4,7 +4,7 @@ import { Key, Plus, Trash2, Copy, Check, AlertCircle, Shield, User } from 'lucid
 import { api, getToken, getStoredUser, setStoredUser } from '../api/client';
 import { PackageEditForm } from '../components/PackageEditForm';
 
-const CANTONS = [
+export const CANTONS = [
   ['AG', 'Aargau'], ['AI', 'Appenzell Innerrhoden'], ['AR', 'Appenzell Ausserrhoden'],
   ['BE', 'Bern'], ['BL', 'Basel-Landschaft'], ['BS', 'Basel-Stadt'], ['FR', 'Freiburg'],
   ['GE', 'Genf'], ['GL', 'Glarus'], ['GR', 'Graubünden'], ['JU', 'Jura'], ['LU', 'Luzern'],

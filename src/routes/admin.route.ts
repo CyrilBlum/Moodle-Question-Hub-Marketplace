@@ -2,6 +2,15 @@ import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { AdminService } from '../services/admin.service';
 
+const CreateUserSchema = z.object({
+  email: z.string().trim().email('Ungültige E-Mail-Adresse.'),
+  full_name: z.string().trim().min(2, 'Name fehlt.'),
+  institution: z.string().trim().min(2, 'Schule fehlt.'),
+  canton: z.string().trim().length(2, 'Kanton fehlt.'),
+  role: z.enum(['teacher', 'admin']).default('teacher'),
+  password: z.string().min(8, 'Passwort muss mindestens 8 Zeichen lang sein.').optional().or(z.literal('')),
+});
+
 const EmailSchema = z.object({
   subject: z.string().trim().min(1, 'Betreff fehlt.').max(200),
   message: z.string().trim().min(1, 'Nachricht fehlt.').max(10000),
@@ -44,6 +53,20 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
     try {
       await adminService.purgeWithdrawnPackage(id);
       return reply.status(204).send();
+    } catch (err: any) {
+      return sendError(err, reply);
+    }
+  });
+
+  // POST /api/v1/admin/users: create an account (optional password; otherwise a generated one is returned once)
+  app.post('/admin/users', guard, async (req, reply) => {
+    const parsed = CreateUserSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return reply.status(400).send({ statusCode: 400, error: 'Bad Request', message: parsed.error.issues[0]?.message || 'Ungültige Eingabe.' });
+    }
+    try {
+      const created = await adminService.createUser({ ...parsed.data, password: parsed.data.password || undefined });
+      return reply.status(201).send(created);
     } catch (err: any) {
       return sendError(err, reply);
     }

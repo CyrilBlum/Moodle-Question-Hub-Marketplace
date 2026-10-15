@@ -1,4 +1,6 @@
+import crypto from 'crypto';
 import { getDatabase } from '../database/connection';
+import { AuthService } from './auth.service';
 import { EmailService } from './email.service';
 import { PackageStorageService } from './package-storage.service';
 
@@ -97,6 +99,25 @@ export class AdminService {
       withdrawn,
       email_enabled: EmailService.isConfigured(),
     };
+  }
+
+  /**
+   * Creates an account like a registration. Without a password, a random initial password is generated
+   * and returned once, for the admin to pass on (it is never stored in plain text or emailed).
+   */
+  public async createUser(data: {
+    email: string; full_name: string; institution: string; canton: string; role: 'teacher' | 'admin'; password?: string;
+  }): Promise<{ user: AdminUserSummary; initial_password?: string }> {
+    const generated = data.password ? undefined : crypto.randomBytes(12).toString('base64url');
+    const { userId } = await AuthService.getInstance().register({
+      email: data.email, full_name: data.full_name, institution: data.institution, canton: data.canton,
+      password: data.password || (generated as string),
+    });
+    if (data.role === 'admin') {
+      await getDatabase()('users').where({ id: userId }).update({ role: 'admin', updated_at: new Date() });
+    }
+    const user = (await this.overview()).users.find(u => u.id === userId) as AdminUserSummary;
+    return { user, ...(generated ? { initial_password: generated } : {}) };
   }
 
   /**
