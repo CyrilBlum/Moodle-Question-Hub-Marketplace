@@ -101,7 +101,7 @@ Lint PHP on the server (`php8.2 -l`); there is no PHP on the usual dev laptop.
 - Work directly; do not spawn fleets of sub-agents (earlier Antigravity runs burned credits and over-claimed "100% pass").
 - Report what was verified live versus only unit-tested. Do not claim a deploy without checking the live URL.
 - Destructive production actions (deleting packages/accounts, DB writes, restarting shared services) need a dry run and a count first.
-- Git: work on a feature branch, small commits, push; CI (GitHub Actions) must be green. Do not commit secrets, `real_dataset`, or generated `dist/`.
+- Git: work on a feature branch, small commits, push; CI (GitHub Actions) must be green. After every edit, merge the branch into `main` and delete the feature branch (never leave unmerged or stale branches behind). Do not commit secrets, `real_dataset`, or generated `dist/`.
 - Swiss Standard German in student/teacher-facing text: «ss» never «ß»; formal «Sie».
 
 ## 8. Known open items (as of 2026-10-14)
@@ -109,5 +109,5 @@ Lint PHP on the server (`php8.2 -l`); there is no PHP on the usual dev laptop.
 - Not covered by E2E: the plugin's own HTTP client/UI paths (settings editor, withdraw buttons, OAuth consent page), CodeRunner questions.
 - Real 270 MB export exceeds the 50 MB package limit by design (265 MB are embedded media).
 - MariaDB `tmpdir` is on the small `/tmp` loop mount; moving it needs a MariaDB restart (not done).
-- Plugin settings editor, import/preview button fix and entity decoding are implemented; check the feature branches for what is merged.
+- Plugin settings editor, import/preview button fix, entity decoding, private package access, and question type badges are merged into main.
 - Drawing and `oumultiresponse` question types are unsupported by the importer (warning `WARN_UNSUPPORTED_QUESTION_TYPE`).
