@@ -36,9 +36,7 @@ export const Navbar: React.FC = () => {
         <div className="flex justify-between h-16">
           <div className="flex items-center">
             <Link to="/" className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded bg-red-600 flex items-center justify-center text-white font-bold shadow-sm">
-                <span className="text-xl leading-none">🇨🇭</span>
-              </div>
+              <img src="/logo.svg" alt="" className="w-10 h-10" />
               <div>
                 <span className="font-bold text-lg text-slate-900 tracking-tight block">Moodle Question Hub</span>
                 <span className="text-xs text-slate-500 block -mt-1">Schweizer Gymnasium Fragekatalog</span>

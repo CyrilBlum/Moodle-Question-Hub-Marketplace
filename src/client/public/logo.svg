@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Moodle Question Hub: rounded orange "m" with a Swiss cross badge (own drawing, not the Moodle trademark). -->
+  <defs>
+    <linearGradient id="m" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFA23A"/>
+      <stop offset="1" stop-color="#F27A0F"/>
+    </linearGradient>
+  </defs>
+  <path d="M 84 452 V 290 Q 84 214 160 214 Q 236 214 236 290 V 452 M 236 290 Q 236 214 312 214 Q 388 214 388 290 V 452"
+        fill="none" stroke="url(#m)" stroke-width="76" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="296" y="22" width="176" height="176" rx="34" fill="#DA291C" stroke="#FFFFFF" stroke-width="14"/>
+  <!-- Swiss cross: arm width 6/32, arm length 20/32 of the field (each arm 1/6 longer than wide). -->
+  <rect x="329" y="93" width="110" height="33" fill="#FFFFFF"/>
+  <rect x="367.5" y="55" width="33" height="110" fill="#FFFFFF"/>
+</svg>
