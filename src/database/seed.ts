@@ -1,4 +1,3 @@
-import { randomBytes } from 'crypto';
 import { getDatabase, closeDatabase } from './connection';
 import { CryptoService } from '../services/crypto.service';
 
@@ -6,29 +5,24 @@ export async function runSeeds(): Promise<void> {
   const knex = getDatabase();
   console.log('Starte Datenbank-Seeding...');
 
-  // 1. Initial Teacher User
-  const existingUser = await knex('users').where({ email: 'teacher@kanti.ch' }).first();
-  const userId = '11111111-2222-3333-4444-555555555555';
-
-  if (!existingUser) {
-    // The seed password comes from the environment; without it a random one is generated and shown once.
-    const seedPassword = process.env.SEED_TEACHER_PASSWORD || randomBytes(18).toString('base64url');
-    const passwordHash = CryptoService.hashPassword(seedPassword);
-    await knex('users').insert({
-      id: userId,
-      email: 'teacher@kanti.ch',
-      password_hash: passwordHash,
-      full_name: 'Cyril Wendl',
-      institution: 'Kantonsschule Enge',
-      canton: 'ZH',
-      role: 'teacher',
-      created_at: new Date(),
-      updated_at: new Date(),
-    });
-    if (process.env.SEED_TEACHER_PASSWORD) {
-      console.log('Standard-Lehrperson angelegt: teacher@kanti.ch (Passwort aus SEED_TEACHER_PASSWORD)');
-    } else {
-      console.log(`Standard-Lehrperson angelegt: teacher@kanti.ch / ${seedPassword} (einmalig angezeigt)`);
+  // 1. Test teacher: only when SEED_TEACHER_PASSWORD is set (integration tests). Production does not set it,
+  //    so an account deleted in /admin is not re-created on the next start.
+  const seedPassword = process.env.SEED_TEACHER_PASSWORD;
+  if (seedPassword) {
+    const existingUser = await knex('users').where({ email: 'teacher@kanti.ch' }).first();
+    if (!existingUser) {
+      await knex('users').insert({
+        id: '11111111-2222-3333-4444-555555555555',
+        email: 'teacher@kanti.ch',
+        password_hash: CryptoService.hashPassword(seedPassword),
+        full_name: 'Test Lehrperson',
+        institution: 'Kantonsschule Enge',
+        canton: 'ZH',
+        role: 'teacher',
+        created_at: new Date(),
+        updated_at: new Date(),
+      });
+      console.log('Test-Lehrperson angelegt: teacher@kanti.ch (Passwort aus SEED_TEACHER_PASSWORD)');
     }
   }
 
