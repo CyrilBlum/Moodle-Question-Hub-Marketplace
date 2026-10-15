@@ -87,6 +87,18 @@ export class PackageService {
 
     // 3. Check existing package
     const existingPackage = await knex('packages').where({ id: manifest.id }).first();
+    const tombstone = existingPackage ? null : await this.getWithdrawnPackage(manifest.id);
+    if (tombstone) {
+      if (tombstone.owner_id !== ownerId) {
+        throw new Error('CONFLICT: Diese Paket-ID wurde zurückgezogen und kann nicht neu vergeben werden.');
+      }
+      // Moodles that imported an earlier release must never receive different content under its number.
+      if (!semver.gt(manifest.version, tombstone.last_version)) {
+        throw new Error(
+          `CONFLICT: Dieses Paket wurde zurückgezogen. Eine neue Veröffentlichung braucht eine höhere Version als ${tombstone.last_version}.`
+        );
+      }
+    }
     if (existingPackage) {
       const sameVersion = await knex('releases')
         .where({ package_id: manifest.id, version: manifest.version })
@@ -136,6 +148,9 @@ export class PackageService {
     const now = new Date();
 
     await knex.transaction(async trx => {
+      if (tombstone) {
+        await trx('withdrawn_packages').where({ id: manifest.id }).del();
+      }
       if (!existingPackage) {
         await trx('packages').insert({
           id: manifest.id,
@@ -769,7 +784,17 @@ export class PackageService {
     await this.storage.removeRelease(packageId, version);
   }
 
-  /** Withdraws a whole package: all releases, grades, tags and stored files are deleted. */
+  /** Tombstone of a withdrawn package, or undefined. */
+  public async getWithdrawnPackage(
+    packageId: string
+  ): Promise<{ id: string; owner_id: string; last_version: string; withdrawn_at: Date } | undefined> {
+    return getDatabase()('withdrawn_packages').where({ id: packageId }).first();
+  }
+
+  /**
+   * Withdraws a whole package: all releases, grades, tags and stored files are deleted.
+   * A tombstone keeps the ID reserved so clients can tell "withdrawn" (410) from "unknown" (404).
+   */
   public async withdrawPackage(ownerId: string, isAdmin: boolean, packageId: string): Promise<void> {
     const knex = getDatabase();
     const pkg = await knex('packages').where({ id: packageId }).first();
@@ -777,7 +802,15 @@ export class PackageService {
     if (pkg.owner_id !== ownerId && !isAdmin) {
       throw new Error('FORBIDDEN: Sie sind nicht berechtigt, dieses Paket zu verwalten.');
     }
+    const versions = (await knex('releases').where({ package_id: packageId }).pluck('version'))
+      .filter((v: string) => semver.valid(v))
+      .sort(semver.rcompare);
+    const lastVersion = versions[0] || pkg.latest_version;
     await knex.transaction(async trx => {
+      await trx('withdrawn_packages').where({ id: packageId }).del();
+      await trx('withdrawn_packages').insert({
+        id: packageId, owner_id: pkg.owner_id, last_version: lastVersion, withdrawn_at: new Date(),
+      });
       await trx('package_grades').where({ package_id: packageId }).del();
       await trx('package_tags').where({ package_id: packageId }).del();
       await trx('releases').where({ package_id: packageId }).del();

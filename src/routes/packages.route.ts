@@ -11,6 +11,20 @@ export async function packageRoutes(app: FastifyInstance): Promise<void> {
   const packageService = PackageService.getInstance();
   const storageService = PackageStorageService.getInstance();
 
+  /** 410 for a withdrawn package ID; null when the ID was never withdrawn. */
+  const goneReply = async (id: string, reply: any) => {
+    const tombstone = await packageService.getWithdrawnPackage(id);
+    if (!tombstone) return null;
+    return reply.status(410).send({
+      statusCode: 410,
+      error: 'Gone',
+      code: 'PACKAGE_WITHDRAWN',
+      message: `Paket '${id}' wurde zurückgezogen.`,
+      withdrawn_at: new Date(tombstone.withdrawn_at).toISOString(),
+      last_version: tombstone.last_version,
+    });
+  };
+
   // 1. GET /api/v1/packages
   app.get('/packages', { preHandler: [app.authenticateOptional] }, async (req, reply) => {
     const query = req.query as PackageSearchFilters;
@@ -135,6 +149,8 @@ export async function packageRoutes(app: FastifyInstance): Promise<void> {
 
     const pkg = await packageService.getPackage(id, viewerId);
     if (!pkg) {
+      const gone = await goneReply(id, reply);
+      if (gone) return gone;
       return reply.status(404).send({
         statusCode: 404,
         error: 'Not Found',
@@ -182,6 +198,8 @@ export async function packageRoutes(app: FastifyInstance): Promise<void> {
     const { id, version } = req.params as { id: string; version: string };
     const viewerId = (req as any).user?.id as string | undefined;
 
+    const gone = await goneReply(id, reply);
+    if (gone) return gone;
     if (!(await packageService.canAccessPackage(id, viewerId))) {
       return reply.status(403).send({
         statusCode: 403,
@@ -379,6 +397,8 @@ export async function packageRoutes(app: FastifyInstance): Promise<void> {
     const { id } = req.params as { id: string };
     const pkg = await packageService.getPackage(id, (req as any).user?.id);
     if (!pkg) {
+      const gone = await goneReply(id, reply);
+      if (gone) return gone;
       return reply.status(404).send({
         statusCode: 404,
         error: 'Not Found',

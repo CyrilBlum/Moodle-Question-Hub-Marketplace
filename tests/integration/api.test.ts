@@ -482,7 +482,8 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
   });
 
   // 16. Preview switch and withdrawal
-  const lifecycleId = 'ch.gym.inf.lifecycle-test';
+  // Withdrawn IDs stay reserved, so a persistent test database needs a fresh ID per run.
+  const lifecycleId = `ch.gym.inf.lifecycle-test-${Date.now()}`;
   const publishLifecycle = (version: string, extra: object = {}, token = teacherJwtToken) =>
     app.inject({
       method: 'POST',
@@ -580,11 +581,26 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
     expect(
       (await app.inject({ method: 'DELETE', url: `/api/v1/packages/${lifecycleId}`, headers: auth })).statusCode
     ).toBe(204);
-    expect((await app.inject({ method: 'GET', url: `/api/v1/packages/${lifecycleId}` })).statusCode).toBe(404);
+    const gone = await app.inject({ method: 'GET', url: `/api/v1/packages/${lifecycleId}` });
+    expect(gone.statusCode).toBe(410);
+    expect(JSON.parse(gone.body).code).toBe('PACKAGE_WITHDRAWN');
+    expect(JSON.parse(gone.body).last_version).toBe('1.2.0');
+    expect((await app.inject({ method: 'GET', url: `/api/v1/packages/${lifecycleId}/preview` })).statusCode).toBe(410);
+    expect(
+      (await app.inject({ method: 'GET', url: `/api/v1/packages/${lifecycleId}/releases/1.1.0/download` })).statusCode
+    ).toBe(410);
+    expect((await app.inject({ method: 'GET', url: '/api/v1/packages/ch.gym.inf.never-published' })).statusCode).toBe(404);
+
+    // The ID stays reserved: other accounts are refused, the owner may continue above the last version.
+    expect((await publishLifecycle('2.0.0', {}, stranger)).statusCode).toBe(409);
+    expect((await publishLifecycle('1.2.0')).statusCode).toBe(409);
+    expect((await publishLifecycle('1.3.0')).statusCode).toBe(201);
+    expect((await app.inject({ method: 'GET', url: `/api/v1/packages/${lifecycleId}` })).statusCode).toBe(200);
+    await app.inject({ method: 'DELETE', url: `/api/v1/packages/${lifecycleId}`, headers: auth });
   });
 
   it('PATCH /packages/:id edits settings for the owner only and refuses version changes', async () => {
-    const id = 'ch.gym.inf.patch-test';
+    const id = `ch.gym.inf.patch-test-${Date.now()}`;
     const auth = { authorization: `Bearer ${teacherJwtToken}` };
     const pub = await app.inject({
       method: 'POST',

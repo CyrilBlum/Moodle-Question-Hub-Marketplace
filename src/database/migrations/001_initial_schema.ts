@@ -155,9 +155,21 @@ export async function up(knex: Knex): Promise<void> {
       table.index(['package_id', 'status'], 'idx_access_request_package_status');
     });
   }
+
+  // Tombstones of withdrawn packages: the ID keeps answering 410 and cannot be taken over by
+  // another account; the owner may only continue above the last version.
+  if (!(await knex.schema.hasTable('withdrawn_packages'))) {
+    await knex.schema.createTable('withdrawn_packages', table => {
+      table.string('id', 100).primary();
+      table.string('owner_id', 36).notNullable();
+      table.string('last_version', 30).notNullable();
+      table.timestamp('withdrawn_at').notNullable().defaultTo(knex.fn.now());
+    });
+  }
 }
 
 export async function down(knex: Knex): Promise<void> {
+  await knex.schema.dropTableIfExists('withdrawn_packages');
   await knex.schema.dropTableIfExists('package_access_requests');
   await knex.schema.dropTableIfExists('releases');
   await knex.schema.dropTableIfExists('package_tags');
