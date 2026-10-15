@@ -1,16 +1,25 @@
 const API_BASE = '/api/v1';
 
+/** Fired on login, logout and profile changes, so components outside the current page (navbar) update. */
+export const AUTH_CHANGED_EVENT = 'mqh-auth-changed';
+
+function notifyAuthChanged(): void {
+  window.dispatchEvent(new Event(AUTH_CHANGED_EVENT));
+}
+
 export function getToken(): string | null {
   return localStorage.getItem('mqh_token');
 }
 
 export function setToken(token: string): void {
   localStorage.setItem('mqh_token', token);
+  notifyAuthChanged();
 }
 
 export function clearToken(): void {
   localStorage.removeItem('mqh_token');
   localStorage.removeItem('mqh_user');
+  notifyAuthChanged();
 }
 
 export function getStoredUser(): any | null {
@@ -25,6 +34,7 @@ export function getStoredUser(): any | null {
 
 export function setStoredUser(user: any): void {
   localStorage.setItem('mqh_user', JSON.stringify(user));
+  notifyAuthChanged();
 }
 
 async function request(path: string, options: RequestInit = {}): Promise<any> {

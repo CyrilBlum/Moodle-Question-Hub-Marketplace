@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { BookOpen, Upload, Key, User, LogOut, LogIn, Menu, X, Shield } from 'lucide-react';
-import { api, getToken, getStoredUser, setStoredUser, clearToken } from '../api/client';
+import { api, getToken, getStoredUser, setStoredUser, clearToken, AUTH_CHANGED_EVENT } from '../api/client';
 
 export const Navbar: React.FC = () => {
   const [user, setUser] = useState<any>(null);
@@ -9,14 +9,19 @@ export const Navbar: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const token = getToken();
-    if (token) {
-      setUser(getStoredUser());
+    // The navbar stays mounted across pages: follow logins and logouts here and in other tabs.
+    const sync = () => setUser(getToken() ? getStoredUser() : null);
+    sync();
+    if (getToken()) {
       // Refresh the stored profile, so a changed role (e.g. admin) shows without logging in again.
-      api.getMe().then(me => { setStoredUser(me); setUser(me); }).catch(() => undefined);
-    } else {
-      setUser(null);
+      api.getMe().then(me => setStoredUser(me)).catch(() => undefined);
     }
+    window.addEventListener(AUTH_CHANGED_EVENT, sync);
+    window.addEventListener('storage', sync);
+    return () => {
+      window.removeEventListener(AUTH_CHANGED_EVENT, sync);
+      window.removeEventListener('storage', sync);
+    };
   }, []);
 
   const handleLogout = () => {
