@@ -91,13 +91,18 @@ export const api = {
   getPackagePreview: (id: string, version?: string) => {
     return request(`/packages/${id}/preview${version ? `?version=${version}` : ''}`);
   },
-  requestPackageAccess: (id: string) => request(`/packages/${encodeURIComponent(id)}/access-requests`, { method: 'POST' }),
+  requestPackageAccess: (id: string, data: { message?: string; share_contact: boolean }) =>
+    request(`/packages/${encodeURIComponent(id)}/access-requests`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }),
   getPackageAccessRequests: (id: string) => request(`/account/packages/${encodeURIComponent(id)}/access-requests`),
-  setPackageAccessRequestStatus: (packageId: string, requestId: string, status: 'approved' | 'denied') =>
+  setPackageAccessRequestStatus: (packageId: string, requestId: string, status: 'approved' | 'denied', message?: string) =>
     request(`/packages/${encodeURIComponent(packageId)}/access-requests/${encodeURIComponent(requestId)}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ status, message }),
     }),
   downloadPackage: async (id: string, version: string) => {
     const token = getToken();

@@ -81,9 +81,13 @@ export interface PackageSearchResult {
   can_access?: boolean;
   access_requests?: Array<{
     id: string;
-    requester: { id: string; name: string; email: string; institution: string };
+    requester: { id: string; name: string; email: string | null; institution: string | null };
     status: 'pending' | 'approved' | 'denied';
     created_at: string;
+    updated_at: string;
+    message: string | null;
+    response_message: string | null;
+    share_contact: boolean;
   }>;
   /** Category paths of the latest release, e.g. $course$/top/Informatik/Bäume. */
   categories?: string[];

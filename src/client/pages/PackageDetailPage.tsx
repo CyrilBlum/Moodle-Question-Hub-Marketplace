@@ -1,10 +1,11 @@
 import React, { useRef, useState, useEffect } from 'react';
 import renderMathInElement from 'katex/contrib/auto-render';
 import 'katex/dist/katex.min.css';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Download, Copy, Check, Eye, Layers, ShieldCheck, Calendar, BookOpen, ArrowLeft } from 'lucide-react';
 import { api, getStoredUser, getToken } from '../api/client';
 import { PackageSettings } from '../components/PackageSettings';
+import { AccessRequests } from '../components/AccessRequests';
 import { QuestionTypeBadges } from '../components/QuestionTypeBadges';
 import { sanitizeQuestionHtml } from '../utils/sanitize';
 import { buildCategoryTree, CategoryNode } from '../utils/categoryTree';
@@ -50,15 +51,44 @@ export const PackageDetailPage: React.FC = () => {
   const [pkg, setPkg] = useState<any>(null);
   const [preview, setPreview] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'categories' | 'preview' | 'versions' | 'settings'>('overview');
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  // ?tab=anfragen is the link in the access request e-mail to the owner.
+  const [activeTab, setActiveTab] = useState<'overview' | 'categories' | 'preview' | 'versions' | 'requests' | 'settings'>(
+    searchParams.get('tab') === 'anfragen' ? 'requests' : 'overview');
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [accessRequestMessage, setAccessRequestMessage] = useState('');
+  const [accessNote, setAccessNote] = useState('');
+  const [shareContact, setShareContact] = useState(true);
+  const [accessRequests, setAccessRequests] = useState<any[]>([]);
 
   useEffect(() => {
+    if (searchParams.get('tab') === 'anfragen' && !getToken()) {
+      navigate(`/login?return_to=${encodeURIComponent(window.location.pathname + window.location.search)}`, { replace: true });
+      return;
+    }
     if (id) {
       loadData(id);
     }
   }, [id]);
+
+  const currentUser = getStoredUser();
+  const isOwner = !!getToken() && !!currentUser?.id && pkg?.author?.id === currentUser.id;
+
+  const loadAccessRequests = async (packageId: string) => {
+    try {
+      const result = await api.getPackageAccessRequests(packageId);
+      setAccessRequests(result.data || []);
+    } catch {
+      setAccessRequests([]);
+    }
+  };
+
+  useEffect(() => {
+    if (isOwner && pkg?.id) loadAccessRequests(pkg.id);
+    // Someone else following the owner's link lands on the overview.
+    else if (pkg?.id && activeTab === 'requests') setActiveTab('overview');
+  }, [isOwner, pkg?.id]);
 
   const loadData = async (packageId: string, quiet = false) => {
     if (!quiet) setLoading(true);
@@ -87,7 +117,7 @@ export const PackageDetailPage: React.FC = () => {
 
   const requestAccess = async () => {
     try {
-      const result = await api.requestPackageAccess(pkg.id);
+      const result = await api.requestPackageAccess(pkg.id, { message: accessNote.trim() || undefined, share_contact: shareContact });
       setAccessRequestMessage(result.notification_sent === false
         ? 'Die Anfrage wurde gespeichert, aber die E-Mail an die Eigentümerschaft konnte nicht zugestellt werden.'
         : result.status === 'approved' ? 'Sie haben bereits Zugriff.' : 'Anfrage gesendet. Die Eigentümerschaft wurde per E-Mail benachrichtigt.');
@@ -112,8 +142,7 @@ export const PackageDetailPage: React.FC = () => {
     }
   };
 
-  const currentUser = getStoredUser();
-  const isOwner = !!getToken() && !!currentUser?.id && pkg?.author?.id === currentUser.id;
+  const pendingRequests = accessRequests.filter(r => r.status === 'pending').length;
 
   if (loading) {
     return (
@@ -234,6 +263,9 @@ export const PackageDetailPage: React.FC = () => {
               ? [{ id: 'preview', label: `Vorschau (${pkg.stats?.question_count || 0})` }]
               : []),
             ...(pkg.can_access !== false ? [{ id: 'versions', label: `Versionen (${pkg.releases?.length || 0})` }] : []),
+            ...(isOwner && (pkg.visibility === 'private' || accessRequests.length > 0)
+              ? [{ id: 'requests', label: `Zugriffsanfragen${pendingRequests ? ` (${pendingRequests} offen)` : ''}` }]
+              : []),
             ...(isOwner ? [{ id: 'settings', label: 'Einstellungen' }] : []),
           ].map(tab => (
             <button
@@ -264,7 +296,23 @@ export const PackageDetailPage: React.FC = () => {
                 {pkg.access_status === 'pending' ? (
                   <p className="text-sm font-medium text-amber-800">Ihre Zugriffsanfrage ist offen.</p>
                 ) : getToken() ? (
-                  <button onClick={requestAccess} className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700">Zugriff anfragen</button>
+                  <div className="space-y-2">
+                    <label htmlFor="access-note" className="block text-xs font-medium text-amber-900">Nachricht an die Eigentümerschaft (optional)</label>
+                    <textarea
+                      id="access-note"
+                      value={accessNote}
+                      onChange={e => setAccessNote(e.target.value)}
+                      maxLength={2000}
+                      rows={3}
+                      placeholder="z.B. wofür Sie die Fragen einsetzen möchten"
+                      className="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm"
+                    />
+                    <label className="flex items-start gap-2 text-xs text-amber-900">
+                      <input type="checkbox" checked={shareContact} onChange={e => setShareContact(e.target.checked)} className="mt-0.5" />
+                      <span>Meine Kontaktdaten (E-Mail-Adresse und Schule) mitsenden. Ohne sie sieht die Eigentümerschaft nur Ihren Namen und kann Ihnen nur über den Hub antworten.</span>
+                    </label>
+                    <button onClick={requestAccess} className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700">Zugriff anfragen</button>
+                  </div>
                 ) : (
                   <Link to={`/login?return_to=${encodeURIComponent(window.location.pathname)}`} className="inline-block px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700">Anmelden, um Zugriff anzufragen</Link>
                 )}
@@ -366,6 +414,10 @@ export const PackageDetailPage: React.FC = () => {
             ))}
           </div>
         </div>
+      )}
+
+      {activeTab === 'requests' && isOwner && (
+        <AccessRequests packageId={pkg.id} requests={accessRequests} onChanged={() => loadAccessRequests(pkg.id)} />
       )}
 
       {activeTab === 'settings' && isOwner && (

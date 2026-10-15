@@ -657,6 +657,57 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
     expect(res.statusCode).toBe(200);
   });
 
+  it('access requests keep the note, hide contact details without consent, and store the reply', async () => {
+    const auth = { authorization: `Bearer ${teacherJwtToken}` };
+    const knex = getDatabase();
+    await knex('packages').where({ id: testPkgId }).update({ visibility: 'private' });
+    const requester = JSON.parse((await app.inject({
+      method: 'POST', url: '/api/v1/auth/register',
+      payload: { email: `requester-${Date.now()}@example.ch`, password: 'Requester-Pass-123!', full_name: 'Anna Anfrage', institution: 'Kanti Z', canton: 'LU' },
+    })).body);
+    const requesterAuth = { authorization: `Bearer ${requester.token}` };
+    try {
+      // Without SMTP the request is refused before anything is stored.
+      const refused = await app.inject({ method: 'POST', url: `/api/v1/packages/${testPkgId}/access-requests`, headers: requesterAuth,
+        payload: { message: 'Bitte', share_contact: false } });
+      expect(refused.statusCode).toBe(503);
+      expect(await knex('package_access_requests').where({ requester_id: requester.user.id }).first()).toBeUndefined();
+      expect((await app.inject({ method: 'POST', url: `/api/v1/packages/${testPkgId}/access-requests`, headers: requesterAuth,
+        payload: { message: 'x'.repeat(2001) } })).statusCode).toBe(400);
+
+      const requestId = 'test-access-request-1';
+      await knex('package_access_requests').insert({
+        id: requestId, package_id: testPkgId, requester_id: requester.user.id, status: 'pending',
+        message: 'Für das Ergänzungsfach', share_contact: false, created_at: new Date(), updated_at: new Date(),
+      });
+      const list = JSON.parse((await app.inject({ method: 'GET', url: `/api/v1/account/packages/${testPkgId}/access-requests`, headers: auth })).body).data;
+      const row = list.find((r: any) => r.id === requestId);
+      expect(row.message).toBe('Für das Ergänzungsfach');
+      expect(row.share_contact).toBe(false);
+      expect(row.requester.name).toBe('Anna Anfrage');
+      expect(row.requester.email).toBeNull();
+      expect(row.requester.institution).toBeNull();
+      expect((await app.inject({ method: 'GET', url: `/api/v1/account/packages/${testPkgId}/access-requests`, headers: requesterAuth })).statusCode).toBe(403);
+
+      // Only the owner decides; the decision is stored even if no e-mail can be sent.
+      expect((await app.inject({ method: 'PATCH', url: `/api/v1/packages/${testPkgId}/access-requests/${requestId}`, headers: requesterAuth,
+        payload: { status: 'approved' } })).statusCode).toBe(403);
+      const decided = await app.inject({ method: 'PATCH', url: `/api/v1/packages/${testPkgId}/access-requests/${requestId}`, headers: auth,
+        payload: { status: 'approved', message: '  Gerne, viel Erfolg!  ' } });
+      expect(decided.statusCode).toBe(200);
+      expect(JSON.parse(decided.body)).toEqual({ status: 'approved', notification_sent: false });
+      const stored = await knex('package_access_requests').where({ id: requestId }).first();
+      expect(stored.status).toBe('approved');
+      expect(stored.response_message).toBe('Gerne, viel Erfolg!');
+      const visible = JSON.parse((await app.inject({ method: 'GET', url: `/api/v1/packages/${testPkgId}`, headers: requesterAuth })).body);
+      expect(visible.can_access).toBe(true);
+    } finally {
+      await knex('package_access_requests').where({ requester_id: requester.user.id }).del();
+      await knex('users').where({ id: requester.user.id }).del();
+      await knex('packages').where({ id: testPkgId }).update({ visibility: 'public' });
+    }
+  });
+
   it('admin overview and final deletion of withdrawn packages are admin-only', async () => {
     const auth = { authorization: `Bearer ${teacherJwtToken}` };
     expect((await app.inject({ method: 'GET', url: '/api/v1/admin/overview', headers: auth })).statusCode).toBe(403);

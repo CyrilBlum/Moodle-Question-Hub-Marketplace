@@ -304,12 +304,27 @@ export async function packageRoutes(app: FastifyInstance): Promise<void> {
     }
   });
 
+  /** Optional free-text note of an access request or decision: trimmed, at most 2000 characters, or an error text. */
+  const parseAccessNote = (body: unknown): { message: string | null } | string => {
+    const raw = (body as any)?.message;
+    if (raw === undefined || raw === null) return { message: null };
+    if (typeof raw !== 'string') return 'Die Nachricht muss Text sein.';
+    const message = raw.trim();
+    if (message.length > 2000) return 'Die Nachricht darf höchstens 2000 Zeichen lang sein.';
+    return { message: message || null };
+  };
+
   app.post('/packages/:id/access-requests', {
     preHandler: [app.authenticate],
     config: { rateLimit: { max: 5, timeWindow: '1 hour' } },
   }, async (req, reply) => {
     const user = (req as any).user;
     const { id } = req.params as { id: string };
+    const note = parseAccessNote(req.body);
+    if (typeof note === 'string') {
+      return reply.status(400).send({ statusCode: 400, error: 'Bad Request', message: note });
+    }
+    const shareContact = (req.body as any)?.share_contact !== false;
     if (!EmailService.isConfigured()) {
       return reply.status(503).send({
         statusCode: 503,
@@ -320,7 +335,7 @@ export async function packageRoutes(app: FastifyInstance): Promise<void> {
     }
 
     try {
-      const request = await packageService.createAccessRequest(id, user.id);
+      const request = await packageService.createAccessRequest(id, user.id, { message: note.message, shareContact });
       if (!request.shouldNotifyOwner) {
         return reply.status(200).send({ status: request.requestStatus });
       }
@@ -333,6 +348,8 @@ export async function packageRoutes(app: FastifyInstance): Promise<void> {
           requesterEmail: user.email,
           requesterInstitution: user.institution,
           ownerEmail: request.ownerEmail,
+          message: note.message,
+          shareContact,
         });
         return reply.status(201).send({ status: 'pending', notification_sent: true });
       } catch (emailError: any) {
@@ -361,9 +378,26 @@ export async function packageRoutes(app: FastifyInstance): Promise<void> {
     if (status !== 'approved' && status !== 'denied') {
       return reply.status(400).send({ statusCode: 400, error: 'Bad Request', message: 'Status muss approved oder denied sein.' });
     }
+    const note = parseAccessNote(req.body);
+    if (typeof note === 'string') {
+      return reply.status(400).send({ statusCode: 400, error: 'Bad Request', message: note });
+    }
     try {
-      await packageService.setAccessRequestStatus(user.id, id, requestId, status);
-      return reply.status(204).send();
+      const decided = await packageService.setAccessRequestStatus(user.id, id, requestId, status, note.message);
+      // The decision is stored in any case; the e-mail to the requester is best effort.
+      let notificationSent = false;
+      if (EmailService.isConfigured()) {
+        try {
+          await EmailService.sendAccessDecision({
+            packageId: id, packageTitle: decided.packageTitle, requesterEmail: decided.requesterEmail,
+            ownerName: decided.ownerName, status, message: note.message,
+          });
+          notificationSent = true;
+        } catch (emailError: any) {
+          req.log.error({ code: emailError?.code || 'EMAIL_DELIVERY_FAILED' }, 'Failed to send access decision email');
+        }
+      }
+      return reply.status(200).send({ status, notification_sent: notificationSent });
     } catch (err: any) {
       return withdrawErrors(err, reply);
     }

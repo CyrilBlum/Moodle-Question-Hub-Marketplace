@@ -156,6 +156,15 @@ export async function up(knex: Knex): Promise<void> {
     });
   }
 
+  // Optional note of the requester, whether the owner may see their contact details, and the owner's reply.
+  if (!(await knex.schema.hasColumn('package_access_requests', 'message'))) {
+    await knex.schema.alterTable('package_access_requests', table => {
+      table.text('message').nullable();
+      table.boolean('share_contact').notNullable().defaultTo(true);
+      table.text('response_message').nullable();
+    });
+  }
+
   // Tombstones of withdrawn packages: the ID keeps answering 410 and cannot be taken over by
   // another account; the owner may only continue above the last version.
   if (!(await knex.schema.hasTable('withdrawn_packages'))) {

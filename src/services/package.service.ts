@@ -544,7 +544,11 @@ export class PackageService {
     return !!grant;
   }
 
-  public async createAccessRequest(packageId: string, requesterId: string): Promise<{
+  public async createAccessRequest(
+    packageId: string,
+    requesterId: string,
+    note: { message: string | null; shareContact: boolean } = { message: null, shareContact: true },
+  ): Promise<{
     shouldNotifyOwner: boolean;
     requestStatus: string;
     packageTitle: string;
@@ -569,11 +573,13 @@ export class PackageService {
       const now = new Date();
       await knex('package_access_requests').insert({
         id: crypto.randomUUID(), package_id: packageId, requester_id: requesterId,
-        status: 'pending', created_at: now, updated_at: now,
+        status: 'pending', message: note.message, share_contact: note.shareContact, created_at: now, updated_at: now,
       });
       shouldNotifyOwner = true;
     } else if (existing.status === 'denied') {
-      await knex('package_access_requests').where({ id: existing.id }).update({ status: 'pending', updated_at: new Date() });
+      await knex('package_access_requests').where({ id: existing.id }).update({
+        status: 'pending', message: note.message, share_contact: note.shareContact, response_message: null, updated_at: new Date(),
+      });
       shouldNotifyOwner = true;
     }
 
@@ -597,35 +603,49 @@ export class PackageService {
       .where({ 'package_access_requests.package_id': packageId })
       .select(
         'package_access_requests.id', 'package_access_requests.status', 'package_access_requests.created_at',
-        'users.id as requester_id', 'users.full_name as requester_name', 'users.email as requester_email',
+        'package_access_requests.updated_at', 'package_access_requests.message', 'package_access_requests.share_contact',
+        'package_access_requests.response_message', 'users.id as requester_id', 'users.full_name as requester_name', 'users.email as requester_email',
         'users.institution as requester_institution'
       )
       .orderBy('package_access_requests.created_at', 'desc');
 
+    // Contact details are only shown when the requester agreed to share them.
     return rows.map(row => ({
       id: row.id,
       status: row.status,
       created_at: new Date(row.created_at).toISOString(),
+      updated_at: new Date(row.updated_at).toISOString(),
+      message: row.message || null,
+      response_message: row.response_message || null,
+      share_contact: !!row.share_contact,
       requester: {
         id: row.requester_id,
         name: row.requester_name,
-        email: row.requester_email,
-        institution: row.requester_institution,
+        email: row.share_contact ? row.requester_email : null,
+        institution: row.share_contact ? row.requester_institution : null,
       },
     }));
   }
 
-  public async setAccessRequestStatus(ownerId: string, packageId: string, requestId: string, status: 'approved' | 'denied'): Promise<void> {
+  /** Stores the decision with the owner's optional reply and returns what the notification to the requester needs. */
+  public async setAccessRequestStatus(
+    ownerId: string, packageId: string, requestId: string, status: 'approved' | 'denied', responseMessage: string | null = null,
+  ): Promise<{ packageTitle: string; requesterEmail: string; requesterName: string; ownerName: string }> {
     const knex = getDatabase();
     const row = await knex('package_access_requests')
       .join('packages', 'package_access_requests.package_id', 'packages.id')
+      .join('users as requester', 'package_access_requests.requester_id', 'requester.id')
+      .join('users as owner', 'packages.owner_id', 'owner.id')
       .where({ 'package_access_requests.id': requestId, 'package_access_requests.package_id': packageId })
-      .select('package_access_requests.id', 'packages.owner_id')
+      .select('package_access_requests.id', 'packages.owner_id', 'packages.title',
+        'requester.email as requester_email', 'requester.full_name as requester_name', 'owner.full_name as owner_name')
       .first();
     if (!row) throw new Error('NOT_FOUND: Zugriffsanfrage nicht gefunden.');
     if (row.owner_id !== ownerId) throw new Error('FORBIDDEN: Nur die Eigentümerin oder der Eigentümer kann Anfragen bearbeiten.');
 
-    await knex('package_access_requests').where({ id: requestId }).update({ status, updated_at: new Date() });
+    await knex('package_access_requests').where({ id: requestId })
+      .update({ status, response_message: responseMessage, updated_at: new Date() });
+    return { packageTitle: row.title, requesterEmail: row.requester_email, requesterName: row.requester_name, ownerName: row.owner_name };
   }
 
   public async getRelease(packageId: string, version: string): Promise<any | null> {
