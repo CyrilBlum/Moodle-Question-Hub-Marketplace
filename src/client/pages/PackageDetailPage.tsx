@@ -485,14 +485,14 @@ export const PackageDetailPage: React.FC = () => {
                   </div>
                 </div>
 
-                <a
-                  href={`/api/v1/packages/${pkg.id}/releases/${rel.version}/download`}
-                  download
+                {/* Same authenticated download as the button above, so private packages work too. */}
+                <button
+                  onClick={() => downloadXml(rel.version)}
                   className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-md bg-white border border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-100 transition shrink-0"
                 >
                   <Download className="w-3.5 h-3.5 text-slate-500" />
                   <span>v{rel.version} laden</span>
-                </a>
+                </button>
               </div>
             ))}
           </div>

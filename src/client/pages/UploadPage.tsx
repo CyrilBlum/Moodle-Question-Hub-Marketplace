@@ -148,7 +148,8 @@ export const UploadPage: React.FC = () => {
           </ol>
           <p className="text-xs text-sky-800">
             Ist das Plugin in Ihrem Moodle nicht installiert, wenden Sie sich an Ihre Moodle-Administration. Ohne Plugin
-            können Sie hier eine aus Moodle exportierte XML-Datei hochladen.
+            können Sie hier eine aus Moodle exportierte XML-Datei hochladen.{' '}
+            <Link to="/anleitung#veroeffentlichen" className="underline">Ausführliche Anleitung</Link>
           </p>
         </div>
 

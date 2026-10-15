@@ -58,14 +58,17 @@ export const Captcha = forwardRef<CaptchaHandle, Props>(({ onChange }, ref) => {
     },
   }), []);
 
+  // The custom element is inline by default; the block wrapper keeps the form's vertical spacing.
   return (
-    <altcha-widget
-      ref={widgetRef}
-      challengeurl="/api/v1/auth/captcha"
-      auto="onload"
-      strings={STRINGS}
-      style={{ '--altcha-max-width': '100%' }}
-    />
+    <div>
+      <altcha-widget
+        ref={widgetRef}
+        challengeurl="/api/v1/auth/captcha"
+        auto="onload"
+        strings={STRINGS}
+        style={{ '--altcha-max-width': '100%' }}
+      />
+    </div>
   );
 });
 

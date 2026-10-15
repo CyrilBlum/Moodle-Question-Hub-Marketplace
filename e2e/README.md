@@ -24,6 +24,9 @@ python3 e2e/e2e_runner.py --tier all      # or --tier 1|2|3|4
 Tiers: 1 feature coverage (F01-F15), 2 boundaries and attacks, 3 cross-feature combinations,
 4 Swiss Gymnasium scenarios incl. live quiz attempts on both Moodle versions.
 
+Feature 16 (`test_f16_roles_versions.py`) registers two throw-away Hub accounts per run (each triggers an admin
+notification e-mail) and deletes them again through the admin API, so the teacher account must be a Hub admin.
+
 ## Test data cleanup
 A session fixture (`conftest.py`) records the highest question, category and quiz IDs on both
 Moodles before the run and deletes everything newer afterwards. Consequences:

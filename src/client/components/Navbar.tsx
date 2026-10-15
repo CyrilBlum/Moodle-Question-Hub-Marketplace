@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { BookOpen, Upload, Key, User, LogOut, LogIn, Menu, X, Shield } from 'lucide-react';
+import { BookOpen, Upload, Key, User, LogOut, LogIn, Menu, X, Shield, HelpCircle } from 'lucide-react';
 import { api, getToken, getStoredUser, setStoredUser, clearToken, AUTH_CHANGED_EVENT } from '../api/client';
 
 export const Navbar: React.FC = () => {
@@ -55,6 +55,10 @@ export const Navbar: React.FC = () => {
             <Link to="/upload" className="text-sm font-medium text-slate-700 hover:text-red-600 flex items-center space-x-1.5 transition">
               <Upload className="w-4 h-4" />
               <span>Paket hochladen</span>
+            </Link>
+            <Link to="/anleitung" className="text-sm font-medium text-slate-700 hover:text-red-600 flex items-center space-x-1.5 transition">
+              <HelpCircle className="w-4 h-4" />
+              <span>Anleitung</span>
             </Link>
 
             {user ? (
@@ -126,6 +130,13 @@ export const Navbar: React.FC = () => {
             className="block py-2 text-base font-medium text-slate-700 hover:text-red-600"
           >
             Paket hochladen
+          </Link>
+          <Link
+            to="/anleitung"
+            onClick={() => setMobileMenuOpen(false)}
+            className="block py-2 text-base font-medium text-slate-700 hover:text-red-600"
+          >
+            Anleitung
           </Link>
           {user ? (
             <>
