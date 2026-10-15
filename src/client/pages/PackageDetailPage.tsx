@@ -294,9 +294,9 @@ export const PackageDetailPage: React.FC = () => {
                 <span>Kompatibilität</span>
               </h3>
               <ul className="text-xs text-slate-600 space-y-1.5">
-                <li>• Moodle 4.5 LTS (Vollständig getestet)</li>
-                <li>• Moodle 5.x Stable (Vollständig getestet)</li>
-                <li>• Keine externen Plugin-Abhängigkeiten</li>
+                <li>• Der Paketinhalt und die Fragetypen sind oben ausgewiesen.</li>
+                <li>• Prüfen Sie vor dem Import, ob Ihre Moodle-Instanz die verwendeten Fragetypen unterstützt.</li>
+                <li>• Paketautorinnen und -autoren können Voraussetzungen in der Beschreibung dokumentieren.</li>
               </ul>
             </div>
           </div>
@@ -315,8 +315,7 @@ export const PackageDetailPage: React.FC = () => {
       {activeTab === 'preview' && (
         <div className="space-y-6">
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-xs text-amber-800">
-            <strong>Pädagogisch geschützte Vorschau:</strong> Musterlösungen, Punkteanteile und automatisches Feedback werden
-            aus Sicherheitsgründen serverseitig herausgefiltert, um Prüfungsintegrität zu gewährleisten.
+            <strong>Vorschau:</strong> Musterlösungen, Punkteanteile und automatisches Feedback sind in der Vorschau ausgeblendet.
           </div>
 
           <div className="space-y-4">
