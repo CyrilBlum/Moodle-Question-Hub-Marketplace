@@ -310,7 +310,8 @@ def run_harness(instance: str, action: str, payload: Dict[str, Any], timeout: in
 
 @pytest.fixture(scope="session", autouse=True)
 def moodle_test_data_cleanup():
-    """Deletes all quizzes, questions and categories the test session created on both Moodle testbeds.
+    """Deletes all quizzes, questions, categories and Question Hub records the test session created
+    on both Moodle testbeds.
 
     Set QHUB_KEEP_TEST_DATA=1 to keep the data for debugging.
     """
@@ -326,6 +327,8 @@ def moodle_test_data_cleanup():
             "maxquizid": snap["maxquizid"],
             "maxquestionid": snap["maxquestionid"],
             "maxcategoryid": snap["maxcategoryid"],
+            "maxhistoryid": snap["maxhistoryid"],
+            "maxitemid": snap["maxitemid"],
         }, timeout=600)
         print(f"\n[cleanup] {MOODLE_INSTANCES[name]['label']}: {result}")
 

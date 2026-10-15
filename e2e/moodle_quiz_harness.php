@@ -285,11 +285,13 @@ try {
                 'maxquestionid' => (int)$DB->get_field_sql('SELECT COALESCE(MAX(id), 0) FROM {question}'),
                 'maxcategoryid' => (int)$DB->get_field_sql('SELECT COALESCE(MAX(id), 0) FROM {question_categories}'),
                 'maxquizid' => (int)$DB->get_field_sql('SELECT COALESCE(MAX(id), 0) FROM {quiz}'),
+                'maxhistoryid' => (int)$DB->get_field_sql('SELECT COALESCE(MAX(id), 0) FROM {qbank_questionhub_history}'),
+                'maxitemid' => (int)$DB->get_field_sql('SELECT COALESCE(MAX(id), 0) FROM {qbank_questionhub_items}'),
             ]);
             break;
 
         case 'cleanup_since':
-            // Removes quizzes, questions and categories created after a 'snapshot'.
+            // Removes quizzes, questions, categories and Question Hub records created after a 'snapshot'.
             $maxquizid = (int)($payload['maxquizid'] ?? -1);
             $maxquestionid = (int)($payload['maxquestionid'] ?? -1);
             $maxcategoryid = (int)($payload['maxcategoryid'] ?? -1);
@@ -334,11 +336,30 @@ try {
                 }
             } while ($deleted_this_pass > 0);
 
+            // 4. Question Hub plugin records (import/publish history, published versions, import
+            // fingerprints). Otherwise test imports keep showing up as links in "My library" and as
+            // sync status of categories. Optional, so older snapshots without these IDs still work.
+            $history = 0;
+            $items = 0;
+            $maxhistoryid = (int)($payload['maxhistoryid'] ?? -1);
+            $maxitemid = (int)($payload['maxitemid'] ?? -1);
+            if ($maxhistoryid >= 0) {
+                $DB->delete_records_select('qbank_questionhub_published', 'historyid > ?', [$maxhistoryid]);
+                $history = $DB->count_records_select('qbank_questionhub_history', 'id > ?', [$maxhistoryid]);
+                $DB->delete_records_select('qbank_questionhub_history', 'id > ?', [$maxhistoryid]);
+            }
+            if ($maxitemid >= 0) {
+                $items = $DB->count_records_select('qbank_questionhub_items', 'id > ?', [$maxitemid]);
+                $DB->delete_records_select('qbank_questionhub_items', 'id > ?', [$maxitemid]);
+            }
+
             echo json_encode([
                 'status' => 'ok',
                 'deleted_quizzes' => $quizzes,
                 'deleted_questions' => $questions,
                 'deleted_categories' => $categories,
+                'deleted_history' => $history,
+                'deleted_items' => $items,
                 'remaining_questions' => $DB->count_records_select('question', 'id > ?', [$maxquestionid]),
             ]);
             break;
