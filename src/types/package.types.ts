@@ -21,6 +21,8 @@ export interface PackageManifest {
   /** Whether the Hub shows a public preview of the questions (default true). */
   preview_enabled?: boolean;
   visibility?: 'public' | 'private';
+  /** Version the client's content is based on; a newer Hub release rejects the update (pull first). */
+  base_version?: string;
 }
 
 export interface PackageRecord {

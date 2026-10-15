@@ -118,6 +118,14 @@ export class PackageService {
           `CONFLICT: Version ${manifest.version} existiert bereits oder ist nicht höher als die aktuelle Version ${existingPackage.latest_version}.`
         );
       }
+
+      // A client that states its base version must have pulled the latest release first,
+      // otherwise its update would silently drop changes published from elsewhere.
+      if (manifest.base_version && manifest.base_version !== existingPackage.latest_version) {
+        throw new Error(
+          `CONFLICT: Ihre Inhalte beruhen auf Version ${manifest.base_version}, im Hub ist bereits Version ${existingPackage.latest_version}. Holen Sie zuerst die neue Version und veröffentlichen Sie danach.`
+        );
+      }
     }
 
     // 4. Validate taxonomy

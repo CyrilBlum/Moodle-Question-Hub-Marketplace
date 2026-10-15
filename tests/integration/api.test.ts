@@ -525,6 +525,11 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
     const kept = JSON.parse((await app.inject({ method: 'GET', url: `/api/v1/packages/${lifecycleId}` })).body);
     expect(kept.preview_enabled).toBe(false);
     expect((await publishLifecycle('1.2.0', { preview_enabled: true })).statusCode).toBe(201);
+
+    // An update built on an older release is refused until the client has pulled the latest one.
+    const stale = await publishLifecycle('1.3.0', { base_version: '1.1.0' });
+    expect(stale.statusCode).toBe(409);
+    expect(JSON.parse(stale.body).message).toContain('im Hub ist bereits Version 1.2.0');
     const on = await app.inject({ method: 'GET', url: `/api/v1/packages/${lifecycleId}/preview` });
     expect(on.statusCode).toBe(200);
   });
@@ -595,6 +600,7 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
     expect((await publishLifecycle('2.0.0', {}, stranger)).statusCode).toBe(409);
     expect((await publishLifecycle('1.2.0')).statusCode).toBe(409);
     expect((await publishLifecycle('1.3.0')).statusCode).toBe(201);
+    expect((await publishLifecycle('1.4.0', { base_version: '1.3.0' })).statusCode).toBe(201);
     expect((await app.inject({ method: 'GET', url: `/api/v1/packages/${lifecycleId}` })).statusCode).toBe(200);
     await app.inject({ method: 'DELETE', url: `/api/v1/packages/${lifecycleId}`, headers: auth });
   });
