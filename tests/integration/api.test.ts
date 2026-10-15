@@ -663,12 +663,13 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
     expect((await app.inject({ method: 'GET', url: '/api/v1/admin/overview' })).statusCode).toBe(401);
 
     // The role is read from the database: the existing JWT works as soon as the role changes.
-    await getDatabase()('users').where({ email: 'teacher@kanti.ch' }).update({ role: 'admin' });
+    const me = JSON.parse((await app.inject({ method: 'GET', url: '/api/v1/auth/me', headers: auth })).body);
+    await getDatabase()('users').where({ id: me.id }).update({ role: 'admin' });
     try {
       const res = await app.inject({ method: 'GET', url: '/api/v1/admin/overview', headers: auth });
       expect(res.statusCode).toBe(200);
       const body = JSON.parse(res.body);
-      const teacher = body.users.find((u: any) => u.email === 'teacher@kanti.ch');
+      const teacher = body.users.find((u: any) => u.id === me.id);
       expect(teacher.role).toBe('admin');
       expect(teacher.packages.some((p: any) => p.id === testPkgId)).toBe(true);
       expect(body.users.every((u: any) => !('password_hash' in u))).toBe(true);
@@ -680,7 +681,7 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
       expect((await app.inject({ method: 'GET', url: `/api/v1/packages/${lifecycleId}` })).statusCode).toBe(404);
       expect((await app.inject({ method: 'DELETE', url: `/api/v1/admin/withdrawn/${lifecycleId}`, headers: auth })).statusCode).toBe(404);
     } finally {
-      await getDatabase()('users').where({ email: 'teacher@kanti.ch' }).update({ role: 'teacher' });
+      await getDatabase()('users').where({ id: me.id }).update({ role: 'teacher' });
     }
   });
 });
