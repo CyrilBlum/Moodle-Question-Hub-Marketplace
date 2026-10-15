@@ -120,6 +120,16 @@ export class AdminService {
     return { user, ...(generated ? { initial_password: generated } : {}) };
   }
 
+  /** E-mails every admin about a self-registered account. Without SMTP this is a no-op. */
+  public async notifyNewAccount(user: { email: string; full_name: string; institution: string; canton: string }): Promise<void> {
+    if (!EmailService.isConfigured()) return;
+    const admins = await getDatabase()('users').where({ role: 'admin' }).pluck('email');
+    if (admins.length === 0) return;
+    await EmailService.sendNewAccountNotice({
+      to: admins, email: user.email, full_name: user.full_name, institution: user.institution, canton: user.canton,
+    });
+  }
+
   /**
    * Deletes an account with its tokens and access requests (cascade). Accounts that still own active
    * packages are refused, so no package is left without an owner; withdrawn ones keep their tombstone.

@@ -61,6 +61,34 @@ export class EmailService {
     });
   }
 
+  /** Tells the administrators that someone registered; replies go to the new account. */
+  public static async sendNewAccountNotice(data: {
+    to: string[]; email: string; full_name: string; institution: string; canton: string;
+  }): Promise<void> {
+    const transporter = this.transporter();
+    const base = getConfig().PUBLIC_BASE_URL.replace(/\/$/, '');
+    await transporter.sendMail({
+      from: getConfig().SMTP_FROM,
+      to: data.to,
+      replyTo: data.email,
+      subject: `Neues Konto im Question Hub: ${data.full_name}`,
+      text: [
+        'Guten Tag',
+        '',
+        'Im Moodle Question Hub wurde ein neues Konto registriert:',
+        '',
+        `Name: ${data.full_name}`,
+        `E-Mail: ${data.email}`,
+        `Schule: ${data.institution}`,
+        `Kanton: ${data.canton}`,
+        '',
+        `Alle Konten verwalten: ${base}/admin`,
+        '',
+        'Diese Nachricht wurde automatisch vom Moodle Question Hub versendet.',
+      ].join('\n'),
+    });
+  }
+
   private static packageUrl(packageId: string, tab?: string): string {
     const base = getConfig().PUBLIC_BASE_URL.replace(/\/$/, '');
     return `${base}/packages/${encodeURIComponent(packageId)}${tab ? `?tab=${tab}` : ''}`;

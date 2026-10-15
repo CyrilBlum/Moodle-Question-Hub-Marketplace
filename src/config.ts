@@ -34,6 +34,12 @@ const ConfigSchema = z.object({
   SMTP_PASSWORD: z.string().optional(),
   SMTP_FROM: z.string().optional(),
 
+  // Proof-of-work captcha (ALTCHA format) on login and registration; the key defaults to one derived from JWT_SECRET
+  CAPTCHA_ENABLED: z
+    .preprocess(val => !(val === 'false' || val === false || val === '0' || val === 0), z.boolean())
+    .default(true),
+  CAPTCHA_HMAC_KEY: z.string().optional(),
+
   // Pluggable Monetisation
   MONETISATION_ENABLED: z
     .preprocess(val => val === 'true' || val === true || val === '1' || val === 1, z.boolean())

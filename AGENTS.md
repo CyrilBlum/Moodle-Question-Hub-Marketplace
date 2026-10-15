@@ -64,6 +64,13 @@ and an obsolete `tests/` folder (old copy with credentials: delete, never reuse)
   `SMTP_SECURE=false`; the password is a Proton SMTP token for that address, only in the env file). `cblum.ch` allows only
   Proton in SPF and has DMARC `p=quarantine`, so other senders for `@cblum.ch` would land in spam. After changing the env file:
   `systemctl restart moodle-question-hub` (systemd strips the quotes around `SMTP_FROM`).
+  Every self-registration mails all admins (best effort, not for accounts an admin creates). Access requests mail the
+  owner a link to `/packages/:id?tab=anfragen`; the decision (with an optional reply) is mailed to the requester.
+- **Captcha**: `POST /auth/login` and `/auth/register` need a solved proof-of-work captcha in the field `altcha`
+  (ALTCHA format, MIT; widget `altcha` in the SPA, verification in `src/services/captcha.service.ts` with node:crypto,
+  challenge from `GET /auth/captcha`, valid 10 min, each solution once). API clients solve it like the E2E helper
+  `HubClient.captcha()` in `e2e/conftest.py`. `CAPTCHA_ENABLED=false` switches it off; the HMAC key defaults to one
+  derived from `JWT_SECRET` (`CAPTCHA_HMAC_KEY` overrides it).
 
 ## 4. Build and deploy
 Hub (this repo):

@@ -25,6 +25,7 @@ def test_f05_t01_teacher_registration(hub_client):
         "full_name": f"Teacher {ts}",
         "institution": "Kantonsschule Enge",
         "canton": "ZH",
+        "altcha": hub_client.captcha(),
     }
     resp = requests.post(f"{hub_client.api_base}/auth/register", json=payload, timeout=15)
     assert resp.status_code in [200, 201], f"Registration failed: {resp.text}"

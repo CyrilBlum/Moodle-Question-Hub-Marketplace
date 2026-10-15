@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { UserPlus, AlertCircle } from 'lucide-react';
 import { api } from '../api/client';
+import { Captcha, CaptchaHandle } from '../components/Captcha';
 
 export const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
@@ -12,9 +13,12 @@ export const RegisterPage: React.FC = () => {
   const [canton, setCanton] = useState('ZH');
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
+  const [captcha, setCaptcha] = useState<string | null>(null);
+  const captchaRef = useRef<CaptchaHandle>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!captcha) return;
     setLoading(true);
     setErrorMsg('');
 
@@ -25,10 +29,12 @@ export const RegisterPage: React.FC = () => {
         full_name: fullName.trim(),
         institution: institution.trim(),
         canton: canton.trim().toUpperCase(),
+        altcha: captcha,
       });
       navigate('/dashboard');
     } catch (err: any) {
       setErrorMsg(err.message || 'Registrierung fehlgeschlagen.');
+      captchaRef.current?.reset();
     } finally {
       setLoading(false);
     }
@@ -126,9 +132,11 @@ export const RegisterPage: React.FC = () => {
             />
           </div>
 
+          <Captcha ref={captchaRef} onChange={setCaptcha} />
+
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !captcha}
             className="w-full py-2.5 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 shadow-sm transition disabled:opacity-50"
           >
             {loading ? 'Konto wird erstellt...' : 'Konto erstellen'}

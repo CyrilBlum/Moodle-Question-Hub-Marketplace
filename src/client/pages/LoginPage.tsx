@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { LogIn, AlertCircle } from 'lucide-react';
 import { api } from '../api/client';
+import { Captcha, CaptchaHandle } from '../components/Captcha';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -10,20 +11,24 @@ export const LoginPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
+  const [captcha, setCaptcha] = useState<string | null>(null);
+  const captchaRef = useRef<CaptchaHandle>(null);
 
   const queryParams = new URLSearchParams(location.search);
   const returnTo = queryParams.get('return_to') || '/dashboard';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!captcha) return;
     setLoading(true);
     setErrorMsg('');
 
     try {
-      await api.login(email.trim(), password);
+      await api.login(email.trim(), password, captcha);
       navigate(returnTo);
     } catch (err: any) {
       setErrorMsg(err.message || 'Anmeldung fehlgeschlagen. Bitte prüfen Sie Ihre Anmeldedaten.');
+      captchaRef.current?.reset();
     } finally {
       setLoading(false);
     }
@@ -75,9 +80,11 @@ export const LoginPage: React.FC = () => {
             />
           </div>
 
+          <Captcha ref={captchaRef} onChange={setCaptcha} />
+
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !captcha}
             className="w-full py-2.5 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 shadow-sm transition disabled:opacity-50"
           >
             {loading ? 'Anmelden...' : 'Anmelden'}

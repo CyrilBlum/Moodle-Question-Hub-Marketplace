@@ -1,6 +1,8 @@
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { AuthService } from '../services/auth.service';
+import { AdminService } from '../services/admin.service';
+import { CaptchaService } from '../services/captcha.service';
 
 const RegisterSchema = z.object({
   email: z.string().email(),
@@ -19,6 +21,23 @@ const ProfileSchema = z.object({ email: z.string().email(), full_name: z.string(
 export async function authRoutes(app: FastifyInstance): Promise<void> {
   const authService = AuthService.getInstance();
 
+  /** 400 unless the request carries a solved, unused captcha (field `altcha`); null when it passes. */
+  const captchaRejected = (req: any, reply: any) => {
+    if (!CaptchaService.isEnabled() || CaptchaService.verify((req.body as any)?.altcha)) return null;
+    return reply.status(400).send({
+      statusCode: 400,
+      error: 'Bad Request',
+      code: 'CAPTCHA_FAILED',
+      message: 'Die Sicherheitsprüfung ist fehlgeschlagen oder abgelaufen. Bitte bestätigen Sie sie erneut.',
+    });
+  };
+
+  // GET /api/v1/auth/captcha (challenge for the ALTCHA widget on the login and registration forms)
+  app.get('/auth/captcha', { config: { rateLimit: { max: 30, timeWindow: '1 minute' } } }, async (_req, reply) => {
+    reply.header('Cache-Control', 'no-store');
+    return reply.status(200).send(CaptchaService.createChallenge());
+  });
+
   // POST /api/v1/auth/register
   app.post('/auth/register', async (req, reply) => {
     const parseResult = RegisterSchema.safeParse(req.body);
@@ -31,8 +50,15 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       });
     }
 
+    const rejected = captchaRejected(req, reply);
+    if (rejected) return rejected;
+
     try {
-      const { user, userId } = await authService.register(parseResult.data);
+      const { user } = await authService.register(parseResult.data);
+      // Best effort and not awaited: a slow or failing mail server must not delay the registration.
+      const { email, full_name, institution, canton } = parseResult.data;
+      AdminService.getInstance().notifyNewAccount({ email, full_name, institution, canton })
+        .catch(err => req.log.error({ code: err?.code || 'EMAIL_DELIVERY_FAILED' }, 'Failed to notify admins of a new account'));
       const token = app.jwt.sign({
         id: user.id,
         email: user.email,
@@ -70,6 +96,8 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
         message: 'Validierungsfehler bei Login',
       });
     }
+    const rejected = captchaRejected(req, reply);
+    if (rejected) return rejected;
 
     try {
       const user = await authService.login(parseResult.data.email, parseResult.data.password);

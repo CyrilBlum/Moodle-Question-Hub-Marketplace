@@ -134,7 +134,7 @@ export const api = {
   },
 
   // Auth
-  register: async (data: { email: string; password: string; full_name: string; institution: string; canton: string }) => {
+  register: async (data: { email: string; password: string; full_name: string; institution: string; canton: string; altcha: string }) => {
     const res = await request('/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -147,11 +147,11 @@ export const api = {
     return res;
   },
 
-  login: async (email: string, password: string) => {
+  login: async (email: string, password: string, altcha: string) => {
     const res = await request('/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, altcha }),
     });
     if (res.token) {
       setToken(res.token);

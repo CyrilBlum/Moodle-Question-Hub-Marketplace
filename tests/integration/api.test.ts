@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import { FastifyInstance } from 'fastify';
 import { buildServer } from '../../src/server';
 import { runMigrations } from '../../src/database/migrate';
@@ -14,6 +15,17 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
   let teacherJwtToken: string;
   let patToken: string;
   let patId: string;
+
+  /** Solves a captcha challenge the way the browser widget does (proof of work, ALTCHA format). */
+  const captcha = async (): Promise<string> => {
+    const c = JSON.parse((await app.inject({ method: 'GET', url: '/api/v1/auth/captcha' })).body);
+    for (let n = 0; n <= c.maxnumber; n++) {
+      if (crypto.createHash('sha256').update(c.salt + n).digest('hex') === c.challenge) {
+        return Buffer.from(JSON.stringify({ algorithm: c.algorithm, challenge: c.challenge, number: n, salt: c.salt, signature: c.signature })).toString('base64');
+      }
+    }
+    throw new Error('Captcha challenge not solvable');
+  };
 
   beforeAll(async () => {
     process.env.SEED_TEACHER_PASSWORD = 'integration-test-only-pw';
@@ -68,6 +80,7 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
       method: 'POST',
       url: '/api/v1/auth/register',
       payload: {
+        altcha: await captcha(),
         email: testEmail,
         password: 'SecureTeacherPassword2026!',
         full_name: 'Dr. Beat Meier',
@@ -89,6 +102,7 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
       method: 'POST',
       url: '/api/v1/auth/login',
       payload: {
+        altcha: await captcha(),
         email: 'teacher@kanti.ch',
         password: 'integration-test-only-pw',
       },
@@ -97,6 +111,21 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
     expect(res.statusCode).toBe(200);
     const body = JSON.parse(res.body);
     expect(body.user.email).toBe('teacher@kanti.ch');
+
+    // Without a solved captcha, with a forged one, or with a used one, login and registration are refused.
+    const credentials = { email: 'teacher@kanti.ch', password: 'integration-test-only-pw' };
+    const missing = await app.inject({ method: 'POST', url: '/api/v1/auth/login', payload: credentials });
+    expect(missing.statusCode).toBe(400);
+    expect(JSON.parse(missing.body).code).toBe('CAPTCHA_FAILED');
+    const solved = await captcha();
+    const forged = JSON.parse(Buffer.from(solved, 'base64').toString());
+    forged.number += 1;
+    expect((await app.inject({ method: 'POST', url: '/api/v1/auth/login',
+      payload: { ...credentials, altcha: Buffer.from(JSON.stringify(forged)).toString('base64') } })).statusCode).toBe(400);
+    expect((await app.inject({ method: 'POST', url: '/api/v1/auth/login', payload: { ...credentials, altcha: solved } })).statusCode).toBe(200);
+    expect((await app.inject({ method: 'POST', url: '/api/v1/auth/login', payload: { ...credentials, altcha: solved } })).statusCode).toBe(400);
+    expect((await app.inject({ method: 'POST', url: '/api/v1/auth/register',
+      payload: { email: `nocaptcha-${Date.now()}@example.ch`, password: 'No-Captcha-123!', full_name: 'Ohne Captcha', institution: 'Kanti X', canton: 'ZH' } })).statusCode).toBe(400);
     expect(body.token).toBeDefined();
   });
 
@@ -541,6 +570,7 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
       method: 'POST',
       url: '/api/v1/auth/register',
       payload: {
+        altcha: await captcha(),
         email: `stranger-${Date.now()}@example.ch`,
         password: 'Stranger-Pass-123!',
         full_name: 'Fremde Person',
@@ -663,7 +693,7 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
     await knex('packages').where({ id: testPkgId }).update({ visibility: 'private' });
     const requester = JSON.parse((await app.inject({
       method: 'POST', url: '/api/v1/auth/register',
-      payload: { email: `requester-${Date.now()}@example.ch`, password: 'Requester-Pass-123!', full_name: 'Anna Anfrage', institution: 'Kanti Z', canton: 'LU' },
+      payload: { altcha: await captcha(), email: `requester-${Date.now()}@example.ch`, password: 'Requester-Pass-123!', full_name: 'Anna Anfrage', institution: 'Kanti Z', canton: 'LU' },
     })).body);
     const requesterAuth = { authorization: `Bearer ${requester.token}` };
     try {
@@ -736,7 +766,7 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
       expect((await app.inject({ method: 'DELETE', url: `/api/v1/admin/users/${me.id}`, headers: auth })).statusCode).toBe(409);
       const temp = JSON.parse((await app.inject({
         method: 'POST', url: '/api/v1/auth/register',
-        payload: { email: `delete-me-${Date.now()}@example.ch`, password: 'Delete-Me-Pass-123!', full_name: 'Wegwerf Konto', institution: 'Kanti X', canton: 'BE' },
+        payload: { altcha: await captcha(), email: `delete-me-${Date.now()}@example.ch`, password: 'Delete-Me-Pass-123!', full_name: 'Wegwerf Konto', institution: 'Kanti X', canton: 'BE' },
       })).body);
       expect((await app.inject({ method: 'POST', url: `/api/v1/admin/users/${temp.user.id}/email`, headers: auth,
         payload: { subject: 'Hallo', message: 'Test' } })).statusCode).toBe(503);
@@ -756,7 +786,7 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
       expect(createdBody.user.role).toBe('teacher');
       expect(createdBody.initial_password.length).toBeGreaterThanOrEqual(12);
       const login = await app.inject({ method: 'POST', url: '/api/v1/auth/login',
-        payload: { email: newEmail, password: createdBody.initial_password } });
+        payload: { altcha: await captcha(), email: newEmail, password: createdBody.initial_password } });
       expect(login.statusCode).toBe(200);
       expect((await app.inject({ method: 'POST', url: '/api/v1/admin/users', headers: auth,
         payload: { email: newEmail, full_name: 'Doppelt', institution: 'Kanti Y', canton: 'ZH' } })).statusCode).toBe(409);

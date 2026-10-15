@@ -4,6 +4,8 @@ Provides resilient HTTP clients with exponential backoff on HTTP 429,
 live session cookies, SSH command runners, and test fixture helpers.
 """
 
+import base64
+import hashlib
 import os
 import sys
 import time
@@ -123,6 +125,16 @@ class HubClient:
     def health(self) -> requests.Response:
         return self.session.get(f"{self.api_base}/health", headers=self._headers(), timeout=15)
 
+    def captcha(self) -> str:
+        """Solve the Hub's proof-of-work captcha (ALTCHA format) like the browser widget does."""
+        challenge = self.session.get(f"{self.api_base}/auth/captcha", timeout=15).json()
+        for number in range(challenge["maxnumber"] + 1):
+            if hashlib.sha256(f"{challenge['salt']}{number}".encode()).hexdigest() == challenge["challenge"]:
+                payload = {key: challenge[key] for key in ("algorithm", "challenge", "salt", "signature")}
+                payload["number"] = number
+                return base64.b64encode(json.dumps(payload).encode()).decode()
+        raise RuntimeError("Captcha challenge not solvable")
+
     def login(
         self,
         email: str = DEFAULT_TEACHER_EMAIL,
@@ -132,7 +144,7 @@ class HubClient:
         url = f"{self.api_base}/auth/login"
         resp = self.session.post(
             url,
-            json={"email": email, "password": password},
+            json={"email": email, "password": password, "altcha": self.captcha()},
             headers={"Content-Type": "application/json"},
             timeout=15,
         )
