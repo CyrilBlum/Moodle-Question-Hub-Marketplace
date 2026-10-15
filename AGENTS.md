@@ -59,7 +59,11 @@ and an obsolete `tests/` folder (old copy with credentials: delete, never reuse)
   admin; without a password a random initial password is returned once and never emailed), `DELETE withdrawn/:id` (final deletion: removes the
   tombstone and frees the ID; Moodles then get 404 instead of 410), `DELETE users/:id` (refused for the own account and for
   accounts that still own active packages; tokens and access requests cascade), `POST users/:id/email` (needs `SMTP_*` in the
-  env file, otherwise 503 and the page falls back to a mailto link; SMTP is not configured on production as of 2026-10-15).
+  env file, otherwise 503 and the page falls back to a mailto link).
+- **Mail**: production sends through Proton SMTP submission as `hub@cblum.ch` (`smtp.protonmail.ch:587`, STARTTLS,
+  `SMTP_SECURE=false`; the password is a Proton SMTP token for that address, only in the env file). `cblum.ch` allows only
+  Proton in SPF and has DMARC `p=quarantine`, so other senders for `@cblum.ch` would land in spam. After changing the env file:
+  `systemctl restart moodle-question-hub` (systemd strips the quotes around `SMTP_FROM`).
 
 ## 4. Build and deploy
 Hub (this repo):
