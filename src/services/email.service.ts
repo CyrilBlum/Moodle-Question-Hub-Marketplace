@@ -7,7 +7,7 @@ export interface AccessRequestEmailData {
   requesterName: string;
   requesterEmail: string;
   requesterInstitution: string;
-  ownerEmail: string;
+  adminEmails: string[];
   /** Optional note of the requester. */
   message?: string | null;
   /** Without consent, e-mail and school stay hidden and replies do not reach the requester. */
@@ -89,6 +89,27 @@ export class EmailService {
     });
   }
 
+  /** Tells someone that a package admin gave them a role on a package. */
+  public static async sendMembershipNotice(data: {
+    to: string; packageId: string; packageTitle: string; actorName: string; role: string;
+  }): Promise<void> {
+    const transporter = this.transporter();
+    await transporter.sendMail({
+      from: getConfig().SMTP_FROM,
+      to: data.to,
+      subject: `Sie wirken an «${data.packageTitle}» mit`,
+      text: [
+        'Guten Tag',
+        '',
+        `${data.actorName} hat Sie im Moodle Question Hub zum Fragenpaket «${data.packageTitle}» hinzugefügt (Rolle: ${data.role}).`,
+        '',
+        `Zum Paket: ${this.packageUrl(data.packageId, 'mitwirkende')}`,
+        '',
+        'Diese Nachricht wurde automatisch vom Moodle Question Hub versendet.',
+      ].join('\n'),
+    });
+  }
+
   private static packageUrl(packageId: string, tab?: string): string {
     const base = getConfig().PUBLIC_BASE_URL.replace(/\/$/, '');
     return `${base}/packages/${encodeURIComponent(packageId)}${tab ? `?tab=${tab}` : ''}`;
@@ -101,7 +122,7 @@ export class EmailService {
       : `${data.requesterName} (Kontaktdaten nicht freigegeben)`;
     await transporter.sendMail({
       from: getConfig().SMTP_FROM,
-      to: data.ownerEmail,
+      to: data.adminEmails,
       replyTo: data.shareContact ? data.requesterEmail : undefined,
       subject: `Zugriffsanfrage für «${data.packageTitle}»`,
       text: [

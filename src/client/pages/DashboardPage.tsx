@@ -91,18 +91,6 @@ export const DashboardPage: React.FC = () => {
     }
   };
 
-  const handleWithdrawRelease = async (pkg: any, version: string) => {
-    if (!confirm(`Version ${version} von «${pkg.title}» zurückziehen? Die Versionsnummer kann nicht erneut verwendet werden.`)) {
-      return;
-    }
-    try {
-      await api.withdrawRelease(pkg.id, version);
-      loadMyPackages();
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Zurückziehen fehlgeschlagen.');
-    }
-  };
-
   const handleCreateToken = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!tokenName.trim()) return;
@@ -176,10 +164,11 @@ export const DashboardPage: React.FC = () => {
 
       {/* My published packages */}
       <div className="bg-white rounded-xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-4">
-        <h2 className="text-lg font-bold text-slate-900">Meine veröffentlichten Pakete</h2>
+        <h2 className="text-lg font-bold text-slate-900">Meine Pakete</h2>
+        <p className="text-xs text-slate-500">Selbst veröffentlichte Pakete und Pakete, an denen Sie als Bearbeiter/in oder Admin mitwirken.</p>
         {errorMsg && <p className="text-xs text-red-600">{errorMsg}</p>}
         {myPackages.length === 0 ? (
-          <p className="text-xs text-slate-500">Noch keine Pakete veröffentlicht.</p>
+          <p className="text-xs text-slate-500">Noch keine Pakete.</p>
         ) : (
           <div className="divide-y divide-slate-100">
             {myPackages.map(pkg => (
@@ -191,24 +180,10 @@ export const DashboardPage: React.FC = () => {
                   <div className="text-xs text-slate-500 font-mono">
                     {pkg.id} • v{pkg.latest_version} • {pkg.downloads_count} Downloads •{' '}
                     {pkg.preview_enabled ? 'mit Vorschau' : 'ohne Vorschau'}
-                  </div>
-                  <div className="text-xs text-slate-500 mt-1 flex flex-wrap gap-2">
-                    {pkg.versions.map((v: string) => (
-                      <span key={v} className="inline-flex items-center bg-slate-100 rounded px-1.5 py-0.5 font-mono">
-                        {v}
-                        {pkg.versions.length > 1 && (
-                          <button
-                            onClick={() => handleWithdrawRelease(pkg, v)}
-                            title={`Version ${v} zurückziehen`}
-                            className="ml-1 text-slate-400 hover:text-red-600"
-                          >
-                            ×
-                          </button>
-                        )}
-                      </span>
-                    ))}
+                    {!pkg.is_creator && <> • {pkg.my_role === 'admin' ? 'Admin' : 'Bearbeiter/in'}</>}
                   </div>
                 </div>
+                {pkg.my_role === 'admin' && <div className="flex gap-2">
                 <button
                   onClick={() => startEdit(pkg)}
                   className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 sm:mr-2"
@@ -221,6 +196,7 @@ export const DashboardPage: React.FC = () => {
                 >
                   Paket zurückziehen
                 </button>
+                </div>}
               </div>
             ))}
           </div>

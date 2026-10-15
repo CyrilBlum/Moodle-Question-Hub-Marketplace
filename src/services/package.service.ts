@@ -1,6 +1,8 @@
 import crypto from 'crypto';
 import semver from 'semver';
+import { PackageMembersService, PackageRole } from './package-members.service';
 import { getDatabase } from '../database/connection';
+import { AdminService } from './admin.service';
 import { SafeXmlValidatorService } from './xml-validator.service';
 import { PackageStorageService } from './package-storage.service';
 import { TaxonomyService } from './taxonomy.service';
@@ -87,6 +89,7 @@ export class PackageService {
 
     // 3. Check existing package
     const existingPackage = await knex('packages').where({ id: manifest.id }).first();
+    let publisherRole: PackageRole | null = null;
     const tombstone = existingPackage ? null : await this.getWithdrawnPackage(manifest.id);
     if (tombstone) {
       if (tombstone.owner_id !== ownerId) {
@@ -108,7 +111,8 @@ export class PackageService {
           `CONFLICT: Version ${manifest.version} existiert bereits oder ist nicht höher als die aktuelle Version ${existingPackage.latest_version} (zurückgezogene Versionen bleiben gesperrt).`
         );
       }
-      if (existingPackage.owner_id !== ownerId) {
+      publisherRole = await PackageMembersService.getInstance().getRole(manifest.id, ownerId);
+      if (!PackageMembersService.atLeast(publisherRole, 'editor')) {
         throw new Error('FORBIDDEN: Sie sind nicht berechtigt, neue Versionen dieses Pakets zu veröffentlichen.');
       }
 
@@ -200,6 +204,9 @@ export class PackageService {
             });
           }
         }
+      } else if (publisherRole !== 'admin') {
+        // Editors add versions; the package settings stay with its admins.
+        await trx('packages').where({ id: manifest.id }).update({ latest_version: manifest.version, updated_at: now });
       } else {
         await trx('packages')
           .where({ id: manifest.id })
@@ -348,6 +355,7 @@ export class PackageService {
       ? await knex('package_access_requests').where({ requester_id: viewerId }).whereIn('package_id', packageIds)
       : [];
     const accessByPackage = new Map(accessRequests.map(request => [request.package_id, request.status]));
+    const rolesByPackage = await PackageMembersService.getInstance().getRoles(packageIds, viewerId);
 
     const data: PackageSearchResult[] = rows.map(row => {
       const pkgReleases = releases.filter(r => r.package_id === row.id);
@@ -374,7 +382,8 @@ export class PackageService {
 
       const isPrivate = row.visibility === 'private';
       const accessStatus = accessByPackage.get(row.id) as 'pending' | 'approved' | 'denied' | undefined;
-      const canAccess = !isPrivate || row.owner_id === viewerId || accessStatus === 'approved';
+      const myRole = rolesByPackage.get(row.id) || null;
+      const canAccess = !isPrivate || !!myRole;
 
       return {
         id: row.id,
@@ -404,6 +413,7 @@ export class PackageService {
         visibility: isPrivate ? 'private' : 'public',
         access_status: accessStatus,
         can_access: canAccess,
+        my_role: myRole,
         categories: canAccess ? categoryPaths : [],
         stats: {
           question_count: canAccess ? questionCount : 0,
@@ -455,7 +465,9 @@ export class PackageService {
       : null;
     const accessStatus = accessRequest?.status as 'pending' | 'approved' | 'denied' | undefined;
     const isPrivate = row.visibility === 'private';
-    const canAccess = !isPrivate || row.owner_id === viewerId || accessStatus === 'approved';
+    const myRole = await PackageMembersService.getInstance().getRole(packageId, viewerId);
+    const canAccess = !isPrivate || !!myRole;
+    const isHubAdmin = !!viewerId && await AdminService.getInstance().isAdmin(viewerId);
 
     const releases = await knex('releases')
       .where({ package_id: packageId, is_yanked: false })
@@ -505,6 +517,8 @@ export class PackageService {
       visibility: isPrivate ? 'private' : 'public',
       access_status: accessStatus,
       can_access: canAccess,
+      my_role: myRole,
+      can_manage: myRole === 'admin' || isHubAdmin,
       stats: {
         question_count: canAccess && latestRelease ? latestRelease.question_count : 0,
         categories_count: canAccess ? categories.length : 0,
@@ -536,12 +550,8 @@ export class PackageService {
     const knex = getDatabase();
     const pkg = await knex('packages').where({ id: packageId }).select('owner_id', 'visibility').first();
     if (!pkg) return false;
-    if (pkg.visibility !== 'private' || pkg.owner_id === userId) return true;
-    if (!userId) return false;
-    const grant = await knex('package_access_requests')
-      .where({ package_id: packageId, requester_id: userId, status: 'approved' })
-      .first();
-    return !!grant;
+    if (pkg.visibility !== 'private') return true;
+    return !!(await PackageMembersService.getInstance().getRole(packageId, userId));
   }
 
   public async createAccessRequest(
@@ -553,19 +563,23 @@ export class PackageService {
     requestStatus: string;
     packageTitle: string;
     requester: { name: string; email: string; institution: string };
-    ownerEmail: string;
+    adminEmails: string[];
   }> {
     const knex = getDatabase();
     const pkg = await knex('packages').where({ id: packageId }).first();
     if (!pkg) throw new Error('NOT_FOUND: Paket nicht gefunden.');
     if (pkg.visibility !== 'private') throw new Error('CONFLICT: Dieses Paket ist bereits öffentlich.');
-    if (pkg.owner_id === requesterId) throw new Error('CONFLICT: Sie sind Eigentümer dieses Pakets.');
+    if (await PackageMembersService.getInstance().getRole(packageId, requesterId)) {
+      throw new Error('CONFLICT: Sie haben bereits Zugriff auf dieses Paket.');
+    }
 
-    const [owner, requester] = await Promise.all([
-      knex('users').where({ id: pkg.owner_id }).select('email').first(),
+    const [admins, requester] = await Promise.all([
+      knex('users').where({ id: pkg.owner_id })
+        .orWhereIn('id', knex('package_members').where({ package_id: packageId, role: 'admin' }).select('user_id'))
+        .pluck('email'),
       knex('users').where({ id: requesterId }).select('full_name', 'email', 'institution').first(),
     ]);
-    if (!owner || !requester) throw new Error('NOT_FOUND: Benutzerkonto nicht gefunden.');
+    if (admins.length === 0 || !requester) throw new Error('NOT_FOUND: Benutzerkonto nicht gefunden.');
 
     const existing = await knex('package_access_requests').where({ package_id: packageId, requester_id: requesterId }).first();
     let shouldNotifyOwner = false;
@@ -588,15 +602,13 @@ export class PackageService {
       requestStatus: existing?.status === 'approved' ? 'approved' : 'pending',
       packageTitle: pkg.title,
       requester: { name: requester.full_name, email: requester.email, institution: requester.institution },
-      ownerEmail: owner.email,
+      adminEmails: admins,
     };
   }
 
   public async listAccessRequests(ownerId: string, packageId: string): Promise<any[]> {
     const knex = getDatabase();
-    const pkg = await knex('packages').where({ id: packageId }).first();
-    if (!pkg) throw new Error('NOT_FOUND: Paket nicht gefunden.');
-    if (pkg.owner_id !== ownerId) throw new Error('FORBIDDEN: Nur die Eigentümerin oder der Eigentümer kann Anfragen sehen.');
+    await PackageMembersService.getInstance().require(packageId, ownerId, 'admin', 'Nur Admins des Pakets sehen die Zugriffsanfragen.');
 
     const rows = await knex('package_access_requests')
       .join('users', 'package_access_requests.requester_id', 'users.id')
@@ -635,17 +647,27 @@ export class PackageService {
     const row = await knex('package_access_requests')
       .join('packages', 'package_access_requests.package_id', 'packages.id')
       .join('users as requester', 'package_access_requests.requester_id', 'requester.id')
-      .join('users as owner', 'packages.owner_id', 'owner.id')
       .where({ 'package_access_requests.id': requestId, 'package_access_requests.package_id': packageId })
-      .select('package_access_requests.id', 'packages.owner_id', 'packages.title',
-        'requester.email as requester_email', 'requester.full_name as requester_name', 'owner.full_name as owner_name')
+      .select('package_access_requests.id', 'package_access_requests.requester_id', 'packages.title',
+        'requester.email as requester_email', 'requester.full_name as requester_name')
       .first();
     if (!row) throw new Error('NOT_FOUND: Zugriffsanfrage nicht gefunden.');
-    if (row.owner_id !== ownerId) throw new Error('FORBIDDEN: Nur die Eigentümerin oder der Eigentümer kann Anfragen bearbeiten.');
+    await PackageMembersService.getInstance().require(packageId, ownerId, 'admin', 'Nur Admins des Pakets können Anfragen bearbeiten.');
+    const decider = await knex('users').where({ id: ownerId }).first('full_name');
 
-    await knex('package_access_requests').where({ id: requestId })
-      .update({ status, response_message: responseMessage, updated_at: new Date() });
-    return { packageTitle: row.title, requesterEmail: row.requester_email, requesterName: row.requester_name, ownerName: row.owner_name };
+    const now = new Date();
+    await knex.transaction(async trx => {
+      await trx('package_access_requests').where({ id: requestId })
+        .update({ status, response_message: responseMessage, updated_at: now });
+      const member = await trx('package_members').where({ package_id: packageId, user_id: row.requester_id }).first();
+      // Approval grants read access (membership); a refusal only removes plain read access, never a higher role.
+      if (status === 'approved' && !member) {
+        await trx('package_members').insert({ package_id: packageId, user_id: row.requester_id, role: 'member', created_at: now, updated_at: now });
+      } else if (status === 'denied' && member?.role === 'member') {
+        await trx('package_members').where({ package_id: packageId, user_id: row.requester_id }).del();
+      }
+    });
+    return { packageTitle: row.title, requesterEmail: row.requester_email, requesterName: row.requester_name, ownerName: decider?.full_name || '' };
   }
 
   public async getRelease(packageId: string, version: string): Promise<any | null> {
@@ -669,7 +691,6 @@ export class PackageService {
    */
   public async updatePackage(
     ownerId: string,
-    isAdmin: boolean,
     packageId: string,
     patch: {
       title?: string;
@@ -688,9 +709,7 @@ export class PackageService {
     const knex = getDatabase();
     const pkg = await knex('packages').where({ id: packageId }).first();
     if (!pkg) throw new Error('NOT_FOUND: Paket nicht gefunden.');
-    if (pkg.owner_id !== ownerId && !isAdmin) {
-      throw new Error('FORBIDDEN: Sie sind nicht berechtigt, dieses Paket zu verwalten.');
-    }
+    await PackageMembersService.getInstance().require(packageId, ownerId, 'admin', 'Sie sind nicht berechtigt, dieses Paket zu verwalten.');
 
     const update: Record<string, unknown> = {};
     if (patch.title !== undefined) {
@@ -750,15 +769,22 @@ export class PackageService {
     });
   }
 
-  /** Packages owned by a user (for the "my packages" view in the plugin and dashboard). */
+  /**
+   * Packages a user may publish to: created by them or shared with them as editor or admin
+   * (the "my packages" view in the plugin and dashboard). `my_role` says what else they may do.
+   */
   public async listOwnedPackages(ownerId: string): Promise<Array<{
     id: string; title: string; summary: string; license: string; canton: string | null;
     subject: string; subject_category: string; grades: string[]; tags: string[];
     latest_version: string; versions: string[];
-    preview_enabled: boolean; downloads_count: number; updated_at: string;
+    preview_enabled: boolean; downloads_count: number; updated_at: string; my_role: PackageRole; is_creator: boolean;
   }>> {
     const knex = getDatabase();
-    const rows = await knex('packages').where({ owner_id: ownerId }).orderBy('updated_at', 'desc');
+    const rows = await knex('packages')
+      .where({ owner_id: ownerId })
+      .orWhereIn('id', knex('package_members').where({ user_id: ownerId }).whereIn('role', ['editor', 'admin']).select('package_id'))
+      .orderBy('updated_at', 'desc');
+    const roles = await PackageMembersService.getInstance().getRoles(rows.map(r => r.id), ownerId);
     const ids = rows.map(r => r.id);
     const releases = ids.length
       ? await knex('releases').whereIn('package_id', ids).where({ is_yanked: false })
@@ -781,6 +807,8 @@ export class PackageService {
       visibility: r.visibility === 'private' ? 'private' : 'public',
       downloads_count: r.downloads_count,
       updated_at: new Date(r.updated_at).toISOString(),
+      my_role: roles.get(r.id) || 'editor',
+      is_creator: r.owner_id === ownerId,
     }));
   }
 
@@ -788,13 +816,11 @@ export class PackageService {
    * Withdraws one release. The row stays (yanked) so the version number can never be reused;
    * the file is removed from download/listing. latest_version moves to the highest remaining one.
    */
-  public async withdrawRelease(ownerId: string, isAdmin: boolean, packageId: string, version: string): Promise<void> {
+  public async withdrawRelease(ownerId: string, packageId: string, version: string): Promise<void> {
     const knex = getDatabase();
     const pkg = await knex('packages').where({ id: packageId }).first();
     if (!pkg) throw new Error('NOT_FOUND: Paket nicht gefunden.');
-    if (pkg.owner_id !== ownerId && !isAdmin) {
-      throw new Error('FORBIDDEN: Sie sind nicht berechtigt, dieses Paket zu verwalten.');
-    }
+    await PackageMembersService.getInstance().require(packageId, ownerId, 'admin', 'Sie sind nicht berechtigt, dieses Paket zu verwalten.');
     const release = await knex('releases').where({ package_id: packageId, version, is_yanked: false }).first();
     if (!release) throw new Error('NOT_FOUND: Version nicht gefunden.');
 
@@ -823,13 +849,11 @@ export class PackageService {
    * Withdraws a whole package: all releases, grades, tags and stored files are deleted.
    * A tombstone keeps the ID reserved so clients can tell "withdrawn" (410) from "unknown" (404).
    */
-  public async withdrawPackage(ownerId: string, isAdmin: boolean, packageId: string): Promise<void> {
+  public async withdrawPackage(ownerId: string, packageId: string): Promise<void> {
     const knex = getDatabase();
     const pkg = await knex('packages').where({ id: packageId }).first();
     if (!pkg) throw new Error('NOT_FOUND: Paket nicht gefunden.');
-    if (pkg.owner_id !== ownerId && !isAdmin) {
-      throw new Error('FORBIDDEN: Sie sind nicht berechtigt, dieses Paket zu verwalten.');
-    }
+    await PackageMembersService.getInstance().require(packageId, ownerId, 'admin', 'Sie sind nicht berechtigt, dieses Paket zu verwalten.');
     const versions = (await knex('releases').where({ package_id: packageId }).pluck('version'))
       .filter((v: string) => semver.valid(v))
       .sort(semver.rcompare);
@@ -841,6 +865,7 @@ export class PackageService {
       });
       await trx('package_grades').where({ package_id: packageId }).del();
       await trx('package_tags').where({ package_id: packageId }).del();
+      await trx('package_members').where({ package_id: packageId }).del();
       await trx('releases').where({ package_id: packageId }).del();
       await trx('packages').where({ id: packageId }).del();
     });

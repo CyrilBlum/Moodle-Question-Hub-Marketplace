@@ -3,6 +3,7 @@ import { getDatabase } from '../database/connection';
 import { AuthService } from './auth.service';
 import { EmailService } from './email.service';
 import { PackageStorageService } from './package-storage.service';
+import { PackageMembersService } from './package-members.service';
 
 export interface AdminPackageSummary {
   id: string;
@@ -12,6 +13,10 @@ export interface AdminPackageSummary {
   downloads_count: number;
   release_count: number;
   withdrawn_release_count: number;
+  /** Read access only / may publish versions / may also manage the package (creator included). */
+  members_count: number;
+  editors_count: number;
+  admins_count: number;
   updated_at: string;
 }
 
@@ -61,6 +66,7 @@ export class AdminService {
     const releases = await knex('releases').select('package_id', 'is_yanked');
     const tombstones = await knex('withdrawn_packages').orderBy('withdrawn_at', 'desc');
     const emails = new Map(users.map(u => [u.id, u.email]));
+    const roleCounts = await PackageMembersService.getInstance().counts();
 
     const withdrawn: AdminWithdrawnPackage[] = tombstones.map(t => ({
       id: t.id,
@@ -91,6 +97,9 @@ export class AdminService {
               downloads_count: p.downloads_count,
               release_count: own.filter(r => !r.is_yanked).length,
               withdrawn_release_count: own.filter(r => !!r.is_yanked).length,
+              members_count: roleCounts.get(p.id)?.members ?? 0,
+              editors_count: roleCounts.get(p.id)?.editors ?? 0,
+              admins_count: roleCounts.get(p.id)?.admins ?? 1,
               updated_at: new Date(p.updated_at).toISOString(),
             } as AdminPackageSummary;
           }),

@@ -134,6 +134,24 @@ export const UploadPage: React.FC = () => {
           Laden Sie Ihre Moodle-XML-Sammlung hoch. Der Pre-Flight-Prüfer validiert Fragentypen, Anteile und Medien.
         </p>
 
+        <div className="mt-4 rounded-lg border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900 space-y-2">
+          <p className="font-semibold">Empfohlen: direkt aus Moodle veröffentlichen</p>
+          <p>
+            Mit dem Moodle-Plugin «Question Hub» bleibt Ihre Fragenkategorie mit dem Paket verbunden: Spätere Änderungen
+            veröffentlichen Sie mit einem Klick als neue Version, und Mitwirkende holen sie ebenso einfach in ihr Moodle.
+          </p>
+          <ol className="list-decimal pl-5 space-y-0.5">
+            <li>Öffnen Sie in Ihrem Kurs die Fragensammlung und wählen Sie dort im Auswahlmenü oben «Question Hub».</li>
+            <li>Verbinden Sie Moodle einmalig mit Ihrem Hub-Konto («Mit Question Hub verbinden»).</li>
+            <li>Klicken Sie neben der gewünschten Kategorie auf «Kategorie veröffentlichen» und füllen Sie die Angaben aus.</li>
+            <li>Nach Änderungen an den Fragen erscheint bei der Kategorie «Push»: So entsteht die nächste Version. Mitwirkende mit der Rolle Bearbeiter/in können das ebenfalls.</li>
+          </ol>
+          <p className="text-xs text-sky-800">
+            Ist das Plugin in Ihrem Moodle nicht installiert, wenden Sie sich an Ihre Moodle-Administration. Ohne Plugin
+            können Sie hier eine aus Moodle exportierte XML-Datei hochladen.
+          </p>
+        </div>
+
         <div className="flex items-center space-x-4 mt-6">
           {[
             { num: 1, label: '1. XML-Upload' },

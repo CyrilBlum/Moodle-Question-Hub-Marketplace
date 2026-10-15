@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import fs from 'fs';
 import { PackageService, PackageSearchFilters } from '../services/package.service';
-import { AdminService } from '../services/admin.service';
+import { PackageMembersService } from '../services/package-members.service';
 import { SafeXmlValidatorService } from '../services/xml-validator.service';
 import { PackageStorageService } from '../services/package-storage.service';
 import { PreviewSanitizerService } from '../services/preview-sanitizer.service';
@@ -294,7 +294,7 @@ export async function packageRoutes(app: FastifyInstance): Promise<void> {
       });
     }
     try {
-      await packageService.updatePackage(user.id, await AdminService.getInstance().isAdmin(user.id), id, patch as any);
+      await packageService.updatePackage(user.id, id, patch as any);
       return reply.status(200).send(await packageService.getPackage(id, user.id));
     } catch (err: any) {
       if ((err.message || '').startsWith('BAD_REQUEST:')) {
@@ -347,7 +347,7 @@ export async function packageRoutes(app: FastifyInstance): Promise<void> {
           requesterName: user.full_name,
           requesterEmail: user.email,
           requesterInstitution: user.institution,
-          ownerEmail: request.ownerEmail,
+          adminEmails: request.adminEmails,
           message: note.message,
           shareContact,
         });
@@ -403,12 +403,64 @@ export async function packageRoutes(app: FastifyInstance): Promise<void> {
     }
   });
 
+  // Package members: list (anyone with a role), add/change/remove (package admins and Hub admins).
+  const members = PackageMembersService.getInstance();
+  app.get('/packages/:id/members', { preHandler: [app.authenticate] }, async (req, reply) => {
+    const user = (req as any).user;
+    const { id } = req.params as { id: string };
+    try {
+      return reply.status(200).send(await members.list(id, user.id));
+    } catch (err: any) {
+      return withdrawErrors(err, reply);
+    }
+  });
+
+  app.post('/packages/:id/members', { preHandler: [app.authenticate] }, async (req, reply) => {
+    const user = (req as any).user;
+    const { id } = req.params as { id: string };
+    const { email, role } = (req.body || {}) as { email?: unknown; role?: unknown };
+    if (typeof email !== 'string' || !email.includes('@') || !PackageMembersService.isRole(role)) {
+      return reply.status(400).send({ statusCode: 400, error: 'Bad Request', message: 'E-Mail-Adresse und Rolle (member, editor, admin) sind nötig.' });
+    }
+    try {
+      return reply.status(201).send(await members.add(user.id, id, email, role));
+    } catch (err: any) {
+      return withdrawErrors(err, reply);
+    }
+  });
+
+  app.patch('/packages/:id/members/:userId', { preHandler: [app.authenticate] }, async (req, reply) => {
+    const user = (req as any).user;
+    const { id, userId } = req.params as { id: string; userId: string };
+    const { role } = (req.body || {}) as { role?: unknown };
+    if (!PackageMembersService.isRole(role)) {
+      return reply.status(400).send({ statusCode: 400, error: 'Bad Request', message: 'Rolle muss member, editor oder admin sein.' });
+    }
+    try {
+      await members.setRole(user.id, id, userId, role);
+      return reply.status(204).send();
+    } catch (err: any) {
+      return withdrawErrors(err, reply);
+    }
+  });
+
+  app.delete('/packages/:id/members/:userId', { preHandler: [app.authenticate] }, async (req, reply) => {
+    const user = (req as any).user;
+    const { id, userId } = req.params as { id: string; userId: string };
+    try {
+      await members.remove(user.id, id, userId);
+      return reply.status(204).send();
+    } catch (err: any) {
+      return withdrawErrors(err, reply);
+    }
+  });
+
   // 8. DELETE /api/v1/packages/:id (withdraw the whole package)
   app.delete('/packages/:id', { preHandler: [app.authenticate] }, async (req, reply) => {
     const user = (req as any).user;
     const { id } = req.params as { id: string };
     try {
-      await packageService.withdrawPackage(user.id, await AdminService.getInstance().isAdmin(user.id), id);
+      await packageService.withdrawPackage(user.id, id);
       return reply.status(204).send();
     } catch (err) {
       return withdrawErrors(err, reply);
@@ -420,7 +472,7 @@ export async function packageRoutes(app: FastifyInstance): Promise<void> {
     const user = (req as any).user;
     const { id, version } = req.params as { id: string; version: string };
     try {
-      await packageService.withdrawRelease(user.id, await AdminService.getInstance().isAdmin(user.id), id, version);
+      await packageService.withdrawRelease(user.id, id, version);
       return reply.status(204).send();
     } catch (err) {
       return withdrawErrors(err, reply);

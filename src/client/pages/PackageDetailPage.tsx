@@ -2,10 +2,11 @@ import React, { useRef, useState, useEffect } from 'react';
 import renderMathInElement from 'katex/contrib/auto-render';
 import 'katex/dist/katex.min.css';
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Download, Copy, Check, Eye, Layers, ShieldCheck, Calendar, BookOpen, ArrowLeft } from 'lucide-react';
-import { api, getStoredUser, getToken } from '../api/client';
+import { Download, Copy, Check, Eye, Layers, ShieldCheck, Calendar, BookOpen, ArrowLeft, ChevronDown } from 'lucide-react';
+import { api, getToken } from '../api/client';
 import { PackageSettings } from '../components/PackageSettings';
 import { AccessRequests } from '../components/AccessRequests';
+import { PackageMembers } from '../components/PackageMembers';
 import { QuestionTypeBadges } from '../components/QuestionTypeBadges';
 import { sanitizeQuestionHtml } from '../utils/sanitize';
 import { buildCategoryTree, CategoryNode } from '../utils/categoryTree';
@@ -53,9 +54,10 @@ export const PackageDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  // ?tab=anfragen is the link in the access request e-mail to the owner.
-  const [activeTab, setActiveTab] = useState<'overview' | 'categories' | 'preview' | 'versions' | 'requests' | 'settings'>(
-    searchParams.get('tab') === 'anfragen' ? 'requests' : 'overview');
+  // ?tab=anfragen / ?tab=mitwirkende are the links in the access request and membership e-mails.
+  const [activeTab, setActiveTab] = useState<'overview' | 'categories' | 'preview' | 'versions' | 'members' | 'requests' | 'settings'>(
+    searchParams.get('tab') === 'anfragen' ? 'requests' : searchParams.get('tab') === 'mitwirkende' ? 'members' : 'overview');
+  const [showVersions, setShowVersions] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [accessRequestMessage, setAccessRequestMessage] = useState('');
   const [accessNote, setAccessNote] = useState('');
@@ -63,7 +65,7 @@ export const PackageDetailPage: React.FC = () => {
   const [accessRequests, setAccessRequests] = useState<any[]>([]);
 
   useEffect(() => {
-    if (searchParams.get('tab') === 'anfragen' && !getToken()) {
+    if (['anfragen', 'mitwirkende'].includes(searchParams.get('tab') || '') && !getToken()) {
       navigate(`/login?return_to=${encodeURIComponent(window.location.pathname + window.location.search)}`, { replace: true });
       return;
     }
@@ -72,8 +74,9 @@ export const PackageDetailPage: React.FC = () => {
     }
   }, [id]);
 
-  const currentUser = getStoredUser();
-  const isOwner = !!getToken() && !!currentUser?.id && pkg?.author?.id === currentUser.id;
+  // Package admins and Hub admins manage the package; anyone with a role sees the members.
+  const canManage = !!getToken() && !!pkg?.can_manage;
+  const hasRole = !!getToken() && (!!pkg?.my_role || canManage);
 
   const loadAccessRequests = async (packageId: string) => {
     try {
@@ -85,10 +88,10 @@ export const PackageDetailPage: React.FC = () => {
   };
 
   useEffect(() => {
-    if (isOwner && pkg?.id) loadAccessRequests(pkg.id);
-    // Someone else following the owner's link lands on the overview.
-    else if (pkg?.id && activeTab === 'requests') setActiveTab('overview');
-  }, [isOwner, pkg?.id]);
+    if (canManage && pkg?.id) loadAccessRequests(pkg.id);
+    // Someone without the rights following an e-mail link lands on the overview.
+    if (pkg?.id && ((activeTab === 'requests' && !canManage) || (activeTab === 'members' && !hasRole))) setActiveTab('overview');
+  }, [canManage, hasRole, pkg?.id]);
 
   const loadData = async (packageId: string, quiet = false) => {
     if (!quiet) setLoading(true);
@@ -128,13 +131,14 @@ export const PackageDetailPage: React.FC = () => {
     }
   };
 
-  const downloadXml = async () => {
+  const downloadXml = async (version: string = pkg.latest_version) => {
+    setShowVersions(false);
     try {
-      const blob = await api.downloadPackage(pkg.id, pkg.latest_version);
+      const blob = await api.downloadPackage(pkg.id, version);
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `package-${pkg.id}-${pkg.latest_version}.xml`;
+      link.download = `package-${pkg.id}-${version}.xml`;
       link.click();
       URL.revokeObjectURL(url);
     } catch (err: any) {
@@ -205,14 +209,43 @@ export const PackageDetailPage: React.FC = () => {
 
           {/* Action buttons */}
           {pkg.can_access !== false && <div className="flex flex-wrap items-center gap-2 pt-2 md:pt-0">
-            <a
-              href="#download"
-              onClick={e => { e.preventDefault(); downloadXml(); }}
-              className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-lg bg-red-600 text-white font-medium hover:bg-red-700 shadow-sm transition text-sm"
-            >
-              <Download className="w-4 h-4" />
-              <span>XML herunterladen</span>
-            </a>
+            <div className="relative inline-flex rounded-lg shadow-sm">
+              <button
+                onClick={() => downloadXml()}
+                className={`inline-flex items-center space-x-2 px-4 py-2.5 bg-red-600 text-white font-medium hover:bg-red-700 transition text-sm ${
+                  (pkg.releases?.length || 0) > 1 ? 'rounded-l-lg' : 'rounded-lg'}`}
+              >
+                <Download className="w-4 h-4" />
+                <span>XML herunterladen</span>
+              </button>
+              {(pkg.releases?.length || 0) > 1 && (
+                <button
+                  onClick={() => setShowVersions(v => !v)}
+                  aria-haspopup="menu"
+                  aria-expanded={showVersions}
+                  title="Frühere Version herunterladen"
+                  className="px-2 py-2.5 rounded-r-lg bg-red-600 text-white hover:bg-red-700 border-l border-red-500"
+                >
+                  <ChevronDown className="w-4 h-4" />
+                  <span className="sr-only">Frühere Version herunterladen</span>
+                </button>
+              )}
+              {showVersions && (
+                <div role="menu" className="absolute right-0 top-full mt-1 z-20 min-w-[12rem] bg-white border border-slate-200 rounded-lg shadow-lg py-1">
+                  {pkg.releases.map((rel: any) => (
+                    <button
+                      key={rel.version}
+                      role="menuitem"
+                      onClick={() => downloadXml(rel.version)}
+                      className="w-full text-left px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 flex justify-between gap-3"
+                    >
+                      <span className="font-mono">v{rel.version}{rel.version === pkg.latest_version ? ' (aktuell)' : ''}</span>
+                      <span className="text-xs text-slate-400">{new Date(rel.created_at).toLocaleDateString('de-CH')}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <button
               onClick={copyImportUrl}
               className="inline-flex items-center space-x-1.5 px-3 py-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium transition text-sm shadow-sm"
@@ -263,10 +296,11 @@ export const PackageDetailPage: React.FC = () => {
               ? [{ id: 'preview', label: `Vorschau (${pkg.stats?.question_count || 0})` }]
               : []),
             ...(pkg.can_access !== false ? [{ id: 'versions', label: `Versionen (${pkg.releases?.length || 0})` }] : []),
-            ...(isOwner && (pkg.visibility === 'private' || accessRequests.length > 0)
+            ...(hasRole ? [{ id: 'members', label: 'Mitwirkende' }] : []),
+            ...(canManage && (pkg.visibility === 'private' || accessRequests.length > 0)
               ? [{ id: 'requests', label: `Zugriffsanfragen${pendingRequests ? ` (${pendingRequests} offen)` : ''}` }]
               : []),
-            ...(isOwner ? [{ id: 'settings', label: 'Einstellungen' }] : []),
+            ...(canManage ? [{ id: 'settings', label: 'Einstellungen' }] : []),
           ].map(tab => (
             <button
               key={tab.id}
@@ -416,11 +450,13 @@ export const PackageDetailPage: React.FC = () => {
         </div>
       )}
 
-      {activeTab === 'requests' && isOwner && (
+      {activeTab === 'members' && hasRole && <PackageMembers packageId={pkg.id} />}
+
+      {activeTab === 'requests' && canManage && (
         <AccessRequests packageId={pkg.id} requests={accessRequests} onChanged={() => loadAccessRequests(pkg.id)} />
       )}
 
-      {activeTab === 'settings' && isOwner && (
+      {activeTab === 'settings' && canManage && (
         <PackageSettings key={`${pkg.updated_at}`} pkg={pkg} onChanged={() => loadData(pkg.id, true)} />
       )}
 

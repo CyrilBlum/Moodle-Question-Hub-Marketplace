@@ -79,6 +79,10 @@ export interface PackageSearchResult {
   visibility: 'public' | 'private';
   access_status?: 'pending' | 'approved' | 'denied';
   can_access?: boolean;
+  /** The viewer's role on the package (creator = admin); null without one. */
+  my_role?: 'admin' | 'editor' | 'member' | null;
+  /** Package admin or Hub admin: may edit settings, members, access requests and withdraw. */
+  can_manage?: boolean;
   access_requests?: Array<{
     id: string;
     requester: { id: string; name: string; email: string | null; institution: string | null };

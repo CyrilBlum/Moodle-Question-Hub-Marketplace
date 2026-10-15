@@ -251,6 +251,9 @@ export const AdminPage: React.FC = () => {
                             <td className="py-1.5 pr-3 whitespace-nowrap text-slate-600">
                               {p.release_count} Version(en){p.withdrawn_release_count > 0 && `, ${p.withdrawn_release_count} zurückgezogen`}
                             </td>
+                            <td className="py-1.5 pr-3 whitespace-nowrap text-slate-600" title="Mitglieder (Lesezugriff) · Bearbeiter/innen · Admins inkl. Ersteller/in">
+                              {p.members_count} Mitgl. · {p.editors_count} Bearb. · {p.admins_count} Admin
+                            </td>
                             <td className="py-1.5 pr-3 whitespace-nowrap text-slate-600">{p.visibility === 'private' ? 'privat' : 'öffentlich'}</td>
                             <td className="py-1.5 pr-3 whitespace-nowrap text-slate-600">{p.downloads_count} Downloads</td>
                             <td className="py-1.5 text-right">

@@ -8,6 +8,7 @@ import { runMigrations } from '../../src/database/migrate';
 import { runSeeds } from '../../src/database/seed';
 import { closeDatabase, getDatabase } from '../../src/database/connection';
 import { CryptoService } from '../../src/services/crypto.service';
+import { PackageMembersService } from '../../src/services/package-members.service';
 
 describe('Marketplace REST API Endpoints Integration Tests', () => {
   let app: FastifyInstance;
@@ -735,6 +736,88 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
       await knex('package_access_requests').where({ requester_id: requester.user.id }).del();
       await knex('users').where({ id: requester.user.id }).del();
       await knex('packages').where({ id: testPkgId }).update({ visibility: 'public' });
+    }
+  });
+
+  it('package members: members read, editors publish versions, admins manage the package', async () => {
+    const ownerAuth = { authorization: `Bearer ${teacherJwtToken}` };
+    const me = JSON.parse((await app.inject({ method: 'GET', url: '/api/v1/auth/me', headers: ownerAuth })).body);
+    const id = `ch.gym.inf.members-test-${Date.now()}`;
+    const publish = (version: string, token: string, extra: object = {}) => app.inject({
+      method: 'POST', url: '/api/v1/packages', headers: { authorization: `Bearer ${token}` },
+      payload: {
+        metadata: {
+          id, version, title: 'Mitwirkende Test', summary: 'Paket fuer Rollentests.', language: 'de-CH', license: 'CC-BY-4.0',
+          taxonomy: { subject: 'Informatik', subject_category: 'SF' }, visibility: 'private', ...extra,
+        },
+        xml: validXml,
+      },
+    });
+    const register = async (name: string) => JSON.parse((await app.inject({
+      method: 'POST', url: '/api/v1/auth/register',
+      payload: { altcha: await captcha(), email: `${name}-${Date.now()}@example.ch`, password: 'Members-Pass-123!', full_name: `Person ${name}`, institution: 'Kanti M', canton: 'BE' },
+    })).body);
+    const detail = async (auth: object) => JSON.parse((await app.inject({ method: 'GET', url: `/api/v1/packages/${id}`, headers: auth })).body);
+
+    expect((await publish('1.0.0', teacherJwtToken)).statusCode).toBe(201);
+    const editor = await register('editor');
+    const reader = await register('reader');
+    const editorAuth = { authorization: `Bearer ${editor.token}` };
+    const readerAuth = { authorization: `Bearer ${reader.token}` };
+    try {
+      // Without a role: no publishing and no access to the private package.
+      expect((await publish('1.1.0', editor.token)).statusCode).toBe(403);
+      expect((await detail(readerAuth)).can_access).toBe(false);
+
+      // Only package admins add people, by the e-mail of an existing account.
+      const add = (auth: object, email: string, role: string) =>
+        app.inject({ method: 'POST', url: `/api/v1/packages/${id}/members`, headers: auth, payload: { email, role } });
+      expect((await add(editorAuth, reader.user.email, 'member')).statusCode).toBe(403);
+      expect((await add(ownerAuth, editor.user.email, 'editor')).statusCode).toBe(201);
+      expect((await add(ownerAuth, reader.user.email.toUpperCase(), 'member')).statusCode).toBe(201);
+      expect((await add(ownerAuth, 'niemand@example.ch', 'member')).statusCode).toBe(404);
+      expect((await add(ownerAuth, reader.user.email, 'owner')).statusCode).toBe(400);
+
+      // Everyone with a role sees the members; e-mail addresses only the admins.
+      const seenByReader = JSON.parse((await app.inject({ method: 'GET', url: `/api/v1/packages/${id}/members`, headers: readerAuth })).body);
+      expect(seenByReader.can_manage).toBe(false);
+      expect(seenByReader.members.map((m: any) => m.role)).toEqual(['admin', 'editor', 'member']);
+      expect(seenByReader.members[0]).toMatchObject({ user_id: me.id, is_creator: true });
+      expect(seenByReader.members.every((m: any) => m.email === null)).toBe(true);
+      const seenByOwner = JSON.parse((await app.inject({ method: 'GET', url: `/api/v1/packages/${id}/members`, headers: ownerAuth })).body);
+      expect(seenByOwner.members[1].email).toBe(editor.user.email);
+
+      // Members read the private package but cannot publish.
+      expect(await detail(readerAuth)).toMatchObject({ can_access: true, my_role: 'member', can_manage: false });
+      expect((await publish('1.1.0', reader.token)).statusCode).toBe(403);
+
+      // Editors publish new versions; the package settings stay unchanged and stay with the admins.
+      expect((await publish('1.1.0', editor.token, { title: 'Vom Editor geaendert', visibility: 'public' })).statusCode).toBe(201);
+      expect(await detail(editorAuth)).toMatchObject({ title: 'Mitwirkende Test', visibility: 'private', latest_version: '1.1.0', my_role: 'editor' });
+      expect((await app.inject({ method: 'PATCH', url: `/api/v1/packages/${id}`, headers: editorAuth, payload: { title: 'Neuer Titel' } })).statusCode).toBe(403);
+      expect((await app.inject({ method: 'DELETE', url: `/api/v1/packages/${id}/releases/1.0.0`, headers: editorAuth })).statusCode).toBe(403);
+      const editorPackages = JSON.parse((await app.inject({ method: 'GET', url: '/api/v1/account/packages', headers: editorAuth })).body).data;
+      expect(editorPackages.find((p: any) => p.id === id)).toMatchObject({ my_role: 'editor', is_creator: false });
+      const readerPackages = JSON.parse((await app.inject({ method: 'GET', url: '/api/v1/account/packages', headers: readerAuth })).body).data;
+      expect(readerPackages.some((p: any) => p.id === id)).toBe(false);
+
+      // Admins manage the package like the creator, who always stays admin.
+      const setRole = (userId: string, role: string) =>
+        app.inject({ method: 'PATCH', url: `/api/v1/packages/${id}/members/${userId}`, headers: ownerAuth, payload: { role } });
+      expect((await setRole(editor.user.id, 'admin')).statusCode).toBe(204);
+      expect((await setRole(me.id, 'editor')).statusCode).toBe(409);
+      expect((await app.inject({ method: 'PATCH', url: `/api/v1/packages/${id}`, headers: editorAuth, payload: { title: 'Neuer Titel' } })).statusCode).toBe(204);
+      expect((await PackageMembersService.getInstance().counts()).get(id)).toEqual({ members: 1, editors: 0, admins: 2 });
+
+      // Removing a member revokes the access; an admin may withdraw the package.
+      expect((await app.inject({ method: 'DELETE', url: `/api/v1/packages/${id}/members/${me.id}`, headers: editorAuth })).statusCode).toBe(409);
+      expect((await app.inject({ method: 'DELETE', url: `/api/v1/packages/${id}/members/${reader.user.id}`, headers: editorAuth })).statusCode).toBe(204);
+      expect((await detail(readerAuth)).can_access).toBe(false);
+      expect((await app.inject({ method: 'DELETE', url: `/api/v1/packages/${id}`, headers: editorAuth })).statusCode).toBe(204);
+      expect(await getDatabase()('package_members').where({ package_id: id }).first()).toBeUndefined();
+    } finally {
+      await app.inject({ method: 'DELETE', url: `/api/v1/packages/${id}`, headers: ownerAuth });
+      await getDatabase()('users').whereIn('id', [editor.user.id, reader.user.id]).del();
     }
   });
 

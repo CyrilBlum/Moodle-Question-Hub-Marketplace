@@ -175,9 +175,29 @@ export async function up(knex: Knex): Promise<void> {
       table.timestamp('withdrawn_at').notNullable().defaultTo(knex.fn.now());
     });
   }
+
+  // Package roles besides the creator (packages.owner_id, always admin): member = read access to a
+  // private package, editor = publish new versions, admin = also settings, members, access requests, withdrawal.
+  if (!(await knex.schema.hasTable('package_members'))) {
+    await knex.schema.createTable('package_members', table => {
+      table.string('package_id', 100).notNullable().references('id').inTable('packages').onDelete('CASCADE');
+      table.string('user_id', 36).notNullable().references('id').inTable('users').onDelete('CASCADE');
+      table.string('role', 10).notNullable();
+      table.timestamp('created_at').notNullable().defaultTo(knex.fn.now());
+      table.timestamp('updated_at').notNullable().defaultTo(knex.fn.now());
+      table.primary(['package_id', 'user_id']);
+      table.index(['user_id'], 'idx_package_members_user');
+    });
+    // Approved access requests so far granted read access: they become members.
+    const approved = await knex('package_access_requests').where({ status: 'approved' }).select('package_id', 'requester_id');
+    for (const row of approved) {
+      await knex('package_members').insert({ package_id: row.package_id, user_id: row.requester_id, role: 'member' });
+    }
+  }
 }
 
 export async function down(knex: Knex): Promise<void> {
+  await knex.schema.dropTableIfExists('package_members');
   await knex.schema.dropTableIfExists('withdrawn_packages');
   await knex.schema.dropTableIfExists('package_access_requests');
   await knex.schema.dropTableIfExists('releases');

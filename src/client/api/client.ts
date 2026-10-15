@@ -173,6 +173,21 @@ export const api = {
     });
   },
   getMyPackages: () => request('/account/packages'),
+  getPackageMembers: (id: string) => request(`/packages/${encodeURIComponent(id)}/members`),
+  addPackageMember: (id: string, email: string, role: 'member' | 'editor' | 'admin') =>
+    request(`/packages/${encodeURIComponent(id)}/members`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, role }),
+    }),
+  setPackageMemberRole: (id: string, userId: string, role: 'member' | 'editor' | 'admin') =>
+    request(`/packages/${encodeURIComponent(id)}/members/${encodeURIComponent(userId)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role }),
+    }),
+  removePackageMember: (id: string, userId: string) =>
+    request(`/packages/${encodeURIComponent(id)}/members/${encodeURIComponent(userId)}`, { method: 'DELETE' }),
 
   // Administration (admins only)
   getAdminOverview: () => request('/admin/overview'),

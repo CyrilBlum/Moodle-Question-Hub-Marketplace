@@ -52,6 +52,12 @@ and an obsolete `tests/` folder (old copy with credentials: delete, never reuse)
 - **Mustache**: output is already escaped. Never run `format_string()` (escaped) into a template variable; use `['escape' => false]`.
 - **Hub data**: titles are stored as plain text; the Hub decodes HTML entities on publish/edit.
 - **Moodle plugin caching**: after copying plugin files run `purge_caches.php` on that instance.
+- **Package roles** (table `package_members`, service `package-members.service.ts`): the creator (`packages.owner_id`) is
+  always package admin. `member` = read access to a private package (an approved access request creates it), `editor` =
+  also publish new versions (the publish keeps the package settings), `admin` = also settings, members, access requests,
+  withdrawal. API: `GET/POST /packages/:id/members`, `PATCH/DELETE /packages/:id/members/:userId`; web tab «Mitwirkende».
+  `GET /account/packages` lists packages the user created or edits, with `my_role`; the plugin shows Push only for
+  those and package settings/withdrawal only for `my_role = admin`. Hub admins pass every package-admin check.
 - **Admin role**: `users.role = 'admin'` (set in the DB after a dump and a dry-run count, or by an admin creating an account).
   The role is read from the DB on every request (`AdminService.isAdmin`), not from the JWT, so a change applies without a new login.
   Admins edit/withdraw any package and use the web page `/admin` with the API under `/api/v1/admin/*`:
