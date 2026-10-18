@@ -230,8 +230,22 @@ export async function up(knex: Knex): Promise<void> {
 
   // Merge requests from a fork into its original (numbered per target package), with comments,
   // system notes (merged, closed, ...) and approvals.
+  // MariaDB: foreign keys need the collation of the referenced tables, which may differ from the database default.
+  let collation: string | null = null;
+  if (['mysql', 'mysql2'].includes(String(knex.client.config.client))) {
+    const [rows] = await knex.raw(
+      "SELECT table_collation AS c FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'packages'");
+    collation = rows?.[0]?.c || null;
+  }
+  const sameCollation = (table: Knex.CreateTableBuilder) => {
+    if (collation) {
+      table.charset(collation.split('_')[0]);
+      table.collate(collation);
+    }
+  };
   if (!(await knex.schema.hasTable('merge_requests'))) {
     await knex.schema.createTable('merge_requests', table => {
+      sameCollation(table);
       table.string('id', 36).primary();
       table.string('target_package_id', 100).notNullable().references('id').inTable('packages').onDelete('CASCADE');
       table.integer('number').notNullable();
@@ -256,6 +270,7 @@ export async function up(knex: Knex): Promise<void> {
   }
   if (!(await knex.schema.hasTable('merge_request_notes'))) {
     await knex.schema.createTable('merge_request_notes', table => {
+      sameCollation(table);
       table.string('id', 36).primary();
       table.string('merge_request_id', 36).notNullable().references('id').inTable('merge_requests').onDelete('CASCADE');
       table.string('author_id', 36).nullable().references('id').inTable('users').onDelete('SET NULL');
@@ -271,6 +286,7 @@ export async function up(knex: Knex): Promise<void> {
   }
   if (!(await knex.schema.hasTable('merge_request_approvals'))) {
     await knex.schema.createTable('merge_request_approvals', table => {
+      sameCollation(table);
       table.string('merge_request_id', 36).notNullable().references('id').inTable('merge_requests').onDelete('CASCADE');
       table.string('user_id', 36).notNullable().references('id').inTable('users').onDelete('CASCADE');
       table.timestamp('created_at').notNullable().defaultTo(knex.fn.now());
