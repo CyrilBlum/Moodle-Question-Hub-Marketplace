@@ -26,16 +26,35 @@ export interface ChangeView {
   other_hunks?: ReturnType<typeof questionDiff>;
 }
 
+/** Parsed releases by SHA-256 (releases are immutable), least recently used dropped beyond ~200 MB of XML. */
+const contentCache = new Map<string, { xml: string; parsed: ParsedPackage }>();
+let contentCacheBytes = 0;
+const CONTENT_CACHE_MAX_BYTES = 200 * 1024 * 1024;
+
 /** Shared helpers for forks and merge requests: release contents and comparisons. */
 export class PackageContent {
   /** Parsed release, or null when the release (or its file) no longer exists. */
   public static async read(packageId: string, version: string | null | undefined): Promise<{ xml: string; parsed: ParsedPackage } | null> {
     if (!version) return null;
-    const release = await getDatabase()('releases').where({ package_id: packageId, version, is_yanked: false }).first('id');
+    const release = await getDatabase()('releases').where({ package_id: packageId, version, is_yanked: false }).first('sha256');
     if (!release) return null;
+    const cached = contentCache.get(release.sha256);
+    if (cached) {
+      contentCache.delete(release.sha256);
+      contentCache.set(release.sha256, cached);
+      return cached;
+    }
     try {
       const xml = await fs.promises.readFile(PackageStorageService.getInstance().getReleaseFilePath(packageId, version), 'utf-8');
-      return { xml, parsed: parsePackage(xml) };
+      const entry = { xml, parsed: parsePackage(xml) };
+      contentCache.set(release.sha256, entry);
+      contentCacheBytes += xml.length;
+      for (const [key, value] of contentCache) {
+        if (contentCacheBytes <= CONTENT_CACHE_MAX_BYTES || contentCache.size <= 1) break;
+        contentCache.delete(key);
+        contentCacheBytes -= value.xml.length;
+      }
+      return entry;
     } catch {
       return null;
     }
@@ -130,7 +149,13 @@ export class ForkService {
     if (!PACKAGE_ID_RE.test(forkId)) {
       throw new Error('BAD_REQUEST: Die Paket-ID darf nur Kleinbuchstaben, Ziffern, Punkt, Binde- und Unterstrich enthalten (3 bis 100 Zeichen).');
     }
-    if (await knex('packages').where({ id: forkId }).first('id') || await packages.getWithdrawnPackage(forkId)) {
+    const existing = await knex('packages').where({ id: forkId }).first();
+    // Repeating a fork (e.g. after a timeout in Moodle) returns the existing, unchanged fork.
+    if (existing && existing.owner_id === userId && existing.forked_from_id === sourceId
+        && existing.forked_from_version === version && existing.latest_version === version) {
+      return { package_id: forkId, version, forked_from_id: sourceId, forked_from_version: version };
+    }
+    if (existing || await packages.getWithdrawnPackage(forkId)) {
       throw new Error(`CONFLICT: Die Paket-ID '${forkId}' ist bereits vergeben.`);
     }
     const license = options.license || source.license;
@@ -145,10 +170,7 @@ export class ForkService {
     manifest.title = title;
     manifest.license = license;
     manifest.visibility = source.visibility === 'private' ? 'private' : options.visibility === 'private' ? 'private' : 'public';
-    await packages.publishPackage(userId, manifest, content.xml);
-    await knex('packages').where({ id: forkId }).update({
-      forked_from_id: sourceId, forked_from_version: version, forked_from_license: source.license,
-    });
+    await packages.publishPackage(userId, manifest, content.xml, { fork: { id: sourceId, version, license: source.license } });
     return { package_id: forkId, version, forked_from_id: sourceId, forked_from_version: version };
   }
 
@@ -195,7 +217,8 @@ export class ForkService {
   private async contents(forkId: string, viewerId?: string) {
     const knex = getDatabase();
     const fork = await knex('packages').where({ id: forkId }).first();
-    if (!fork) throw new Error('NOT_FOUND: Paket nicht gefunden.');
+    // A private fork stays invisible to people without access (404, not 403).
+    if (!fork || !(await PackageService.getInstance().canAccessPackage(forkId, viewerId))) throw new Error('NOT_FOUND: Paket nicht gefunden.');
     if (!fork.forked_from_id) throw new Error('BAD_REQUEST: Dieses Paket ist kein Fork.');
     const upstream = await knex('packages').where({ id: fork.forked_from_id }).first();
     if (!upstream) throw new Error('CONFLICT: Das ursprüngliche Paket wurde zurückgezogen.');
@@ -251,6 +274,10 @@ export class ForkService {
     const c = await this.contents(forkId, userId);
     if (c.fork.forked_from_version === c.upstream.latest_version) {
       return { status: 'up_to_date', base_version: c.upstream.latest_version };
+    }
+    if (!c.baseAvailable) {
+      // Without the common base, the original's changes cannot be told from the fork's: a merge would drop them.
+      throw new Error(`CONFLICT: Version ${c.fork.forked_from_version} des Originals, auf der der Fork beruht, wurde zurückgezogen. Ein automatischer Abgleich ist nicht möglich; holen Sie die aktuelle Version des Originals und übertragen Sie Ihre Änderungen von Hand.`);
     }
     // Fork = source of the kept changes, original = target receiving them: merging the fork's changes into
     // the original's current version gives the synced fork.

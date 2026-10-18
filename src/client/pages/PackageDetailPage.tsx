@@ -262,10 +262,10 @@ export const PackageDetailPage: React.FC = () => {
             <button
               onClick={() => getToken() ? setShowFork(true) : navigate(`/login?return_to=${encodeURIComponent(window.location.pathname)}`)}
               className="inline-flex items-center space-x-1.5 px-3 py-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium transition text-sm shadow-sm"
-              title="Eigene Kopie anlegen, bearbeiten und Änderungen per Merge Request vorschlagen"
+              title="Eigene Kopie anlegen, bearbeiten und Änderungen per Änderungsvorschlag vorschlagen"
             >
               <GitFork className="w-4 h-4 text-slate-500" />
-              <span>Forken{pkg.forks_count ? ` (${pkg.forks_count})` : ''}</span>
+              <span>Eigene Kopie (Fork)</span>
             </button>
             <button
               onClick={copyImportUrl}
@@ -317,7 +317,7 @@ export const PackageDetailPage: React.FC = () => {
               ? [{ id: 'preview', label: `Vorschau (${pkg.stats?.question_count || 0})` }]
               : []),
             ...(pkg.can_access !== false ? [{ id: 'versions', label: `Versionen (${pkg.releases?.length || 0})` }] : []),
-            ...(pkg.can_access !== false ? [{ id: 'merge', label: `Merge Requests${pkg.open_merge_requests_count ? ` (${pkg.open_merge_requests_count} offen)` : ''}` }] : []),
+            ...(pkg.can_access !== false ? [{ id: 'merge', label: `Änderungsvorschläge${pkg.open_merge_requests_count ? ` (${pkg.open_merge_requests_count} offen)` : ''}` }] : []),
             ...(pkg.can_access !== false && pkg.forks_count ? [{ id: 'forks', label: `Forks (${pkg.forks_count})` }] : []),
             ...(hasRole ? [{ id: 'members', label: 'Mitwirkende' }] : []),
             ...(canManage && (pkg.visibility === 'private' || accessRequests.length > 0)

@@ -79,8 +79,11 @@ export class PackageService {
     ownerId: string,
     manifest: PackageManifest,
     rawXml: string,
-    /** Set by callers that already checked package-admin rights (merging a merge request as a Hub admin). */
-    opts: { asPackageAdmin?: boolean } = {}
+    /**
+     * asPackageAdmin: set by callers that already checked package-admin rights (merging as a Hub admin).
+     * fork: lineage of a new package created by ForkService, stored in the same insert.
+     */
+    opts: { asPackageAdmin?: boolean; fork?: { id: string; version: string; license: string } } = {}
   ): Promise<{
     package_id: string;
     version: string;
@@ -187,6 +190,7 @@ export class PackageService {
     const releaseId = crypto.randomUUID();
     const now = new Date();
 
+    try {
     await knex.transaction(async trx => {
       if (tombstone) {
         await trx('withdrawn_packages').where({ id: manifest.id }).del();
@@ -211,6 +215,7 @@ export class PackageService {
           visibility: manifest.visibility === 'private' ? 'private' : 'public',
           github_repo: githubLink?.github_repo ?? null,
           github_linked_by: githubLink?.github_linked_by ?? null,
+          ...(opts.fork ? { forked_from_id: opts.fork.id, forked_from_version: opts.fork.version, forked_from_license: opts.fork.license } : {}),
           created_at: now,
           updated_at: now,
         });
@@ -236,10 +241,12 @@ export class PackageService {
         }
       } else if (publisherRole !== 'admin') {
         // Editors add versions; the package settings stay with its admins.
-        await trx('packages').where({ id: manifest.id }).update({ latest_version: manifest.version, updated_at: now });
+        const moved = await trx('packages').where({ id: manifest.id, latest_version: existingPackage.latest_version })
+          .update({ latest_version: manifest.version, updated_at: now });
+        if (moved !== 1) throw new Error('CONFLICT: Inzwischen wurde eine andere Version veröffentlicht. Bitte erneut versuchen.');
       } else {
-        await trx('packages')
-          .where({ id: manifest.id })
+        const moved = await trx('packages')
+          .where({ id: manifest.id, latest_version: existingPackage.latest_version })
           .update({
             latest_version: manifest.version,
             title: decodeEntities(manifest.title.trim()),
@@ -259,6 +266,8 @@ export class PackageService {
             ...(githubLink ? { github_repo: githubLink.github_repo, github_linked_by: githubLink.github_linked_by } : {}),
             updated_at: now,
           });
+        // Another publish (e.g. a parallel merge) since the checks above: its changes must not be overwritten.
+        if (moved !== 1) throw new Error('CONFLICT: Inzwischen wurde eine andere Version veröffentlicht. Bitte erneut versuchen.');
       }
 
       // Insert release record
@@ -277,6 +286,13 @@ export class PackageService {
         created_at: now,
       });
     });
+    } catch (err) {
+      // Nothing was recorded: drop the stored file again, so the version number stays free for a retry
+      // (unless a parallel publish of the same number recorded it).
+      const recorded = await knex('releases').where({ package_id: manifest.id, version: manifest.version }).first('id').catch(() => true);
+      if (!recorded) await this.storage.removeRelease(manifest.id, manifest.version).catch(() => {});
+      throw err;
+    }
 
     const synced = await this.syncReleaseToGitHub(manifest.id, manifest.version, rawXml, manifest.release_notes);
     const github = synced?.status === 'ok' && githubLink?.repoCreated ? { ...synced, repo_created: true } : synced;
@@ -563,15 +579,17 @@ export class PackageService {
 
     let forkedFrom: PackageDetailResult['forked_from'] = null;
     if (row.forked_from_id) {
-      const origin = await knex('packages').join('users', 'packages.owner_id', 'users.id')
+      const originRow = await knex('packages').join('users', 'packages.owner_id', 'users.id')
         .where({ 'packages.id': row.forked_from_id }).first('packages.title', 'packages.visibility', 'users.full_name');
+      // A private original's title and author stay hidden from people without access to it.
+      const origin = originRow && (originRow.visibility !== 'private' || await this.canAccessPackage(row.forked_from_id, viewerId)) ? originRow : null;
       forkedFrom = {
         id: row.forked_from_id,
         version: row.forked_from_version || null,
         license: row.forked_from_license || null,
         title: origin ? origin.title : null,
         author_name: origin ? origin.full_name : null,
-        exists: !!origin,
+        exists: !!originRow,
       };
     }
     const forkIds: string[] = await knex('packages').where({ forked_from_id: packageId }).pluck('id');
@@ -1022,7 +1040,7 @@ export class PackageService {
         await trx('merge_requests').where({ id: mrId }).update({ status: 'closed', closed_by: ownerId, closed_at: new Date(), updated_at: new Date() });
         await trx('merge_request_notes').insert({
           id: crypto.randomUUID(), merge_request_id: mrId, author_id: ownerId, kind: 'system',
-          body: 'hat den Merge Request geschlossen: Der Fork wurde zurückgezogen.', created_at: new Date(), updated_at: new Date(),
+          body: 'hat den Änderungsvorschlag geschlossen: Der Fork wurde zurückgezogen.', created_at: new Date(), updated_at: new Date(),
         });
       }
       await trx('releases').where({ package_id: packageId }).del();

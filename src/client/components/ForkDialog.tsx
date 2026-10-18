@@ -42,18 +42,21 @@ export const ForkDialog: React.FC<{ pkg: any; onClose: () => void }> = ({ pkg, o
           <h2 id="fork-title" className="text-lg font-bold text-slate-900 flex items-center gap-2"><GitFork className="w-5 h-5" />Paket forken</h2>
           <button type="button" onClick={onClose} aria-label="Schliessen" className="text-slate-400 hover:text-slate-700"><X className="w-5 h-5" /></button>
         </div>
+        <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+          Arbeiten Sie mit den Fragen in Moodle? Dann forken Sie besser im Moodle-Plugin (Question Hub › Kategorie › «Forken»):
+          Nur so bleibt Ihre Kategorie mit dem Fork verknüpft. Ein hier erstellter Fork muss in Moodle neu importiert werden.
+        </p>
         <p className="text-sm text-slate-600">
           Ein Fork ist Ihre eigene Kopie von <strong>{pkg.title}</strong> (Version {pkg.latest_version}). Sie können sie frei
-          bearbeiten und neue Versionen veröffentlichen. Verbesserungen schlagen Sie dem Original später mit einem Merge Request vor.
+          bearbeiten und neue Versionen veröffentlichen. Verbesserungen schlagen Sie dem Original später mit einem Änderungsvorschlag vor.
           Das Original bleibt unverändert.
         </p>
-        <p className="text-xs text-slate-500">
-          In Moodle forken Sie am besten über das Plugin (Question Hub → Kategorie → «Forken»): Dann bleibt Ihre Kategorie mit dem Fork verknüpft.
-        </p>
+
         <label className="block text-sm font-medium text-slate-700">
-          Paket-ID des Forks
+          Technischer Name (Paket-ID, später nicht änderbar)
           <input className={`${input} font-mono`} value={id} onChange={e => setId(e.target.value)} required pattern="[a-z0-9][a-z0-9._\-]{1,98}[a-z0-9]"
             title="Kleinbuchstaben, Ziffern, Punkt, Binde- und Unterstrich" />
+          <span className="block mt-0.5 text-xs font-normal text-slate-500">Nur Kleinbuchstaben, Ziffern, Punkt, Binde- und Unterstrich, z.B. {pkg.id}-meier.</span>
         </label>
         <label className="block text-sm font-medium text-slate-700">
           Titel
@@ -76,8 +79,9 @@ export const ForkDialog: React.FC<{ pkg: any; onClose: () => void }> = ({ pkg, o
         </div>
         <p className="text-xs text-slate-500">
           {pkg.visibility === 'private' ? 'Ein Fork eines privaten Pakets bleibt privat. ' : ''}
-          Die Lizenz des Originals ({pkg.license}) gilt weiter: Der Fork nennt das Original und seine Urheberschaft
-          {pkg.license === 'CC-BY-SA-4.0' ? ' und steht unter derselben Lizenz' : ''}.
+          Der Fork nennt das Original und seine Urheberschaft.
+          {pkg.license === 'CC-BY-SA-4.0' && ' Das Original steht unter CC BY-SA: Bearbeitungen müssen dieselbe Lizenz behalten.'}
+          {pkg.license === 'CC-BY-4.0' && ' Zulässig sind CC BY oder CC BY-SA.'}
         </p>
         {error && <p role="alert" className="text-sm text-rose-700">{error}</p>}
         <div className="flex justify-end gap-2">

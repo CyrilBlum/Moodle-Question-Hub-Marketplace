@@ -97,3 +97,30 @@ describe('question-xml', () => {
     expect(added[0].rows.every(r => r.type === 'add')).toBe(true);
   });
 });
+
+describe('question-xml edge cases', () => {
+  it('keeps whitespace inside CDATA significant and ignores it between tags', () => {
+    const code = (body: string) => pkg(cat('K'), `<question type="essay"><name><text>Code</text></name><questiontext format="html"><text><![CDATA[<pre>${body}</pre>]]></text></questiontext></question>`);
+    const a = parsePackage(code('if x:\n    y'));
+    const b = parsePackage(code('if x:\n  y'));
+    expect(sameContent(a, b)).toBe(false);
+  });
+
+  it('identifies duplicate names by content, so deleting one does not shift the other', () => {
+    const base = parsePackage(pkg(cat('K'), tf('A', 'erste'), tf('A', 'zweite')));
+    const fork = parsePackage(pkg(cat('K'), tf('A', 'zweite')));
+    const target = parsePackage(pkg(cat('K'), tf('A', 'erste'), tf('A', 'zweite'), tf('B', 'neu')));
+    const entries = compareThreeWay(base, fork, target);
+    expect(entries.filter(e => e.source_status).map(e => e.source_status)).toEqual(['removed']);
+    const merged = parsePackage(mergeThreeWay(base, fork, target).xml!);
+    expect(merged.questions.map(q => q.raw.includes('zweite') ? 'A2' : q.name)).toEqual(['A2', 'B']);
+  });
+
+  it('keeps empty categories and puts questions without category first', () => {
+    const base = parsePackage(pkg(cat('K'), tf('Q', 'x'), cat('Leer')));
+    const fork = parsePackage(pkg(tf('Ohne', 'o'), cat('K'), tf('Q', 'x'), cat('Leer')));
+    const xml = mergeThreeWay(base, fork, base).xml!;
+    expect(xml.indexOf('Ohne')).toBeLessThan(xml.indexOf('$course$/top/K'));
+    expect(xml).toContain('$course$/top/Leer');
+  });
+});

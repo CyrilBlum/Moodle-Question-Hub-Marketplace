@@ -48,7 +48,7 @@ export const GuidePage: React.FC = () => {
           <Upload className="w-4 h-4 text-red-600" />Paket veröffentlichen
         </a>
         <a href="#forken" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:border-red-300">
-          <GitFork className="w-4 h-4 text-red-600" />Forken und Merge Requests
+          <GitFork className="w-4 h-4 text-red-600" />Forken und Änderungsvorschläge
         </a>
         <a href="#lizenz" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:border-red-300">
           <Scale className="w-4 h-4 text-red-600" />Lizenz
@@ -214,11 +214,11 @@ export const GuidePage: React.FC = () => {
     </section>
 
     <section id="forken" className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-5 scroll-mt-20">
-      <h2 className="text-lg font-bold text-slate-900">Forken und Merge Requests</h2>
+      <h2 className="text-lg font-bold text-slate-900">Forken und Änderungsvorschläge</h2>
       <p className="text-sm text-slate-700">
         Sie möchten Fragen eines fremden Pakets verbessern oder ergänzen? Forken Sie es: Sie erhalten eine eigene Kopie, die Sie
-        frei bearbeiten. Gute Änderungen schlagen Sie dem Original mit einem Merge Request vor. Wie bei GitLab oder GitHub
-        entscheiden die Admins des Originals, was übernommen wird.
+        frei bearbeiten. Gute Änderungen schlagen Sie dem Original mit einem Änderungsvorschlag (englisch «Merge Request») vor.
+        Die Admins des Originals entscheiden, was übernommen wird.
       </p>
       <ol className="space-y-5">
         <Step n={1} title="Paket forken">
@@ -227,27 +227,27 @@ export const GuidePage: React.FC = () => {
             prüfen und bestätigen. Der Hub legt den Fork in Ihrem Konto an, und Ihre Kategorie ist danach mit dem Fork statt
             mit dem Original verknüpft. Lokale Änderungen bleiben erhalten.
           </p>
-          <p>Im Hub: Auf der Paketseite <Ui de="Forken" /> wählen. Den Fork holen Sie dann wie jedes Paket in Moodle.</p>
+          <p>Im Hub: Auf der Paketseite <Ui de="Eigene Kopie (Fork)" /> wählen. Den Fork holen Sie dann wie jedes Paket in Moodle.</p>
         </Step>
         <Step n={2} title="Fork bearbeiten">
           <p>
             Ändern Sie die Fragen in Moodle wie gewohnt und veröffentlichen Sie sie mit <Ui de="Push" /> als neue Version des
-            Forks. Ändert sich das Original inzwischen, wählen Sie auf der Seite Ihres Forks im Hub <Ui de="Mit Original abgleichen" />:
+            Forks. Ändert sich das Original inzwischen, wählen Sie auf der Seite Ihres Forks im Hub <Ui de="Änderungen des Originals übernehmen" />:
             Die Änderungen des Originals kommen als neue Fork-Version dazu, Ihre eigenen bleiben. In Moodle holen Sie sie mit <Ui de="Pull v…" />.
           </p>
         </Step>
-        <Step n={3} title="Merge Request stellen">
+        <Step n={3} title="Änderungsvorschlag stellen">
           <p>
-            Auf der Seite Ihres Forks im Hub (oder in Moodle über <Ui de="Merge Request" />) <Ui de="Merge Request erstellen" />
+            Auf der Seite Ihres Forks im Hub (oder in Moodle über <Ui de="Änderungen vorschlagen" en="Propose changes" />) <Ui de="Änderungsvorschlag erstellen" />
             wählen, Titel und Beschreibung angeben. Die Admins des Originals erhalten eine E-Mail. Spätere Versionen Ihres Forks
-            erscheinen automatisch im offenen Merge Request.
+            erscheinen automatisch im offenen Änderungsvorschlag.
           </p>
         </Step>
         <Step n={4} title="Prüfen, diskutieren, übernehmen">
           <p>
             Im Reiter <Ui de="Änderungen" /> sehen alle mit Zugriff jede geänderte Frage als Zeilenvergleich und können sie
             kommentieren; Diskussionen lassen sich als erledigt markieren. Bearbeiter/innen und Admins des Originals können
-            genehmigen. Admins übernehmen den Merge Request: Der Hub veröffentlicht die Änderungen als neue Version des Originals.
+            genehmigen. Admins übernehmen den Änderungsvorschlag: Der Hub veröffentlicht die Änderungen als neue Version des Originals.
             Haben Fork und Original dieselbe Frage unterschiedlich geändert (Konflikt), wählen sie je Frage, welche Fassung gilt.
           </p>
         </Step>
@@ -271,7 +271,7 @@ export const GuidePage: React.FC = () => {
         <li><strong>CC0 1.0</strong>: gemeinfrei, ohne Bedingungen.</li>
       </ul>
       <p className="text-sm text-slate-700">
-        Private Pakete tragen die Lizenz ebenfalls, sind aber nur für freigegebene Personen sichtbar. Mit einem Merge Request
+        Private Pakete tragen die Lizenz ebenfalls, sind aber nur für freigegebene Personen sichtbar. Mit einem Änderungsvorschlag
         stellen Sie Ihre Änderungen unter die Lizenz des Originals. Veröffentlichen Sie nur Inhalte, an denen Sie die Rechte haben
         (z.B. keine Bilder aus Lehrmitteln ohne Erlaubnis).
       </p>

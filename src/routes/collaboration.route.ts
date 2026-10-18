@@ -25,7 +25,7 @@ function sendError(err: any, reply: any) {
 
 function mrNumber(raw: string): number {
   const n = Number(raw);
-  if (!Number.isInteger(n) || n < 1) throw new Error('NOT_FOUND: Merge Request nicht gefunden.');
+  if (!Number.isInteger(n) || n < 1) throw new Error('NOT_FOUND: Änderungsvorschlag nicht gefunden.');
   return n;
 }
 
@@ -156,7 +156,7 @@ export async function collaborationRoutes(app: FastifyInstance): Promise<void> {
 
   app.post('/packages/:id/merge-requests/:number/notes', {
     preHandler: [app.authenticate],
-    config: { rateLimit: { max: 60, timeWindow: '1 hour' } },
+    config: { rateLimit: { max: 30, timeWindow: '1 hour' } },
   }, async (req, reply) => {
     const { id, number } = req.params as { id: string; number: string };
     try {

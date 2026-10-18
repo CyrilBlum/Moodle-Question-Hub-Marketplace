@@ -15,14 +15,17 @@ export const MyMergeRequests: React.FC = () => {
         <Link to={`/packages/${encodeURIComponent(m.target_package_id)}/merge-requests/${m.number}`} className="text-sm font-medium text-slate-900 hover:text-red-700">
           <span className="text-slate-400 mr-1">!{m.number}</span>{m.title}
         </Link>
-        <p className="text-xs text-slate-500">{m.target_title} · {m.author.name} · {new Date(m.updated_at).toLocaleDateString('de-CH')}</p>
+        <p className="text-xs text-slate-500">
+          {m.target_title} · {m.author.name} · aus <span className="font-mono">{m.source_package_id}</span> · {new Date(m.updated_at).toLocaleDateString('de-CH')}
+          {m.comments_count > 0 && ` · ${m.comments_count} Kommentar${m.comments_count === 1 ? '' : 'e'}`}
+        </p>
       </div>
       <MrStatusBadge status={m.status} />
     </li>
   );
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-4">
-      <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2"><GitPullRequest className="w-5 h-5 text-red-600" />Merge Requests</h2>
+      <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2"><GitPullRequest className="w-5 h-5 text-red-600" />Änderungsvorschläge</h2>
       {data.to_review.length > 0 && (
         <div>
           <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500">Zu prüfen (Ihre Pakete)</h3>

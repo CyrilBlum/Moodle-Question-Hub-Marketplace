@@ -1071,20 +1071,22 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
       expect(own).toMatchObject({ forked_from_id: src, forked_from_version: '1.0.0', my_role: 'admin' });
 
       // Without changes there is nothing to propose.
-      expect((await app.inject({ method: 'POST', url: mrUrl, headers: cAuth, payload: { source_package_id: forkId, title: 'Leer' } })).statusCode).toBe(400);
+      expect((await app.inject({ method: 'POST', url: mrUrl, headers: cAuth, payload: { source_package_id: forkId, title: 'Leer', accept_license: true } })).statusCode).toBe(400);
 
       // Fork: edits Q1, removes Q3, adds Q4. Original: edits Q2 and Q1 differently.
       expect((await publish(forkId, '1.0.1', xml(tf('Q1', 'eins (Fork)'), tf('Q2', 'zwei'), tf('Q4', 'vier')), cAuth, { base_version: '1.0.0' })).statusCode).toBe(201);
       expect((await publish(src, '1.1.0', xml(tf('Q1', 'eins (Original)'), tf('Q2', 'zwei (Original)'), tf('Q3', 'drei')), ownerAuth)).statusCode).toBe(201);
       expect((await get(`/api/v1/packages/${forkId}/fork-status`, cAuth)).body).toMatchObject({ ahead: 3, behind: 2, conflicts: 1, base_version: '1.0.0', can_sync: true });
 
+      // The contributor must accept the original's licence.
+      expect((await app.inject({ method: 'POST', url: mrUrl, headers: cAuth, payload: { source_package_id: forkId, title: 'Ohne Zustimmung' } })).statusCode).toBe(400);
       // Only editors of the fork propose it; one open request per fork.
-      expect((await app.inject({ method: 'POST', url: mrUrl, headers: sAuth, payload: { source_package_id: forkId, title: 'Fremd' } })).statusCode).toBe(403);
+      expect((await app.inject({ method: 'POST', url: mrUrl, headers: sAuth, payload: { source_package_id: forkId, title: 'Fremd', accept_license: true } })).statusCode).toBe(403);
       const created = await app.inject({ method: 'POST', url: mrUrl, headers: cAuth,
-        payload: { source_package_id: forkId, title: 'Verbesserungen', description: 'Q1 präzisiert, Q4 neu.' } });
+        payload: { source_package_id: forkId, title: 'Verbesserungen', description: 'Q1 präzisiert, Q4 neu.', accept_license: true } });
       expect(created.statusCode).toBe(201);
       expect(JSON.parse(created.body).number).toBe(1);
-      expect((await app.inject({ method: 'POST', url: mrUrl, headers: cAuth, payload: { source_package_id: forkId, title: 'Doppelt' } })).statusCode).toBe(409);
+      expect((await app.inject({ method: 'POST', url: mrUrl, headers: cAuth, payload: { source_package_id: forkId, title: 'Doppelt', accept_license: true } })).statusCode).toBe(409);
       expect((await get(`/api/v1/packages/${src}`)).body.open_merge_requests_count).toBe(1);
       expect((await get(mrUrl)).body.data.map((m: any) => m.number)).toEqual([1]);
 
@@ -1101,6 +1103,13 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
       expect((await app.inject({ method: 'PATCH', url: `${mrUrl}/1/notes/${noteId}`, headers: cAuth, payload: { body: 'fremd' } })).statusCode).toBe(403);
       expect((await app.inject({ method: 'PATCH', url: `${mrUrl}/1/notes/${noteId}`, headers: cAuth, payload: { resolved: true } })).statusCode).toBe(204);
 
+      // A private fork's questions are visible to reviewers of the original, not to everyone.
+      expect((await app.inject({ method: 'PATCH', url: `/api/v1/packages/${forkId}`, headers: cAuth, payload: { visibility: 'private' } })).statusCode).toBe(200);
+      expect((await get(`${mrUrl}/1/changes`)).body).toMatchObject({ available: false, changes: [] });
+      expect((await get(`${mrUrl}/1/changes`, ownerAuth)).body.changes).toHaveLength(3);
+      expect((await get(`/api/v1/packages/${forkId}/fork-status`, sAuth)).status).toBe(404);
+      expect((await app.inject({ method: 'PATCH', url: `/api/v1/packages/${forkId}`, headers: cAuth, payload: { visibility: 'public' } })).statusCode).toBe(200);
+
       // Approvals by editors/admins of the original only; merging by its admins only.
       expect((await app.inject({ method: 'PUT', url: `${mrUrl}/1/approval`, headers: sAuth })).statusCode).toBe(403);
       expect((await app.inject({ method: 'PUT', url: `${mrUrl}/1/approval`, headers: ownerAuth })).statusCode).toBe(204);
@@ -1115,7 +1124,10 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
       const blocked = await app.inject({ method: 'POST', url: `${mrUrl}/1/merge`, headers: ownerAuth, payload: {} });
       expect(blocked.statusCode).toBe(409);
       expect(JSON.parse(blocked.body).conflicts).toEqual([q1]);
-      const merged = await app.inject({ method: 'POST', url: `${mrUrl}/1/merge`, headers: ownerAuth, payload: { resolutions: { [q1]: 'source' } } });
+      // A merge pinned to an outdated fork version is refused (the reviewed content must be what is merged).
+      expect((await app.inject({ method: 'POST', url: `${mrUrl}/1/merge`, headers: ownerAuth, payload: { resolutions: { [q1]: 'source' }, source_version: '1.0.0' } })).statusCode).toBe(409);
+      const merged = await app.inject({ method: 'POST', url: `${mrUrl}/1/merge`, headers: ownerAuth,
+        payload: { resolutions: { [q1]: 'source' }, source_version: '1.0.1', target_version: '1.1.0' } });
       expect(merged.statusCode).toBe(200);
       expect(JSON.parse(merged.body).version).toBe('1.1.1');
       const download = await app.inject({ method: 'GET', url: `/api/v1/packages/${src}/releases/1.1.1/download` });
@@ -1126,7 +1138,7 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
       const after = (await get(`${mrUrl}/1`, ownerAuth)).body;
       expect(after).toMatchObject({ status: 'merged', merged_version: '1.1.1' });
       expect(after.notes.some((n: any) => n.kind === 'system' && n.body.includes('1.1.1'))).toBe(true);
-      expect((await get(`/api/v1/packages/${src}`)).body.releases[0].release_notes).toContain('Merge Request !1');
+      expect((await get(`/api/v1/packages/${src}`)).body.releases[0].release_notes).toContain('Änderungsvorschlag !1');
       expect((await get(`${mrUrl}/1/changes`)).body.changes).toHaveLength(3);
       expect((await get('/api/v1/account/merge-requests', cAuth)).body.authored.map((m: any) => m.number)).toEqual([1]);
 
@@ -1140,7 +1152,7 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
 
       // A second request can be closed by its author and reopened; withdrawing the fork closes it.
       expect((await publish(forkId, '1.0.3', xml(tf('Q1', 'eins (Fork)'), tf('Q2', 'zwei (Original)'), tf('Q4', 'vier'), tf('Q5', 'fünf')), cAuth, { base_version: '1.0.2' })).statusCode).toBe(201);
-      expect((await app.inject({ method: 'POST', url: mrUrl, headers: cAuth, payload: { source_package_id: forkId, title: 'Frage Q5 neu' } })).statusCode).toBe(201);
+      expect((await app.inject({ method: 'POST', url: mrUrl, headers: cAuth, payload: { source_package_id: forkId, title: 'Frage Q5 neu', accept_license: true } })).statusCode).toBe(201);
       expect((await app.inject({ method: 'PATCH', url: `${mrUrl}/2`, headers: sAuth, payload: { status: 'closed' } })).statusCode).toBe(403);
       expect((await app.inject({ method: 'PATCH', url: `${mrUrl}/2`, headers: cAuth, payload: { status: 'closed' } })).statusCode).toBe(200);
       expect((await app.inject({ method: 'PATCH', url: `${mrUrl}/2`, headers: cAuth, payload: { status: 'open' } })).statusCode).toBe(200);

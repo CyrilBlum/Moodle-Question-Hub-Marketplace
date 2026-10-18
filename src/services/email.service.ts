@@ -132,7 +132,7 @@ export class EmailService {
         '',
         ...data.lines,
         '',
-        `Zum Merge Request: ${data.url}`,
+        `Zum Änderungsvorschlag: ${data.url}`,
         '',
         'Diese Nachricht wurde automatisch vom Moodle Question Hub versendet.',
       ].join('\n'),

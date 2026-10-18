@@ -25,7 +25,7 @@ export const ForksList: React.FC<{ pkg: any }> = ({ pkg }) => {
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-3">
       <h2 className="text-base font-bold text-slate-900 flex items-center gap-2"><GitFork className="w-4 h-4" />Forks</h2>
-      <p className="text-xs text-slate-500">Kopien dieses Pakets, die andere Lehrpersonen weiterentwickeln. Verbesserungen kommen über Merge Requests zurück.</p>
+      <p className="text-xs text-slate-500">Kopien dieses Pakets, die andere Lehrpersonen weiterentwickeln. Verbesserungen kommen über Änderungsvorschläge zurück.</p>
       {error && <p className="text-sm text-rose-700">{error}</p>}
       {forks && forks.length === 0 && <p className="text-sm text-slate-500">Noch keine Forks.</p>}
       <ul className="divide-y divide-slate-100">
@@ -40,7 +40,7 @@ export const ForksList: React.FC<{ pkg: any }> = ({ pkg }) => {
             </div>
             {f.open_merge_request && (
               <Link to={`/packages/${encodeURIComponent(pkg.id)}/merge-requests/${f.open_merge_request}`} className="text-xs text-red-700 hover:underline">
-                Merge Request !{f.open_merge_request}
+                Änderungsvorschlag !{f.open_merge_request}
               </Link>
             )}
           </li>
@@ -57,12 +57,12 @@ export const MergeRequestList: React.FC<{ pkg: any }> = ({ pkg }) => {
   const [error, setError] = useState('');
   useEffect(() => {
     setItems(null);
-    api.getMergeRequests(pkg.id, status).then(r => setItems(r.data || [])).catch(e => setError(e.message || 'Merge Requests nicht verfügbar.'));
+    api.getMergeRequests(pkg.id, status).then(r => setItems(r.data || [])).catch(e => setError(e.message || 'Änderungsvorschläge nicht verfügbar.'));
   }, [pkg.id, status]);
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-base font-bold text-slate-900 flex items-center gap-2"><GitPullRequest className="w-4 h-4" />Merge Requests</h2>
+        <h2 className="text-base font-bold text-slate-900 flex items-center gap-2"><GitPullRequest className="w-4 h-4" />Änderungsvorschläge</h2>
         <div className="flex gap-1 text-xs" role="tablist">
           {(['open', 'merged', 'closed', 'all'] as const).map(s => (
             <button key={s} role="tab" aria-selected={status === s} onClick={() => setStatus(s)}
@@ -74,11 +74,11 @@ export const MergeRequestList: React.FC<{ pkg: any }> = ({ pkg }) => {
       </div>
       <p className="text-xs text-slate-500">
         Vorschläge aus Forks dieses Pakets. Die Admins des Pakets prüfen sie Frage für Frage und übernehmen sie als neue Version.
-        Einen eigenen Vorschlag machen Sie, indem Sie das Paket forken, den Fork ändern und dort «Merge Request erstellen» wählen.
+        Einen eigenen Vorschlag machen Sie, indem Sie das Paket forken, den Fork ändern und dort «Änderungsvorschlag erstellen» wählen.
       </p>
       {error && <p className="text-sm text-rose-700">{error}</p>}
       {items === null && !error && <p className="text-sm text-slate-500">Lade …</p>}
-      {items && items.length === 0 && <p className="text-sm text-slate-500">Keine Merge Requests.</p>}
+      {items && items.length === 0 && <p className="text-sm text-slate-500">Keine Änderungsvorschläge.</p>}
       <ul className="divide-y divide-slate-100">
         {items?.map(m => (
           <li key={m.id} className="py-3 flex flex-wrap items-center justify-between gap-2">

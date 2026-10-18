@@ -5,6 +5,7 @@ import { api, getToken } from '../api/client';
 import { MrStatusBadge } from '../components/ForksAndMergeRequests';
 import { QuestionDiffList, QuestionChange } from '../components/QuestionDiff';
 import { LicenseBadge } from '../components/License';
+import { plural } from '../utils/plural';
 
 const when = (iso: string) => new Date(iso).toLocaleString('de-CH', { dateStyle: 'medium', timeStyle: 'short' });
 
@@ -33,7 +34,7 @@ export const MergeRequestPage: React.FC = () => {
       setVersion(v => v || data.mergeability?.next_version || '');
       setError('');
     } catch (err: any) {
-      setError(err.status === 403 && !loggedIn ? 'Bitte melden Sie sich an, um diesen Merge Request zu sehen.' : err.message || 'Merge Request nicht gefunden.');
+      setError(err.status === 403 && !loggedIn ? 'Bitte melden Sie sich an, um diesen Änderungsvorschlag zu sehen.' : err.message || 'Änderungsvorschlag nicht gefunden.');
     }
   };
   const loadChanges = async () => {
@@ -72,7 +73,11 @@ export const MergeRequestPage: React.FC = () => {
   const m = mr.mergeability;
 
   const merge = () => act(async () => {
-    const res = await api.mergeMergeRequest(id, number, { version: version.trim() || undefined, release_notes: releaseNotes.trim() || undefined, resolutions });
+    const res = await api.mergeMergeRequest(id, number, {
+      version: version.trim() || undefined, release_notes: releaseNotes.trim() || undefined, resolutions,
+      // The versions reviewed on this page: the Hub refuses the merge if the fork or the package moved on meanwhile.
+      source_version: m?.source_version, target_version: m?.target_version,
+    });
     await loadChanges();
     return res;
   }, 'Übernommen. Die neue Version ist veröffentlicht; Moodles mit diesem Paket sehen sie als Update.');
@@ -120,11 +125,11 @@ export const MergeRequestPage: React.FC = () => {
       </div>
 
       <div className="border-b border-slate-200">
-        <nav className="flex space-x-8">
-          {[['overview', `Übersicht (${mr.notes.filter((n: any) => n.kind === 'comment').length} Kommentare)`],
+        <nav className="flex gap-6 overflow-x-auto">
+          {[['overview', `Übersicht (${mr.notes.filter((n: any) => n.kind === 'comment').length})`],
             ['changes', `Änderungen${changes?.changes ? ` (${changes.changes.length})` : ''}`]].map(([t, label]) => (
             <button key={t} onClick={() => setTab(t as any)}
-              className={`py-3 px-1 border-b-2 font-medium text-sm ${tab === t ? 'border-red-600 text-red-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+              className={`py-3 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${tab === t ? 'border-red-600 text-red-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
               {label}
             </button>
           ))}
@@ -135,7 +140,7 @@ export const MergeRequestPage: React.FC = () => {
 
       {tab === 'overview' && (
         <div className="grid gap-6 md:grid-cols-3">
-          <div className="md:col-span-2 space-y-4">
+          <div className="md:col-span-2 space-y-4 min-w-0">
             <h2 className="text-sm font-bold text-slate-900">Aktivität</h2>
             <ol className="space-y-3">
               {mr.notes.map((n: any) => n.kind === 'system' ? (
@@ -164,31 +169,41 @@ export const MergeRequestPage: React.FC = () => {
             )}
           </div>
 
-          <aside className="space-y-4">
+          <aside className="space-y-4 order-first md:order-none">
             {mr.status === 'open' && m && (
               <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-3 text-sm">
                 <h2 className="font-bold text-slate-900">Übernahme</h2>
                 {m.mergeable ? (
-                  <p className="text-slate-700">
-                    {m.changes} Frage(n) geändert, Basis v{m.base_version}{!m.base_available && ' (nicht mehr verfügbar)'}, Original aktuell v{m.target_version}.
-                    {m.conflicts > 0 && <span className="block mt-1 text-amber-800">{m.conflicts} Konflikt(e): im Reiter «Änderungen» je Frage entscheiden.</span>}
-                  </p>
+                  <div className="text-slate-700 space-y-1">
+                    <p>Der Vorschlag ändert {plural(m.changes, 'Frage', 'Fragen')}.</p>
+                    {m.conflicts > 0 && (
+                      <p className="text-amber-800">
+                        Bei {plural(m.conflicts, 'Frage', 'Fragen')} hat auch das Original seither etwas geändert.{' '}
+                        <button type="button" onClick={() => setTab('changes')} className="underline font-medium">
+                          {p.can_merge ? 'Im Reiter «Änderungen» entscheiden' : 'Im Reiter «Änderungen» ansehen'}
+                        </button>
+                      </p>
+                    )}
+                    {!m.base_available && <p className="text-xs text-slate-500">Die Version des Originals, auf der der Fork beruht, wurde zurückgezogen; verglichen wird mit der aktuellen Version.</p>}
+                  </div>
                 ) : <p className="text-amber-800">{m.reason}</p>}
                 {p.can_merge && (
                   <div className="space-y-2 border-t border-slate-100 pt-3">
                     <label className="block text-xs font-medium text-slate-600">
-                      Neue Version
-                      <input value={version} onChange={e => setVersion(e.target.value)} className="mt-1 w-full rounded border border-slate-300 px-2 py-1 font-mono text-sm" />
+                      Neue Versionsnummer des Pakets
+                      <input value={version} onChange={e => setVersion(e.target.value)} className="mt-1 w-full rounded border border-slate-300 px-2 py-1 text-sm" />
+                      <span className="block mt-0.5 font-normal text-slate-500">Vorschlag: {m.next_version} (aktuell {m.target_version}). Für grössere Änderungen z.B. die mittlere Zahl erhöhen.</span>
                     </label>
                     <label className="block text-xs font-medium text-slate-600">
-                      Versionshinweis
-                      <input value={releaseNotes} onChange={e => setReleaseNotes(e.target.value)} placeholder={`Merge Request !${mr.number} von ${mr.author.name}: ${mr.title}`}
+                      Versionshinweis (optional)
+                      <input value={releaseNotes} onChange={e => setReleaseNotes(e.target.value)} placeholder={`Änderungsvorschlag !${mr.number} von ${mr.author.name}: ${mr.title}`}
                         className="mt-1 w-full rounded border border-slate-300 px-2 py-1 text-sm" />
                     </label>
                     <button disabled={busy || unresolved > 0} onClick={merge}
-                      className="w-full inline-flex justify-center items-center gap-1.5 px-3 py-2 rounded-lg bg-violet-700 text-white font-medium hover:bg-violet-800 disabled:opacity-50">
-                      <GitMerge className="w-4 h-4" />{unresolved > 0 ? `${unresolved} Konflikt(e) offen` : 'Übernehmen'}
+                      className="w-full inline-flex justify-center items-center gap-1.5 px-3 py-2.5 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 disabled:opacity-50">
+                      <GitMerge className="w-4 h-4" />{unresolved > 0 ? `Zuerst ${plural(unresolved, 'Konflikt', 'Konflikte')} entscheiden` : `Übernehmen als Version ${version || m.next_version}`}
                     </button>
+                    <p className="text-xs text-slate-500">Der Hub veröffentlicht die Änderungen als neue Version; Moodles mit diesem Paket sehen sie als Update.</p>
                   </div>
                 )}
               </div>
@@ -196,7 +211,7 @@ export const MergeRequestPage: React.FC = () => {
             <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-2 text-sm">
               <h2 className="font-bold text-slate-900">Genehmigungen</h2>
               {mr.approvals.length === 0 ? <p className="text-slate-500 text-xs">Noch keine.</p> : (
-                <ul className="text-xs text-slate-700 space-y-1">{mr.approvals.map((a: any) => <li key={a.user_id} className="flex items-center gap-1"><Check className="w-3.5 h-3.5 text-emerald-600" />{a.name}</li>)}</ul>
+                <ul className="text-xs text-slate-700 space-y-1">{mr.approvals.map((a: any) => <li key={a.user_id} className={`flex items-center gap-1 ${a.outdated ? 'text-slate-400' : ''}`}><Check className={`w-3.5 h-3.5 ${a.outdated ? 'text-slate-300' : 'text-emerald-600'}`} />{a.name}{a.outdated && ` (für Fork-Version ${a.source_version}, inzwischen geändert)`}</li>)}</ul>
               )}
               {p.can_approve && (
                 <button disabled={busy} onClick={() => act(() => api.setMergeRequestApproval(id, number, !p.approved_by_me))}
@@ -207,11 +222,11 @@ export const MergeRequestPage: React.FC = () => {
             </div>
             {(p.can_close || p.can_reopen) && (
               <button disabled={busy} onClick={() => {
-                if (p.can_close && !confirm('Merge Request schliessen? Er kann später wieder geöffnet werden.')) return;
+                if (p.can_close && !confirm('Änderungsvorschlag schliessen, ohne ihn zu übernehmen? Er kann später wieder geöffnet werden.')) return;
                 act(() => api.updateMergeRequest(id, number, { status: p.can_close ? 'closed' : 'open' }));
               }}
-                className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm hover:bg-slate-50">
-                {p.can_close ? 'Merge Request schliessen' : 'Wieder öffnen'}
+                className="text-sm text-slate-600 underline hover:text-red-700">
+                {p.can_close ? 'Ohne Übernahme schliessen' : 'Wieder öffnen'}
               </button>
             )}
           </aside>
@@ -224,13 +239,13 @@ export const MergeRequestPage: React.FC = () => {
             <p className="text-sm text-slate-600">{changes.reason}</p>
           ) : (
             <>
-              <p className="text-xs text-slate-500">
-                Änderungen des Forks (v{changes.source_version}) gegenüber v{changes.base_version} des Originals
-                {!changes.base_available && ' (Basisversion nicht mehr verfügbar: verglichen mit der aktuellen Version)'}.
-                Konflikte: Das Original hat dieselbe Frage seither anders geändert (v{changes.target_version}).
+              <p className="text-sm text-slate-600">
+                Was der Fork gegenüber dem Original (Version {changes.base_version}) geändert hat: rot entfernt, grün neu.
+                {!changes.base_available && ' Diese Version des Originals wurde zurückgezogen; verglichen wird mit der aktuellen Version.'}
               </p>
-              <QuestionDiffList changes={changes.changes} sideLabel="Fork" otherLabel="Original"
-                resolutions={resolutions} resolveOptions={p.can_merge ? ['source', 'target'] : undefined}
+              <QuestionDiffList changes={changes.changes} sideLabel="Änderung im Fork" otherLabel="Änderung im Original"
+                resolutions={resolutions}
+                resolveOptions={p.can_merge ? [{ value: 'target', label: 'Fassung des Originals behalten' }, { value: 'source', label: 'Fassung des Forks übernehmen' }] : undefined}
                 onResolve={p.can_merge ? (k, v) => setResolutions(r => ({ ...r, [k]: v })) : undefined}
                 notes={questionNotes}
                 onComment={p.can_comment ? async (c, body) => { await api.commentMergeRequest(id, number, { body, question_key: c.key, question_name: c.name }); await load(); } : undefined} />

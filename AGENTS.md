@@ -94,7 +94,9 @@ and an obsolete `tests/` folder (old copy with credentials: delete, never reuse)
   `source_key`); comparison is three-way per question, conflicts need a resolution (`source`/`target`). Merge requests
   (`/packages/:id/merge-requests[/:n[/changes|/notes|/approval|/merge]]`, tables `merge_requests`, `_notes`, `_approvals`)
   go only from a direct fork to its original; one open request per fork; merging (package admins, Hub admins) publishes a
-  new version of the original via `publishPackage(..., { asPackageAdmin: true })`. E-mails to participants are best effort.
+  new version of the original via `publishPackage(..., { asPackageAdmin: true })` (claim `status='merging'`, pinned to the
+  reviewed `source_version`/`target_version`; refused when the base version was withdrawn). Approvals are per fork version.
+  The web UI calls merge requests «Änderungsvorschläge». E-mails to participants (with access) are best effort.
   Plugin: «Forken» on an imported category calls the fork API and re-links the category to the fork
   (`publication_tracker::relink_to_fork`, copies snapshot and tracking rows), so Push goes to the fork.
 - **Licences**: every package has a CC licence (`CC-BY-4.0` default, `CC-BY-SA-4.0`, `CC0-1.0`); web and plugin show the

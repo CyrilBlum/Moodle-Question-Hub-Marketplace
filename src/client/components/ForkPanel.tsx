@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { GitFork, GitPullRequest, RefreshCw } from 'lucide-react';
 import { api } from '../api/client';
 import { QuestionDiffList } from './QuestionDiff';
+import { plural } from '../utils/plural';
 
 /**
  * Status of a fork against its original for its editors: ahead/behind, "sync with the original"
@@ -20,6 +21,7 @@ export const ForkPanel: React.FC<{ pkg: any; onChanged: () => void }> = ({ pkg, 
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [openMr, setOpenMr] = useState<number | null>(null);
+  // "Sync" moves the fork onto the original; also used to label the button.
   const origin = pkg.forked_from;
 
   const load = async (details = false) => {
@@ -72,10 +74,10 @@ export const ForkPanel: React.FC<{ pkg: any; onChanged: () => void }> = ({ pkg, 
     setBusy(true);
     setMessage('');
     try {
-      const res = await api.createMergeRequest(origin.id, { source_package_id: pkg.id, title: mrTitle.trim(), description: mrDescription.trim() || undefined });
+      const res = await api.createMergeRequest(origin.id, { source_package_id: pkg.id, title: mrTitle.trim(), description: mrDescription.trim() || undefined, accept_license: true });
       navigate(`/packages/${encodeURIComponent(origin.id)}/merge-requests/${res.number}`);
     } catch (err: any) {
-      setMessage(err.message || 'Der Merge Request konnte nicht erstellt werden.');
+      setMessage(err.message || 'Der Änderungsvorschlag konnte nicht erstellt werden.');
     } finally {
       setBusy(false);
     }
@@ -92,30 +94,36 @@ export const ForkPanel: React.FC<{ pkg: any; onChanged: () => void }> = ({ pkg, 
       </div>
       {error && <p className="text-sm text-rose-700">{error}</p>}
       {status && (
-        <p className="text-sm text-slate-700">
-          Basis: Original v{status.base_version}{!status.base_available && ' (nicht mehr verfügbar, verglichen wird mit der aktuellen Version)'} ·
-          Original aktuell: v{status.upstream.latest_version} ·{' '}
-          <strong>{status.ahead}</strong> Frage(n) im Fork geändert · <strong>{status.behind}</strong> im Original geändert
-          {status.conflicts > 0 && <> · <span className="text-amber-800 font-semibold">{status.conflicts} Konflikt(e)</span></>}
-        </p>
+        <div className="text-sm text-slate-700 space-y-1">
+          <p>
+            {status.ahead === 0 ? 'Sie haben im Fork noch nichts geändert.' : `Sie haben im Fork ${plural(status.ahead, 'Frage', 'Fragen')} geändert, hinzugefügt oder entfernt.`}{' '}
+            {status.behind === 0
+              ? 'Das Original hat sich seit Ihrer Kopie nicht verändert.'
+              : `Das Original hat sich seit Ihrer Kopie (Version ${status.base_version}) verändert: ${plural(status.behind, 'Frage', 'Fragen')}, aktuell Version ${status.upstream.latest_version}.`}
+          </p>
+          {status.conflicts > 0 && (
+            <p className="text-amber-800">Bei {plural(status.conflicts, 'Frage', 'Fragen')} haben beide Seiten etwas geändert: Beim Übernehmen entscheiden Sie, welche Fassung gilt.</p>
+          )}
+          {!status.base_available && <p className="text-xs text-slate-500">Die Version, auf der Ihr Fork beruht, wurde zurückgezogen; verglichen wird mit der aktuellen Version des Originals.</p>}
+        </div>
       )}
       {status?.can_sync && (
         <div className="flex flex-wrap gap-2">
           <button type="button" disabled={status.behind === 0 && status.base_version === status.upstream.latest_version}
             onClick={() => { setMode('sync'); load(true); }}
             className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm hover:bg-slate-50 disabled:opacity-50">
-            <RefreshCw className="w-4 h-4" />Mit Original abgleichen
+            <RefreshCw className="w-4 h-4" />Änderungen des Originals übernehmen{status.conflicts > 0 ? ` (${plural(status.conflicts, 'Konflikt', 'Konflikte')})` : ''}
           </button>
           {openMr ? (
             <Link to={`/packages/${encodeURIComponent(origin.id)}/merge-requests/${openMr}`}
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-900 text-white text-sm">
-              <GitPullRequest className="w-4 h-4" />Offener Merge Request !{openMr}
+              <GitPullRequest className="w-4 h-4" />Offener Änderungsvorschlag !{openMr}
             </Link>
           ) : (
             <button type="button" disabled={status.ahead === 0} onClick={() => setMode('mr')}
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-900 text-white text-sm disabled:opacity-50"
               title={status.ahead === 0 ? 'Der Fork enthält noch keine Änderungen.' : undefined}>
-              <GitPullRequest className="w-4 h-4" />Merge Request erstellen
+              <GitPullRequest className="w-4 h-4" />Änderungsvorschlag erstellen
             </button>
           )}
         </div>
@@ -124,15 +132,15 @@ export const ForkPanel: React.FC<{ pkg: any; onChanged: () => void }> = ({ pkg, 
 
       {mode === 'sync' && status && (
         <div className="space-y-3 rounded-lg bg-white border border-slate-200 p-4">
-          <h3 className="text-sm font-semibold">Änderungen im Original seit v{status.base_version}</h3>
+          <h3 className="text-sm font-semibold">Änderungen im Original seit Version {status.base_version}</h3>
           <p className="text-xs text-slate-600">
-            Der Abgleich übernimmt diese Änderungen in eine neue Version des Forks ({status.next_version}). Ihre eigenen Änderungen
-            bleiben erhalten. Haben beide Seiten dieselbe Frage unterschiedlich geändert, wählen Sie, welche Fassung gilt.
-            Danach holen Sie die neue Version in Moodle mit «Pull».
+            Es entsteht Version {status.next_version} Ihres Forks mit diesen Änderungen; Ihre eigenen Änderungen bleiben erhalten,
+            das Original bleibt unverändert. Danach holen Sie die neue Version in Moodle mit «Pull».
           </p>
           {status.incoming ? (
-            <QuestionDiffList changes={status.incoming} sideLabel="Original" otherLabel="Ihr Fork"
-              resolutions={resolutions} resolveOptions={['upstream', 'fork']}
+            <QuestionDiffList changes={status.incoming} sideLabel="Änderung im Original" otherLabel="Ihre Änderung im Fork"
+              resolutions={resolutions}
+              resolveOptions={[{ value: 'upstream', label: 'Fassung des Originals behalten' }, { value: 'fork', label: 'Fassung des Forks behalten' }]}
               onResolve={(k, v) => setResolutions(r => ({ ...r, [k]: v }))} />
           ) : <p className="text-sm text-slate-500">Lade Änderungen …</p>}
           <label className="block text-sm text-slate-700">
@@ -144,7 +152,7 @@ export const ForkPanel: React.FC<{ pkg: any; onChanged: () => void }> = ({ pkg, 
             <button type="button" onClick={() => setMode('none')} className="px-3 py-2 rounded-lg border border-slate-300 text-sm">Abbrechen</button>
             <button type="button" onClick={sync} disabled={busy || unresolved > 0}
               className="px-3 py-2 rounded-lg bg-red-600 text-white text-sm font-medium disabled:opacity-50">
-              {unresolved > 0 ? `${unresolved} Konflikt(e) offen` : busy ? 'Wird abgeglichen …' : 'Abgleichen'}
+              {unresolved > 0 ? `${plural(unresolved, 'Konflikt', 'Konflikte')} offen` : busy ? 'Wird übernommen …' : `Als Version ${status.next_version} übernehmen`}
             </button>
           </div>
         </div>
@@ -152,7 +160,7 @@ export const ForkPanel: React.FC<{ pkg: any; onChanged: () => void }> = ({ pkg, 
 
       {mode === 'mr' && (
         <form onSubmit={createMr} className="space-y-3 rounded-lg bg-white border border-slate-200 p-4">
-          <h3 className="text-sm font-semibold">Merge Request an «{origin.title}»</h3>
+          <h3 className="text-sm font-semibold">Änderungsvorschlag an «{origin.title}»</h3>
           <label className="block text-sm text-slate-700">
             Titel
             <input value={mrTitle} onChange={e => setMrTitle(e.target.value)} required minLength={3} maxLength={200}
@@ -165,13 +173,16 @@ export const ForkPanel: React.FC<{ pkg: any; onChanged: () => void }> = ({ pkg, 
           </label>
           <p className="text-xs text-slate-500">
             Die Admins des Originals erhalten eine E-Mail und können die Änderungen Frage für Frage prüfen, kommentieren und übernehmen.
-            Mit dem Merge Request stellen Sie Ihre Änderungen unter die Lizenz des Originals ({origin.license || 'siehe Original'}).
-            Neue Versionen Ihres Forks erscheinen automatisch im offenen Merge Request.
+            Neue Versionen Ihres Forks erscheinen automatisch im offenen Änderungsvorschlag.
           </p>
+          <label className="flex items-start gap-2 text-sm text-slate-700">
+            <input type="checkbox" required className="mt-1" />
+            <span>Ich stelle meine Änderungen unter die Lizenz des Originals ({status?.upstream?.license || origin.license || 'siehe Original'}).</span>
+          </label>
           <div className="flex gap-2 justify-end">
             <button type="button" onClick={() => setMode('none')} className="px-3 py-2 rounded-lg border border-slate-300 text-sm">Abbrechen</button>
             <button type="submit" disabled={busy} className="px-3 py-2 rounded-lg bg-red-600 text-white text-sm font-medium disabled:opacity-50">
-              Merge Request erstellen
+              Änderungsvorschlag erstellen
             </button>
           </div>
         </form>

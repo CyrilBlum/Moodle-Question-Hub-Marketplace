@@ -293,6 +293,21 @@ export async function up(knex: Knex): Promise<void> {
       table.primary(['merge_request_id', 'user_id']);
     });
   }
+  // The fork version an approval was given for (a newer fork version makes it outdated).
+  if (!(await knex.schema.hasColumn('merge_request_approvals', 'source_version'))) {
+    await knex.schema.alterTable('merge_request_approvals', table => {
+      table.string('source_version', 30).nullable();
+    });
+  }
+  // MariaDB timestamps have whole seconds by default: a comment and a system note of the same second would
+  // appear in random order. Millisecond precision keeps the activity in order.
+  if (collation) {
+    const [cols] = await knex.raw(
+      "SELECT datetime_precision AS p FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'merge_request_notes' AND column_name = 'created_at'");
+    if (Number(cols?.[0]?.p || 0) < 3) {
+      await knex.raw('ALTER TABLE merge_request_notes MODIFY created_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3), MODIFY updated_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)');
+    }
+  }
 }
 
 export async function down(knex: Knex): Promise<void> {

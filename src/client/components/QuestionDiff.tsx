@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronRight, AlertTriangle, MessageSquare } from 'lucide-react';
+import { plural } from '../utils/plural';
 
 export interface DiffRow { type: 'ctx' | 'del' | 'add'; text: string; old: number | null; new: number | null }
 export interface DiffHunk { header: string; rows: DiffRow[] }
@@ -55,12 +56,16 @@ export const QuestionDiffList: React.FC<{
   sideLabel: string;
   otherLabel: string;
   resolutions?: Record<string, string>;
-  resolveOptions?: [string, string];
+  /** Choices for a conflict, e.g. keep the original's or the fork's version. */
+  resolveOptions?: Array<{ value: string; label: string }>;
   onResolve?: (key: string, value: string) => void;
   notes?: QuestionNote[];
   onComment?: (change: QuestionChange, body: string) => Promise<void>;
 }> = ({ changes, sideLabel, otherLabel, resolutions, resolveOptions, onResolve, notes = [], onComment }) => {
   const [open, setOpen] = useState<Record<string, boolean>>(() => Object.fromEntries(changes.map(c => [c.key, changes.length <= 5 || c.conflict])));
+  // Conflicts need a decision: list them first.
+  changes = [...changes].sort((a, b) => Number(b.conflict) - Number(a.conflict));
+  const conflictCount = changes.filter(c => c.conflict).length;
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
   if (changes.length === 0) return <p className="text-sm text-slate-500">Keine Änderungen.</p>;
@@ -69,11 +74,17 @@ export const QuestionDiffList: React.FC<{
   return (
     <div className="space-y-3">
       <div className="flex justify-between items-center text-xs text-slate-500">
-        <span>{changes.length} Frage(n) · {changes.filter(c => c.conflict).length} Konflikt(e)</span>
+        <span>{plural(changes.length, 'Frage', 'Fragen')}{conflictCount > 0 && ` · ${plural(conflictCount, 'Konflikt', 'Konflikte')}`}</span>
         <button type="button" onClick={() => setOpen(Object.fromEntries(changes.map(c => [c.key, !allOpen])))} className="text-red-700 hover:underline">
           {allOpen ? 'Alle zuklappen' : 'Alle aufklappen'}
         </button>
       </div>
+      {conflictCount > 0 && (
+        <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+          <strong>{plural(conflictCount, 'Konflikt', 'Konflikte')}:</strong> Original und Fork haben dieselbe Frage unterschiedlich verändert.
+          {onResolve ? ' Entscheiden Sie bei jeder markierten Frage, welche Fassung gelten soll.' : ' Wer übernimmt, entscheidet, welche Fassung gilt.'}
+        </p>
+      )}
       {changes.map(c => {
         const own = notes.filter(n => n.question_key === c.key);
         return (
@@ -100,10 +111,10 @@ export const QuestionDiffList: React.FC<{
                   <fieldset className="flex flex-wrap gap-4 text-sm rounded bg-amber-50 border border-amber-200 p-2">
                     <legend className="sr-only">Welche Fassung gilt?</legend>
                     <span className="text-amber-900 font-medium">Welche Fassung gilt?</span>
-                    {resolveOptions.map((value, i) => (
-                      <label key={value} className="inline-flex items-center gap-1.5">
-                        <input type="radio" name={`res-${c.key}`} checked={resolutions?.[c.key] === value} onChange={() => onResolve(c.key, value)} />
-                        {i === 0 ? sideLabel : otherLabel}
+                    {resolveOptions.map(o => (
+                      <label key={o.value} className="inline-flex items-center gap-1.5">
+                        <input type="radio" name={`res-${c.key}`} checked={resolutions?.[c.key] === o.value} onChange={() => onResolve(c.key, o.value)} />
+                        {o.label}
                       </label>
                     ))}
                   </fieldset>

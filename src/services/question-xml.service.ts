@@ -9,6 +9,8 @@ import crypto from 'crypto';
 export interface QuestionBlock {
   /** Stable identity across releases: category path + idnumber, else category path + type + name. */
   key: string;
+  /** Identity before disambiguation (see alignKeys). */
+  identity: string;
   type: string;
   name: string;
   /** Category path without the $course$/top prefixes, '' before the first category. */
@@ -50,6 +52,20 @@ function decodeText(text: string): string {
     .trim();
 }
 
+/** Removes whitespace between tags, but not inside CDATA sections or comments (code samples, <pre>). */
+function normalise(raw: string): string {
+  const blank = blankOpaque(raw);
+  let out = '';
+  let last = 0;
+  const re = />\s+</g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(blank)) !== null) {
+    out += raw.slice(last, m.index + 1);
+    last = m.index + m[0].length - 1;
+  }
+  return (out + raw.slice(last)).trim();
+}
+
 /** "$course$/top/Informatik/K1" -> "Informatik/K1". */
 export function normaliseCategory(path: string): string {
   let p = path.trim().replace(/^\$[a-z0-9]+\$\/?/i, '');
@@ -79,7 +95,6 @@ export function parsePackage(xml: string): ParsedPackage {
   const blank = blankOpaque(xml);
   const questions: QuestionBlock[] = [];
   const categories = new Map<string, string>();
-  const seen = new Map<string, number>();
   let category = '';
   const re = /<question(\s[^>]*)?>/g;
   let m: RegExpExecArray | null;
@@ -99,23 +114,53 @@ export function parsePackage(xml: string): ParsedPackage {
     const name = textOf(raw, rawBlank, 'name');
     const idnumber = decodeText(element(raw, rawBlank, 'idnumber') ?? '');
     const identity = idnumber !== '' ? ['idnumber', idnumber] : ['name', type, name];
-    const base = JSON.stringify([category, identity]);
-    const n = (seen.get(base) || 0) + 1;
-    seen.set(base, n);
-    questions.push({
-      key: crypto.createHash('sha256').update(n === 1 ? base : `${base}:${n}`).digest('hex').slice(0, 32),
-      type, name, category, raw,
-      norm: raw.replace(/>\s+</g, '><').trim(),
-    });
+    const id = JSON.stringify([category, identity]);
+    questions.push({ key: hashKey(id), identity: id, type, name, category, raw, norm: normalise(raw) });
   }
+  return alignKeys(questionsPackage(questions, categories))[0];
+}
+
+function hashKey(id: string): string {
+  return crypto.createHash('sha256').update(id).digest('hex').slice(0, 32);
+}
+
+function questionsPackage(questions: QuestionBlock[], categories: Map<string, string>): ParsedPackage {
   return { questions, categories };
+}
+
+/**
+ * Keys that mean the same question in all given versions. Questions sharing category, type and name (without
+ * idnumber) in any of them cannot be told apart by position, since a deletion would shift them: they are identified
+ * by their content in every version (an edit then shows as removed + added). Returns copies; inputs stay unchanged.
+ */
+export function alignKeys(...packages: ParsedPackage[]): ParsedPackage[] {
+  const ambiguous = new Set<string>();
+  for (const p of packages) {
+    const seen = new Set<string>();
+    for (const q of p.questions) {
+      if (seen.has(q.identity)) ambiguous.add(q.identity);
+      seen.add(q.identity);
+    }
+  }
+  return packages.map(p => {
+    const used = new Set<string>();
+    const questions = p.questions.map(q => {
+      let id = ambiguous.has(q.identity) ? `${q.identity}#${crypto.createHash('sha256').update(q.norm).digest('hex')}` : q.identity;
+      for (let n = 2; used.has(id); n++) id = `${q.identity}#${n}`;
+      used.add(id);
+      return { ...q, key: hashKey(id) };
+    });
+    return { questions, categories: p.categories };
+  });
 }
 
 /** Builds a Moodle XML package from question blocks, writing a category block whenever the category changes. */
 export function assemblePackage(questions: QuestionBlock[], categories: Map<string, string>): string {
   const parts = ['<?xml version="1.0" encoding="UTF-8"?>', '<quiz>'];
   let current: string | null = null;
-  for (const q of questions) {
+  // Questions without a category block must come before the first one, else they land in the previous category.
+  const ordered = [...questions.filter(q => q.category === ''), ...questions.filter(q => q.category !== '')];
+  for (const q of ordered) {
     if (q.category !== current) {
       current = q.category;
       if (q.category !== '') {
@@ -125,6 +170,9 @@ export function assemblePackage(questions: QuestionBlock[], categories: Map<stri
     }
     parts.push(q.raw);
   }
+  // Categories without questions (e.g. empty ones, or ones holding only a description) are kept.
+  const used = new Set(questions.map(q => q.category));
+  for (const [path, block] of categories) if (path !== '' && !used.has(path)) parts.push(block);
   parts.push('</quiz>', '');
   return parts.join('\n');
 }
@@ -160,6 +208,7 @@ function statusOf(base?: QuestionBlock, side?: QuestionBlock): ChangeStatus | nu
  * the source or the target changed it; `conflict` when both changed it differently.
  */
 export function compareThreeWay(base: ParsedPackage, source: ParsedPackage, target: ParsedPackage): MergeEntry[] {
+  [base, source, target] = alignKeys(base, source, target);
   const b = new Map(base.questions.map(q => [q.key, q]));
   const s = new Map(source.questions.map(q => [q.key, q]));
   const t = new Map(target.questions.map(q => [q.key, q]));
@@ -196,6 +245,7 @@ export type Resolution = 'source' | 'target';
 export function mergeThreeWay(
   base: ParsedPackage, source: ParsedPackage, target: ParsedPackage, resolutions: Record<string, Resolution> = {},
 ): { xml: string | null; unresolved: MergeEntry[]; entries: MergeEntry[]; changed: boolean } {
+  [base, source, target] = alignKeys(base, source, target);
   const entries = compareThreeWay(base, source, target);
   const unresolved = entries.filter(e => e.conflict && resolutions[e.key] !== 'source' && resolutions[e.key] !== 'target');
   if (unresolved.length) return { xml: null, unresolved, entries, changed: false };
@@ -224,8 +274,9 @@ export function mergeThreeWay(
     for (let i = result.length - 1; i >= 0; i--) if (result[i].category === chosen.category) { at = i; break; }
     if (at < 0) result.push(chosen); else result.splice(at + 1, 0, chosen);
   }
-  // The target's category blocks win; categories only the source has come from the source.
-  const categories = new Map([...base.categories, ...source.categories, ...target.categories]);
+  // The target's category blocks win; categories only the source has come from the source. Not the base's:
+  // a category both sides dropped must not come back.
+  const categories = new Map([...source.categories, ...target.categories]);
   const changed = result.length !== target.questions.length || result.some((q, i) => q.norm !== target.questions[i].norm);
   return { xml: assemblePackage(result, categories), unresolved: [], entries, changed };
 }
@@ -233,6 +284,7 @@ export function mergeThreeWay(
 /** Same questions with the same content (order ignored). */
 export function sameContent(a: ParsedPackage, b: ParsedPackage): boolean {
   if (a.questions.length !== b.questions.length) return false;
+  [a, b] = alignKeys(a, b);
   const m = new Map(a.questions.map(q => [q.key, q.norm]));
   return b.questions.every(q => m.get(q.key) === q.norm);
 }
