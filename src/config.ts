@@ -4,6 +4,11 @@ import { z } from 'zod';
 
 dotenv.config();
 
+const PUBLIC_JWT_SECRETS = [
+  'development-secret-must-be-at-least-32-chars-long!',
+  'super-secret-jwt-key-must-be-at-least-32-chars-long!',
+];
+
 const ConfigSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   HOST: z.string().default('127.0.0.1'),
@@ -53,6 +58,11 @@ const ConfigSchema = z.object({
   // Rate Limiting
   RATE_LIMIT_MAX: z.coerce.number().default(300),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().default(60000),
+}).superRefine((config, ctx) => {
+  // The source is public: in production the code default or the .env.example value would let anyone forge tokens.
+  if (config.NODE_ENV === 'production' && PUBLIC_JWT_SECRETS.includes(config.JWT_SECRET)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['JWT_SECRET'], message: 'JWT_SECRET muss in Produktion gesetzt sein' });
+  }
 });
 
 export type AppConfig = z.infer<typeof ConfigSchema>;

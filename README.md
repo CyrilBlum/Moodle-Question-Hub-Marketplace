@@ -62,3 +62,7 @@ npm run dev
 - MariaDB-Datenbank: `questionhub` (Port 3306)
 - Systemd-Dienst: `moodle-question-hub.service` (Port 8090)
 - Nginx Reverse Proxy: `https://hub.cblum.ch`
+
+## Lizenz
+
+GNU Affero General Public License v3 oder neuer (`AGPL-3.0-or-later`), siehe `LICENSE`.

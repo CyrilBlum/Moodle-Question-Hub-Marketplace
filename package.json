@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Moodle Question Hub Community Marketplace Backend & Web Application",
   "private": true,
+  "license": "AGPL-3.0-or-later",
   "type": "commonjs",
   "scripts": {
     "dev": "tsx watch src/index.ts",
