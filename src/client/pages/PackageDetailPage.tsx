@@ -14,6 +14,7 @@ import { LicenseBadge, LICENSES } from '../components/License';
 import { ForkDialog } from '../components/ForkDialog';
 import { ForkPanel } from '../components/ForkPanel';
 import { ForksList, MergeRequestList } from '../components/ForksAndMergeRequests';
+import { useEscapeKey } from '../utils/useEscapeKey';
 
 const QuestionHtml: React.FC<{ html: string; className?: string }> = ({ html, className }) => {
   const elementRef = useRef<HTMLDivElement>(null);
@@ -63,6 +64,7 @@ export const PackageDetailPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'categories' | 'preview' | 'versions' | 'members' | 'requests' | 'settings' | 'forks' | 'merge'>(initialTab);
   const [showFork, setShowFork] = useState(false);
   const [showVersions, setShowVersions] = useState(false);
+  useEscapeKey(showVersions, () => setShowVersions(false));
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [accessRequestMessage, setAccessRequestMessage] = useState('');
   const [accessNote, setAccessNote] = useState('');

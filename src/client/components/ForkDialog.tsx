@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { GitFork, X } from 'lucide-react';
 import { api } from '../api/client';
 import { LicenseOptions, forkLicenses } from './License';
+import { useEscapeKey } from '../utils/useEscapeKey';
 
 /** Creates a fork of a package (a copy in the own account that can later be proposed back). */
 export const ForkDialog: React.FC<{ pkg: any; onClose: () => void }> = ({ pkg, onClose }) => {
@@ -14,6 +15,7 @@ export const ForkDialog: React.FC<{ pkg: any; onClose: () => void }> = ({ pkg, o
   const [license, setLicense] = useState(allowed.includes(pkg.license) ? pkg.license : allowed[0]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  useEscapeKey(!busy, onClose);
 
   useEffect(() => {
     api.suggestForkId(pkg.id).then(r => setId(r.id)).catch(() => setId(`${pkg.id}-fork`));

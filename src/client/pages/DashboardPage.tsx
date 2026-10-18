@@ -5,6 +5,7 @@ import { api, getToken, getStoredUser, setStoredUser } from '../api/client';
 import { PackageEditForm } from '../components/PackageEditForm';
 import { GitHubConnection } from '../components/GitHubConnection';
 import { MyMergeRequests } from '../components/MyMergeRequests';
+import { useEscapeKey } from '../utils/useEscapeKey';
 
 export const CANTONS = [
   ['AG', 'Aargau'], ['AI', 'Appenzell Innerrhoden'], ['AR', 'Appenzell Ausserrhoden'],
@@ -140,6 +141,10 @@ export const DashboardPage: React.FC = () => {
     setTokenName('');
     setErrorMsg('');
   };
+  useEscapeKey(!!editing, () => setEditing(null));
+  // Not once the token is shown: it appears only once and must not vanish by an accidental Esc.
+  useEscapeKey(modalOpen && !createdSecretToken, closeModal);
+
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
