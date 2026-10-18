@@ -1140,7 +1140,7 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
 
       // A second request can be closed by its author and reopened; withdrawing the fork closes it.
       expect((await publish(forkId, '1.0.3', xml(tf('Q1', 'eins (Fork)'), tf('Q2', 'zwei (Original)'), tf('Q4', 'vier'), tf('Q5', 'fünf')), cAuth, { base_version: '1.0.2' })).statusCode).toBe(201);
-      expect((await app.inject({ method: 'POST', url: mrUrl, headers: cAuth, payload: { source_package_id: forkId, title: 'Q5' } })).statusCode).toBe(201);
+      expect((await app.inject({ method: 'POST', url: mrUrl, headers: cAuth, payload: { source_package_id: forkId, title: 'Frage Q5 neu' } })).statusCode).toBe(201);
       expect((await app.inject({ method: 'PATCH', url: `${mrUrl}/2`, headers: sAuth, payload: { status: 'closed' } })).statusCode).toBe(403);
       expect((await app.inject({ method: 'PATCH', url: `${mrUrl}/2`, headers: cAuth, payload: { status: 'closed' } })).statusCode).toBe(200);
       expect((await app.inject({ method: 'PATCH', url: `${mrUrl}/2`, headers: cAuth, payload: { status: 'open' } })).statusCode).toBe(200);
