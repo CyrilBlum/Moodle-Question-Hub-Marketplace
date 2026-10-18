@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { AuthService } from '../services/auth.service';
 import { AdminService } from '../services/admin.service';
 import { CaptchaService } from '../services/captcha.service';
+import { PasswordResetService } from '../services/password-reset.service';
+import { EmailService } from '../services/email.service';
 
 const RegisterSchema = z.object({
   email: z.string().email(),
@@ -15,6 +17,11 @@ const RegisterSchema = z.object({
 const LoginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
+});
+const ForgotSchema = z.object({ email: z.string().email() });
+const ResetSchema = z.object({
+  token: z.string().min(20).max(200),
+  password: z.string().min(8, 'Passwort muss mindestens 8 Zeichen lang sein.'),
 });
 const ProfileSchema = z.object({ email: z.string().email(), full_name: z.string().min(2), institution: z.string().min(2), canton: z.string().length(2), profile_role: z.string().max(100).optional(), password: z.string().min(8).optional().or(z.literal('')) });
 
@@ -125,6 +132,60 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
         error: 'Internal Server Error',
         message: err.message,
       });
+    }
+  });
+
+  // POST /api/v1/auth/password/forgot: mails a reset link. The answer is the same whether the address
+  // has an account or not, so the form does not reveal who is registered.
+  app.post('/auth/password/forgot', { config: { rateLimit: { max: 5, timeWindow: '1 hour' } } }, async (req, reply) => {
+    const parsed = ForgotSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return reply.status(400).send({ statusCode: 400, error: 'Bad Request', message: 'Bitte geben Sie eine gültige E-Mail-Adresse an.' });
+    }
+    const rejected = captchaRejected(req, reply);
+    if (rejected) return rejected;
+    if (!EmailService.isConfigured()) {
+      return reply.status(503).send({
+        statusCode: 503, error: 'Service Unavailable', code: 'EMAIL_NOT_CONFIGURED',
+        message: 'E-Mail-Versand ist derzeit nicht eingerichtet. Wenden Sie sich an die Administration des Hubs.',
+      });
+    }
+    const created = await PasswordResetService.getInstance().createToken(parsed.data.email);
+    if (created) {
+      // Not awaited: the answer must not take longer for existing accounts than for unknown addresses.
+      EmailService.sendPasswordReset({ to: created.user.email, name: created.user.full_name, token: created.token })
+        .catch(err => req.log.error({ code: err?.code || 'EMAIL_DELIVERY_FAILED' }, 'Failed to send password reset email'));
+    }
+    return reply.status(200).send({
+      status: 'sent',
+      message: 'Falls zu dieser Adresse ein Konto besteht, haben wir einen Link zum Zurücksetzen geschickt. Er ist eine Stunde gültig.',
+    });
+  });
+
+  // GET /api/v1/auth/password/reset?token=…: whether the link can still be used.
+  app.get('/auth/password/reset', { config: { rateLimit: { max: 30, timeWindow: '1 minute' } } }, async (req, reply) => {
+    const token = String((req.query as any)?.token || '');
+    reply.header('Cache-Control', 'no-store');
+    return reply.status(200).send({ valid: await PasswordResetService.getInstance().isValid(token) });
+  });
+
+  // POST /api/v1/auth/password/reset: sets the new password with a valid link.
+  app.post('/auth/password/reset', { config: { rateLimit: { max: 10, timeWindow: '15 minutes' } } }, async (req, reply) => {
+    const parsed = ResetSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return reply.status(400).send({
+        statusCode: 400, error: 'Bad Request',
+        message: parsed.error.issues.find(i => i.path[0] === 'password')?.message || 'Der Link ist ungültig oder abgelaufen. Fordern Sie einen neuen an.',
+      });
+    }
+    try {
+      await PasswordResetService.getInstance().resetPassword(parsed.data.token, parsed.data.password);
+      return reply.status(200).send({ status: 'reset', message: 'Ihr Passwort wurde geändert. Sie können sich jetzt anmelden.' });
+    } catch (err: any) {
+      if (String(err.message).startsWith('BAD_REQUEST:')) {
+        return reply.status(400).send({ statusCode: 400, error: 'Bad Request', message: err.message.replace('BAD_REQUEST: ', '') });
+      }
+      return reply.status(500).send({ statusCode: 500, error: 'Internal Server Error', message: err.message });
     }
   });
 

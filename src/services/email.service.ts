@@ -118,6 +118,28 @@ export class EmailService {
     return `${this.baseUrl()}/packages/${encodeURIComponent(packageId)}${tab ? `?tab=${tab}` : ''}`;
   }
 
+  /** Link to set a new password (valid for one hour, once). */
+  public static async sendPasswordReset(data: { to: string; name: string; token: string }): Promise<void> {
+    const transporter = this.transporter();
+    await transporter.sendMail({
+      from: getConfig().SMTP_FROM,
+      to: data.to,
+      subject: 'Passwort für den Moodle Question Hub zurücksetzen',
+      text: [
+        `Guten Tag ${data.name}`,
+        '',
+        'Sie haben einen Link zum Zurücksetzen Ihres Passworts im Moodle Question Hub angefordert.',
+        'Über diesen Link legen Sie ein neues Passwort fest. Er ist eine Stunde lang gültig und funktioniert nur einmal:',
+        '',
+        `${this.baseUrl()}/passwort-zuruecksetzen?token=${encodeURIComponent(data.token)}`,
+        '',
+        'Haben Sie keinen Link angefordert, ignorieren Sie diese Nachricht; Ihr Passwort bleibt unverändert.',
+        '',
+        'Diese Nachricht wurde automatisch vom Moodle Question Hub versendet.',
+      ].join('\n'),
+    });
+  }
+
   /** Merge request events (new request, comment, merged, closed) for the participants. */
   public static async sendMergeRequestNotice(data: { to: string[]; subject: string; lines: string[]; url: string }): Promise<void> {
     const transporter = this.transporter();

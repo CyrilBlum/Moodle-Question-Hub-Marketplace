@@ -86,6 +86,10 @@ and an obsolete `tests/` folder (old copy with credentials: delete, never reuse)
   challenge from `GET /auth/captcha`, valid 10 min, each solution once). API clients solve it like the E2E helper
   `HubClient.captcha()` in `e2e/conftest.py`. `CAPTCHA_ENABLED=false` switches it off; the HMAC key defaults to one
   derived from `JWT_SECRET` (`CAPTCHA_HMAC_KEY` overrides it).
+- **Password forgotten**: `POST /auth/password/forgot` (captcha, 5/h, same answer for unknown addresses, 503 without SMTP)
+  mails a one-time link `/passwort-zuruecksetzen?token=…` valid 1 h; only the SHA-256 is stored (table `password_resets`,
+  DATETIME columns), a new link invalidates older ones. `GET /auth/password/reset?token=` checks it, `POST` sets the password.
+  Existing JWTs stay valid until they expire.
 - **Forks and merge requests** (`fork.service.ts`, `merge-request.service.ts`, routes in `collaboration.route.ts`, engine
   `question-xml.service.ts`): `POST /packages/:id/forks` copies a release into a new package of the user (same version,
   `packages.forked_from_id/_version/_license`; private stays private; licence: BY-SA stays BY-SA, BY -> BY or BY-SA).

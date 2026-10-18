@@ -161,6 +161,13 @@ export const api = {
   },
 
   getMe: () => request('/auth/me'),
+  forgotPassword: (email: string, altcha: string) => request('/auth/password/forgot', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, altcha }),
+  }),
+  checkResetToken: (token: string) => request(`/auth/password/reset?token=${encodeURIComponent(token)}`),
+  resetPassword: (token: string, password: string) => request('/auth/password/reset', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, password }),
+  }),
   updateProfile: (data: Record<string, string>) => request('/auth/me', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
 
   // Tokens

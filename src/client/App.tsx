@@ -12,6 +12,8 @@ import { RegisterPage } from './pages/RegisterPage';
 import { AdminPage } from './pages/AdminPage';
 import { GuidePage } from './pages/GuidePage';
 import { MergeRequestPage } from './pages/MergeRequestPage';
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
+import { ResetPasswordPage } from './pages/ResetPasswordPage';
 
 export const App: React.FC = () => {
   return (
@@ -25,6 +27,8 @@ export const App: React.FC = () => {
           <Route path="/upload" element={<UploadPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/passwort-vergessen" element={<ForgotPasswordPage />} />
+          <Route path="/passwort-zuruecksetzen" element={<ResetPasswordPage />} />
           <Route path="/connect" element={<ConnectPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/admin" element={<AdminPage />} />

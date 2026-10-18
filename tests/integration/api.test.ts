@@ -9,6 +9,7 @@ import { runSeeds } from '../../src/database/seed';
 import { closeDatabase, getDatabase } from '../../src/database/connection';
 import { CryptoService } from '../../src/services/crypto.service';
 import { PackageMembersService } from '../../src/services/package-members.service';
+import { EmailService } from '../../src/services/email.service';
 
 describe('Marketplace REST API Endpoints Integration Tests', () => {
   let app: FastifyInstance;
@@ -1168,6 +1169,56 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
       await app.inject({ method: 'DELETE', url: `/api/v1/packages/${forkId}`, headers: cAuth });
       await app.inject({ method: 'DELETE', url: `/api/v1/packages/${src}`, headers: ownerAuth });
       await getDatabase()('users').whereIn('id', [contributor.user.id, stranger.user.id]).del();
+    }
+  });
+  it('password forgotten: one-time reset link by e-mail, same answer for unknown addresses', async () => {
+    const email = `reset-${Date.now()}@example.ch`;
+    const reg = JSON.parse((await app.inject({ method: 'POST', url: '/api/v1/auth/register',
+      payload: { altcha: await captcha(), email, password: 'Altes-Passwort-1', full_name: 'Rita Reset', institution: 'Kanti R', canton: 'ZH' } })).body);
+    const sent: Array<{ to: string; token: string }> = [];
+    // Without SMTP the form answers 503; with it, the mail (mocked) carries the token.
+    expect((await app.inject({ method: 'POST', url: '/api/v1/auth/password/forgot', payload: { email, altcha: await captcha() } })).statusCode).toBe(503);
+    const configured = vi.spyOn(EmailService, 'isConfigured').mockReturnValue(true);
+    const mail = vi.spyOn(EmailService, 'sendPasswordReset').mockImplementation(async d => { sent.push({ to: d.to, token: d.token }); });
+    try {
+      expect((await app.inject({ method: 'POST', url: '/api/v1/auth/password/forgot', payload: { email } })).statusCode).toBe(400);
+      const unknown = await app.inject({ method: 'POST', url: '/api/v1/auth/password/forgot', payload: { email: 'niemand-xyz@example.ch', altcha: await captcha() } });
+      const known = await app.inject({ method: 'POST', url: '/api/v1/auth/password/forgot', payload: { email: email.toUpperCase(), altcha: await captcha() } });
+      expect(unknown.statusCode).toBe(200);
+      expect(known.statusCode).toBe(200);
+      expect(JSON.parse(unknown.body).message).toBe(JSON.parse(known.body).message);
+      await new Promise(r => setTimeout(r, 20));
+      expect(sent.map(m => m.to)).toEqual([email]);
+      const token = sent[0].token;
+      // Only the hash is stored.
+      expect(await getDatabase()('password_resets').where({ token_hash: token }).first()).toBeUndefined();
+
+      const check = async (t: string) => JSON.parse((await app.inject({ method: 'GET', url: `/api/v1/auth/password/reset?token=${encodeURIComponent(t)}` })).body).valid;
+      expect(await check(token)).toBe(true);
+      expect(await check('x'.repeat(43))).toBe(false);
+      const reset = (t: string, password: string) => app.inject({ method: 'POST', url: '/api/v1/auth/password/reset', payload: { token: t, password } });
+      expect((await reset(token, 'kurz')).statusCode).toBe(400);
+      expect((await reset('y'.repeat(43), 'Neues-Passwort-2')).statusCode).toBe(400);
+      expect((await reset(token, 'Neues-Passwort-2')).statusCode).toBe(200);
+      // Used once only; the new password works, the old one not.
+      expect((await reset(token, 'Drittes-Passwort-3')).statusCode).toBe(400);
+      expect(await check(token)).toBe(false);
+      const login = async (password: string) => (await app.inject({ method: 'POST', url: '/api/v1/auth/login', payload: { email, password, altcha: await captcha() } })).statusCode;
+      expect(await login('Neues-Passwort-2')).toBe(200);
+      expect(await login('Altes-Passwort-1')).toBe(401);
+
+      // A newer link replaces the older one; an expired link is refused.
+      await app.inject({ method: 'POST', url: '/api/v1/auth/password/forgot', payload: { email, altcha: await captcha() } });
+      await app.inject({ method: 'POST', url: '/api/v1/auth/password/forgot', payload: { email, altcha: await captcha() } });
+      await new Promise(r => setTimeout(r, 20));
+      expect(await check(sent[1].token)).toBe(false);
+      expect(await check(sent[2].token)).toBe(true);
+      await getDatabase()('password_resets').where({ user_id: reg.user.id }).update({ expires_at: new Date(Date.now() - 1000) });
+      expect((await reset(sent[2].token, 'Viertes-Passwort-4')).statusCode).toBe(400);
+    } finally {
+      configured.mockRestore();
+      mail.mockRestore();
+      await getDatabase()('users').where({ id: reg.user.id }).del();
     }
   });
 });

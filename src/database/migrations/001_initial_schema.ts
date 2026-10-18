@@ -293,6 +293,20 @@ export async function up(knex: Knex): Promise<void> {
       table.primary(['merge_request_id', 'user_id']);
     });
   }
+  // "Password forgotten": one-time reset links (only the SHA-256 of the token is stored).
+  if (!(await knex.schema.hasTable('password_resets'))) {
+    await knex.schema.createTable('password_resets', table => {
+      sameCollation(table);
+      table.string('id', 36).primary();
+      table.string('user_id', 36).notNullable().references('id').inTable('users').onDelete('CASCADE');
+      table.string('token_hash', 64).notNullable().unique();
+      // DATETIME: a MariaDB TIMESTAMP without default may get ON UPDATE CURRENT_TIMESTAMP and move on every update.
+      table.dateTime('expires_at').notNullable();
+      table.dateTime('used_at').nullable();
+      table.timestamp('created_at').notNullable().defaultTo(knex.fn.now());
+      table.index(['user_id'], 'idx_password_resets_user');
+    });
+  }
   // The fork version an approval was given for (a newer fork version makes it outdated).
   if (!(await knex.schema.hasColumn('merge_request_approvals', 'source_version'))) {
     await knex.schema.alterTable('merge_request_approvals', table => {
@@ -311,6 +325,7 @@ export async function up(knex: Knex): Promise<void> {
 }
 
 export async function down(knex: Knex): Promise<void> {
+  await knex.schema.dropTableIfExists('password_resets');
   await knex.schema.dropTableIfExists('merge_request_approvals');
   await knex.schema.dropTableIfExists('merge_request_notes');
   await knex.schema.dropTableIfExists('merge_requests');
