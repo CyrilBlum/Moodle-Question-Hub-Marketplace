@@ -39,7 +39,7 @@ export const OpenContentNotice: React.FC<{ className?: string }> = ({ className 
     Mit der Veröffentlichung stellen Sie die Fragen unter die gewählte{' '}
     <a href="https://creativecommons.org/licenses/?lang=de" target="_blank" rel="noopener noreferrer" className="text-red-700 hover:underline">Creative-Commons-Lizenz</a>.
     Öffentliche Pakete sind damit offene Bildungsmaterialien (Open Educational Resources): Alle dürfen sie herunterladen,
-    verwenden, forken, verändern und weitergeben, unter Nennung der Urheberschaft (ausser bei CC0) und bei CC BY-SA unter
+    verwenden, verändern, als eigene Variante weiterentwickeln und weitergeben, unter Nennung der Urheberschaft (ausser bei CC0) und bei CC BY-SA unter
     derselben Lizenz. Private Pakete tragen die Lizenz ebenfalls, sind aber nur für freigegebene Personen sichtbar.
     Veröffentlichen Sie nur Inhalte, an denen Sie die Rechte haben.
   </p>

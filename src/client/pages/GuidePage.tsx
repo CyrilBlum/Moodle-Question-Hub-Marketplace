@@ -47,8 +47,8 @@ export const GuidePage: React.FC = () => {
         <a href="#veroeffentlichen" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:border-red-300">
           <Upload className="w-4 h-4 text-red-600" />Paket veröffentlichen
         </a>
-        <a href="#forken" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:border-red-300">
-          <GitFork className="w-4 h-4 text-red-600" />Forken und Änderungsvorschläge
+        <a href="#varianten" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:border-red-300">
+          <GitFork className="w-4 h-4 text-red-600" />Varianten und Änderungsvorschläge
         </a>
         <a href="#lizenz" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:border-red-300">
           <Scale className="w-4 h-4 text-red-600" />Lizenz
@@ -213,48 +213,49 @@ export const GuidePage: React.FC = () => {
       </p>
     </section>
 
-    <section id="forken" className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-5 scroll-mt-20">
-      <h2 className="text-lg font-bold text-slate-900">Forken und Änderungsvorschläge</h2>
+    <section id="varianten" className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-5 scroll-mt-20">
+      <h2 className="text-lg font-bold text-slate-900">Varianten und Änderungsvorschläge</h2>
       <p className="text-sm text-slate-700">
-        Sie möchten Fragen eines fremden Pakets verbessern oder ergänzen? Forken Sie es: Sie erhalten eine eigene Kopie, die Sie
-        frei bearbeiten. Gute Änderungen schlagen Sie dem Original mit einem Änderungsvorschlag (englisch «Merge Request») vor.
-        Die Admins des Originals entscheiden, was übernommen wird.
+        Sie möchten Fragen eines fremden Pakets verbessern oder ergänzen? Legen Sie eine Variante an: Sie erhalten eine eigene
+        Fassung, die Sie frei bearbeiten. Varianten erscheinen auf der Seite des Originals unter «Fassung», nicht als eigene Pakete
+        im Katalog (dort zeigt sie der Filter «Varianten einbeziehen»). Gute Änderungen schlagen Sie dem Original mit einem
+        Änderungsvorschlag (englisch «Merge Request») vor. Die Admins des Originals entscheiden, was übernommen wird.
       </p>
       <ol className="space-y-5">
-        <Step n={1} title="Paket forken">
+        <Step n={1} title="Variante anlegen">
           <p>
-            In Moodle: Bei der mit dem Paket verknüpften Kategorie <Ui de="Forken" en="Fork" /> klicken, Paket-ID und Titel
-            prüfen und bestätigen. Der Hub legt den Fork in Ihrem Konto an, und Ihre Kategorie ist danach mit dem Fork statt
-            mit dem Original verknüpft. Lokale Änderungen bleiben erhalten.
+            In Moodle: Bei der mit dem Paket verknüpften Kategorie <Ui de="Variante anlegen" en="Create variant" /> klicken und
+            bestätigen. Der Hub legt die Variante in Ihrem Konto an, und Ihre Kategorie ist danach mit der Variante statt mit dem
+            Original verknüpft. Lokale Änderungen bleiben erhalten.
           </p>
-          <p>Im Hub: Auf der Paketseite <Ui de="Eigene Kopie (Fork)" /> wählen. Den Fork holen Sie dann wie jedes Paket in Moodle.</p>
+          <p>Im Hub: Auf der Paketseite <Ui de="Variante anlegen" /> wählen. Die Variante holen Sie dann in Moodle wie jedes Paket.</p>
         </Step>
-        <Step n={2} title="Fork bearbeiten">
+        <Step n={2} title="Variante bearbeiten">
           <p>
-            Ändern Sie die Fragen in Moodle wie gewohnt und veröffentlichen Sie sie mit <Ui de="Push" /> als neue Version des
-            Forks. Ändert sich das Original inzwischen, wählen Sie auf der Seite Ihres Forks im Hub <Ui de="Änderungen des Originals übernehmen" />:
-            Die Änderungen des Originals kommen als neue Fork-Version dazu, Ihre eigenen bleiben. In Moodle holen Sie sie mit <Ui de="Pull v…" />.
+            Ändern Sie die Fragen in Moodle wie gewohnt und veröffentlichen Sie sie mit <Ui de="Push" /> als neue Version der
+            Variante. Ändert sich das Original inzwischen, wählen Sie auf der Paketseite Ihre Variante und dort <Ui de="Änderungen des Originals übernehmen" />:
+            Die Änderungen des Originals kommen als neue Version der Variante dazu, Ihre eigenen bleiben. In Moodle holen Sie sie mit <Ui de="Pull v…" />.
           </p>
         </Step>
         <Step n={3} title="Änderungsvorschlag stellen">
           <p>
-            Auf der Seite Ihres Forks im Hub (oder in Moodle über <Ui de="Änderungen vorschlagen" en="Propose changes" />) <Ui de="Änderungsvorschlag erstellen" />
-            wählen, Titel und Beschreibung angeben. Die Admins des Originals erhalten eine E-Mail. Spätere Versionen Ihres Forks
-            erscheinen automatisch im offenen Änderungsvorschlag.
+            Auf der Paketseite Ihre Variante wählen (oder in Moodle über <Ui de="Änderungen vorschlagen" en="Propose changes" />) und
+            <Ui de="Änderungsvorschlag erstellen" /> klicken, Titel und Beschreibung angeben. Die Admins des Originals erhalten eine
+            E-Mail. Spätere Versionen Ihrer Variante erscheinen automatisch im offenen Änderungsvorschlag.
           </p>
         </Step>
         <Step n={4} title="Prüfen, diskutieren, übernehmen">
           <p>
-            Im Reiter <Ui de="Änderungen" /> sehen alle mit Zugriff jede geänderte Frage als Zeilenvergleich und können sie
-            kommentieren; Diskussionen lassen sich als erledigt markieren. Bearbeiter/innen und Admins des Originals können
-            genehmigen. Admins übernehmen den Änderungsvorschlag: Der Hub veröffentlicht die Änderungen als neue Version des Originals.
-            Haben Fork und Original dieselbe Frage unterschiedlich geändert (Konflikt), wählen sie je Frage, welche Fassung gilt.
+            Im Reiter <Ui de="Änderungen" /> sehen alle mit Zugriff jede geänderte Frage und können sie kommentieren; Diskussionen
+            lassen sich als erledigt markieren. Bearbeiter/innen und Admins des Originals können genehmigen. Admins übernehmen den
+            Vorschlag: Der Hub veröffentlicht die Änderungen als neue Version des Originals. Haben Variante und Original dieselbe
+            Frage unterschiedlich geändert (Konflikt), entscheiden sie je Frage, welche Fassung gilt.
           </p>
         </Step>
       </ol>
       <p className="text-xs text-slate-500 border-t border-slate-100 pt-3">
         Fragen werden über Kategoriepfad und ID-Nummer erkannt, ohne ID-Nummer über Fragetyp und Namen. Eine umbenannte Frage
-        ohne ID-Nummer erscheint deshalb als entfernt und neu. Ein Fork eines privaten Pakets bleibt privat.
+        ohne ID-Nummer erscheint deshalb als entfernt und neu. Eine Variante eines privaten Pakets bleibt privat.
       </p>
     </section>
 
@@ -262,12 +263,12 @@ export const GuidePage: React.FC = () => {
       <h2 className="text-lg font-bold text-slate-900">Lizenz: offene Bildungsmaterialien</h2>
       <p className="text-sm text-slate-700">
         Jedes Paket steht unter einer Creative-Commons-Lizenz, die Sie beim Veröffentlichen wählen. Mit der Veröffentlichung
-        eines öffentlichen Pakets werden die Fragen zu offenen Bildungsmaterialien (OER): Alle dürfen sie verwenden, forken,
+        eines öffentlichen Pakets werden die Fragen zu offenen Bildungsmaterialien (OER): Alle dürfen sie verwenden, weiterentwickeln,
         verändern und weitergeben.
       </p>
       <ul className="list-disc pl-5 text-sm text-slate-700 space-y-1">
         <li><strong>CC BY 4.0</strong> (Standard): Weiterverwendung mit Nennung der Urheberschaft.</li>
-        <li><strong>CC BY-SA 4.0</strong>: zusätzlich müssen Bearbeitungen, auch Forks, unter derselben Lizenz stehen.</li>
+        <li><strong>CC BY-SA 4.0</strong>: zusätzlich müssen Bearbeitungen, auch Varianten, unter derselben Lizenz stehen.</li>
         <li><strong>CC0 1.0</strong>: gemeinfrei, ohne Bedingungen.</li>
       </ul>
       <p className="text-sm text-slate-700">

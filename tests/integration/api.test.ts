@@ -1072,6 +1072,15 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
       expect((await app.inject({ method: 'PATCH', url: `/api/v1/packages/${forkId}`, headers: cAuth, payload: { license: 'CC0-1.0' } })).statusCode).toBe(400);
       expect((await get(`/api/v1/packages/${src}/forks`)).body.data.map((f: any) => f.id)).toEqual([forkId]);
       expect((await get(`/api/v1/packages/${src}`)).body.forks_count).toBe(1);
+      // Variants are not catalog entries (unless asked for); the original counts them; a variant knows its original.
+      const catalog = (await get(`/api/v1/packages?q=${encodeURIComponent('Fork Quelle')}&limit=100`)).body.data;
+      expect(catalog.map((p: any) => p.id)).toEqual([src]);
+      expect(catalog[0].variants_count).toBe(1);
+      const withVariants = (await get(`/api/v1/packages?q=${encodeURIComponent('Fork Quelle')}&limit=100&include_variants=1`)).body.data;
+      expect(withVariants.map((p: any) => p.id).sort()).toEqual([src, forkId].sort());
+      expect(forkDetail.root_id).toBe(src);
+      expect(forkDetail.title).toBe('Fork Quelle – Variante von Person contrib');
+      expect((await get(`/api/v1/packages/${src}/forks`)).body.data[0]).toMatchObject({ id: forkId, parent_id: src });
       const own = (await get('/api/v1/account/packages', cAuth)).body.data.find((p: any) => p.id === forkId);
       expect(own).toMatchObject({ forked_from_id: src, forked_from_version: '1.0.0', my_role: 'admin' });
 

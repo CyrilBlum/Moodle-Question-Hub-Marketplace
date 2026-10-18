@@ -96,7 +96,7 @@ export const PackageEditForm: React.FC<Props> = ({ pkg, onSaved, onCancel, showH
             <LicenseOptions allowed={pkg.forked_from ? forkLicenses(pkg.forked_from.license) : undefined} />
           </select>
           {pkg.forked_from?.license && (
-            <span className="block mt-1 font-normal text-slate-500">Fork eines Pakets unter {pkg.forked_from.license}: nur kompatible Lizenzen.</span>
+            <span className="block mt-1 font-normal text-slate-500">Variante eines Pakets unter {pkg.forked_from.license}: nur kompatible Lizenzen.</span>
           )}
         </label>
 

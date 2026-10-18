@@ -99,6 +99,10 @@ export interface PackageSearchResult {
   }>;
   /** Package this one was forked from (also when that package was withdrawn since). */
   forked_from_id?: string | null;
+  /** Variants (forks) below this package the viewer can see. */
+  variants_count?: number;
+  /** Original at the top of a variant chain (detail only). */
+  root_id?: string;
   /** Category paths of the latest release, e.g. $course$/top/Informatik/Bäume. */
   categories?: string[];
   stats: {

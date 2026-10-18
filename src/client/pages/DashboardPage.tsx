@@ -16,6 +16,18 @@ export const CANTONS = [
   ['TI', 'Tessin'], ['UR', 'Uri'], ['VD', 'Waadt'], ['VS', 'Wallis'], ['ZG', 'Zug'], ['ZH', 'Zürich'],
 ] as const;
 
+/** Own packages with each variant right after its original (when the original is in the list too). */
+function orderedPackages(list: any[]): any[] {
+  const ids = new Set(list.map(p => p.id));
+  const result: any[] = [];
+  const add = (p: any) => {
+    result.push(p);
+    list.filter(v => v.forked_from_id === p.id).forEach(add);
+  };
+  list.filter(p => !p.forked_from_id || !ids.has(p.forked_from_id)).forEach(add);
+  return result;
+}
+
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
   // Deep links such as /dashboard#github (from the Moodle plugin) land on that section.
@@ -187,8 +199,8 @@ export const DashboardPage: React.FC = () => {
           <p className="text-xs text-slate-500">Noch keine Pakete.</p>
         ) : (
           <div className="divide-y divide-slate-100">
-            {myPackages.map(pkg => (
-              <div key={pkg.id} className="py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            {orderedPackages(myPackages).map(pkg => (
+              <div key={pkg.id} className={`py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 ${pkg.forked_from_id && myPackages.some(p => p.id === pkg.forked_from_id) ? 'pl-6 border-l-2 border-violet-200' : ''}`}>
                 <div>
                   <a href={`/packages/${pkg.id}`} className="font-semibold text-sm text-slate-900 hover:text-red-600">
                     {pkg.title}
@@ -197,7 +209,7 @@ export const DashboardPage: React.FC = () => {
                     {pkg.id} • v{pkg.latest_version} • {pkg.downloads_count} Downloads •{' '}
                     {pkg.preview_enabled ? 'mit Vorschau' : 'ohne Vorschau'}
                     {!pkg.is_creator && <> • {pkg.my_role === 'admin' ? 'Admin' : 'Bearbeiter/in'}</>}
-                    {pkg.forked_from_id && <> • Fork von {pkg.forked_from_id}</>}
+                    {pkg.forked_from_id && <> • Ihre Variante von {pkg.forked_from_id}</>}
                   </div>
                 </div>
                 {pkg.my_role === 'admin' && <div className="flex gap-2">

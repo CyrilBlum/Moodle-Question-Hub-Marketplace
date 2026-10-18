@@ -95,7 +95,7 @@ export const QuestionDiffList: React.FC<{
       </div>
       {conflictCount > 0 && (
         <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
-          <strong>{plural(conflictCount, 'Konflikt', 'Konflikte')}:</strong> Original und Fork haben dieselbe Frage unterschiedlich verändert.
+          <strong>{plural(conflictCount, 'Konflikt', 'Konflikte')}:</strong> Original und Variante haben dieselbe Frage unterschiedlich verändert.
           {onResolve ? ' Entscheiden Sie bei jeder markierten Frage, welche Fassung gelten soll.' : ' Wer übernimmt, entscheidet, welche Fassung gilt.'}
         </p>
       )}

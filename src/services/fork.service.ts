@@ -174,12 +174,13 @@ export class ForkService {
     }
     const license = options.license || source.license;
     if (!compatibleForkLicenses(source.license).includes(license)) {
-      throw new Error(`BAD_REQUEST: Ein Fork eines Pakets unter ${source.license} kann nur unter ${compatibleForkLicenses(source.license).join(', ')} stehen.`);
+      throw new Error(`BAD_REQUEST: Eine Variante eines Pakets unter ${source.license} kann nur unter ${compatibleForkLicenses(source.license).join(', ')} stehen.`);
     }
-    const title = (options.title ? String(options.title).trim() : `${source.title} (Fork)`).slice(0, 200);
+    const author = await knex('users').where({ id: userId }).first('full_name');
+    const title = (options.title ? String(options.title).trim() : `${source.title} – Variante von ${author?.full_name || 'Unbekannt'}`).slice(0, 200);
     if (title.length < 3) throw new Error('BAD_REQUEST: Der Titel muss mindestens 3 Zeichen lang sein.');
 
-    const manifest = await PackageContent.manifestFor(sourceId, version, `Fork von ${sourceId} v${version}`);
+    const manifest = await PackageContent.manifestFor(sourceId, version, `Variante von ${sourceId} v${version}`);
     manifest.id = forkId;
     manifest.title = title;
     manifest.license = license;
@@ -201,31 +202,41 @@ export class ForkService {
     throw new Error('CONFLICT: Keine freie Paket-ID gefunden. Geben Sie eine ID an.');
   }
 
-  /** Forks of a package the viewer may see. */
+  /** Variants below a package (also variants of variants, with their parent) the viewer may see. */
   public async listForks(packageId: string, viewerId?: string): Promise<any[]> {
     const knex = getDatabase();
-    const packages = PackageService.getInstance();
     if (!(await knex('packages').where({ id: packageId }).first('id'))) throw new Error('NOT_FOUND: Paket nicht gefunden.');
     if (!(await canSee(packageId, viewerId))) throw new Error('FORBIDDEN: Kein Zugriff auf dieses Paket.');
-    const rows = await knex('packages').join('users', 'packages.owner_id', 'users.id')
-      .where({ 'packages.forked_from_id': packageId })
-      .select('packages.id', 'packages.title', 'packages.latest_version', 'packages.forked_from_version',
-        'packages.visibility', 'packages.updated_at', 'packages.created_at', 'users.full_name as author_name', 'users.institution')
-      .orderBy('packages.updated_at', 'desc');
-    const visible = [];
-    for (const r of rows) {
-      if (!(await canSee(r.id, viewerId))) continue;
-      const openMr = await knex('merge_requests').where({ source_package_id: r.id, target_package_id: packageId }).whereIn('status', ['open', 'merging']).first('number');
-      visible.push({
-        id: r.id, title: r.title, latest_version: r.latest_version, forked_from_version: r.forked_from_version,
-        visibility: r.visibility === 'private' ? 'private' : 'public',
-        author: { name: r.author_name, institution: r.institution },
-        open_merge_request: openMr ? openMr.number : null,
-        created_at: new Date(r.created_at).toISOString(), updated_at: new Date(r.updated_at).toISOString(),
-      });
+    const visible: any[] = [];
+    let level = [packageId];
+    const seen = new Set(level);
+    for (let depth = 0; depth < 20 && level.length; depth++) {
+      const rows = await knex('packages').join('users', 'packages.owner_id', 'users.id')
+        .whereIn('packages.forked_from_id', level)
+        .select('packages.id', 'packages.title', 'packages.latest_version', 'packages.forked_from_id', 'packages.forked_from_version',
+          'packages.visibility', 'packages.updated_at', 'packages.created_at', 'users.full_name as author_name', 'users.institution')
+        .orderBy('packages.updated_at', 'desc');
+      level = [];
+      for (const r of rows) {
+        if (seen.has(r.id)) continue;
+        seen.add(r.id);
+        level.push(r.id);
+        if (!(await canSee(r.id, viewerId))) continue;
+        const openMr = await knex('merge_requests').where({ source_package_id: r.id, target_package_id: r.forked_from_id })
+          .whereIn('status', ['open', 'merging']).first('number');
+        visible.push({
+          id: r.id, title: r.title, latest_version: r.latest_version,
+          parent_id: r.forked_from_id, forked_from_version: r.forked_from_version,
+          visibility: r.visibility === 'private' ? 'private' : 'public',
+          author: { name: r.author_name, institution: r.institution },
+          open_merge_request: openMr ? openMr.number : null,
+          created_at: new Date(r.created_at).toISOString(), updated_at: new Date(r.updated_at).toISOString(),
+        });
+      }
     }
     return visible;
   }
+
 
   /** Base, fork and original contents of a fork; throws when the original is gone or not accessible. */
   private async contents(forkId: string, viewerId?: string) {
@@ -233,7 +244,7 @@ export class ForkService {
     const fork = await knex('packages').where({ id: forkId }).first();
     // A private fork stays invisible to people without access (404, not 403).
     if (!fork || !(await canSee(forkId, viewerId))) throw new Error('NOT_FOUND: Paket nicht gefunden.');
-    if (!fork.forked_from_id) throw new Error('BAD_REQUEST: Dieses Paket ist kein Fork.');
+    if (!fork.forked_from_id) throw new Error('BAD_REQUEST: Dieses Paket ist keine Variante.');
     const upstream = await knex('packages').where({ id: fork.forked_from_id }).first();
     if (!upstream) throw new Error('CONFLICT: Das ursprüngliche Paket wurde zurückgezogen.');
     if (!(await canSee(upstream.id, viewerId))) {
@@ -284,20 +295,20 @@ export class ForkService {
     input: { version?: string; release_notes?: string; resolutions?: Record<string, Resolution> },
   ): Promise<{ status: 'up_to_date' | 'base_moved' | 'merged'; version?: string; base_version: string }> {
     const knex = getDatabase();
-    await PackageMembersService.getInstance().require(forkId, userId, 'editor', 'Nur Bearbeiter/innen des Forks können ihn abgleichen.');
+    await PackageMembersService.getInstance().require(forkId, userId, 'editor', 'Nur Bearbeiter/innen der Variante können ihn abgleichen.');
     const c = await this.contents(forkId, userId);
     if (c.fork.forked_from_version === c.upstream.latest_version) {
       return { status: 'up_to_date', base_version: c.upstream.latest_version };
     }
     if (!c.baseAvailable) {
       // Without the common base, the original's changes cannot be told from the fork's: a merge would drop them.
-      throw new Error(`CONFLICT: Version ${c.fork.forked_from_version} des Originals, auf der der Fork beruht, wurde zurückgezogen. Ein automatischer Abgleich ist nicht möglich; holen Sie die aktuelle Version des Originals und übertragen Sie Ihre Änderungen von Hand.`);
+      throw new Error(`CONFLICT: Version ${c.fork.forked_from_version} des Originals, auf der die Variante beruht, wurde zurückgezogen. Ein automatischer Abgleich ist nicht möglich; holen Sie die aktuelle Version des Originals und übertragen Sie Ihre Änderungen von Hand.`);
     }
     // Fork = source of the kept changes, original = target receiving them: merging the fork's changes into
     // the original's current version gives the synced fork.
     const merged = mergeThreeWay(c.base.parsed, c.forkContent.parsed, c.upstreamContent.parsed, flip(input.resolutions || {}));
     if (merged.unresolved.length) {
-      const err = new Error(`CONFLICT: ${merged.unresolved.length} Frage(n) wurden im Fork und im Original unterschiedlich geändert. Wählen Sie für jede, welche Fassung gilt.`);
+      const err = new Error(`CONFLICT: ${merged.unresolved.length} Frage(n) wurden in der Variante und im Original unterschiedlich geändert. Wählen Sie für jede, welche Fassung gilt.`);
       (err as any).conflicts = merged.unresolved.map(e => e.key);
       throw err;
     }

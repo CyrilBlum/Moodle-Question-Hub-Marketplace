@@ -190,7 +190,7 @@ export const MergeRequestPage: React.FC = () => {
                         </button>
                       </p>
                     )}
-                    {!m.base_available && <p className="text-xs text-slate-500">Die Version des Originals, auf der der Fork beruht, wurde zurückgezogen; verglichen wird mit der aktuellen Version.</p>}
+                    {!m.base_available && <p className="text-xs text-slate-500">Die Version des Originals, auf der die Variante beruht, wurde zurückgezogen; verglichen wird mit der aktuellen Version.</p>}
                   </div>
                 ) : <p className="text-amber-800">{m.reason}</p>}
                 {p.can_merge && (
@@ -217,7 +217,7 @@ export const MergeRequestPage: React.FC = () => {
             <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-2 text-sm">
               <h2 className="font-bold text-slate-900">Genehmigungen</h2>
               {mr.approvals.length === 0 ? <p className="text-slate-500 text-xs">Noch keine.</p> : (
-                <ul className="text-xs text-slate-700 space-y-1">{mr.approvals.map((a: any) => <li key={a.user_id} className={`flex items-center gap-1 ${a.outdated ? 'text-slate-400' : ''}`}><Check className={`w-3.5 h-3.5 ${a.outdated ? 'text-slate-300' : 'text-emerald-600'}`} />{a.name}{a.outdated && ` (für Fork-Version ${a.source_version}, inzwischen geändert)`}</li>)}</ul>
+                <ul className="text-xs text-slate-700 space-y-1">{mr.approvals.map((a: any) => <li key={a.user_id} className={`flex items-center gap-1 ${a.outdated ? 'text-slate-400' : ''}`}><Check className={`w-3.5 h-3.5 ${a.outdated ? 'text-slate-300' : 'text-emerald-600'}`} />{a.name}{a.outdated && ` (für Varianten-Version ${a.source_version}, inzwischen geändert)`}</li>)}</ul>
               )}
               {p.can_approve && (
                 <button disabled={busy} onClick={() => act(() => api.setMergeRequestApproval(id, number, !p.approved_by_me))}
@@ -246,12 +246,12 @@ export const MergeRequestPage: React.FC = () => {
           ) : (
             <>
               <p className="text-sm text-slate-600">
-                Was der Fork gegenüber dem Original (Version {changes.base_version}) geändert hat: rot entfernt, grün neu.
+                Was die Variante gegenüber dem Original (Version {changes.base_version}) geändert hat: rot entfernt, grün neu.
                 {!changes.base_available && ' Diese Version des Originals wurde zurückgezogen; verglichen wird mit der aktuellen Version.'}
               </p>
-              <QuestionDiffList changes={changes.changes} sideLabel="Änderung im Fork" otherLabel="Änderung im Original"
+              <QuestionDiffList changes={changes.changes} sideLabel="Änderung in der Variante" otherLabel="Änderung im Original"
                 resolutions={resolutions}
-                resolveOptions={p.can_merge ? [{ value: 'target', label: 'Fassung des Originals behalten' }, { value: 'source', label: 'Fassung des Forks übernehmen' }] : undefined}
+                resolveOptions={p.can_merge ? [{ value: 'target', label: 'Fassung des Originals behalten' }, { value: 'source', label: 'Fassung der Variante übernehmen' }] : undefined}
                 onResolve={p.can_merge ? (k, v) => setResolutions(r => ({ ...r, [k]: v })) : undefined}
                 notes={questionNotes}
                 onComment={p.can_comment ? async (c, body) => { await api.commentMergeRequest(id, number, { body, question_key: c.key, question_name: c.name }); await load(); } : undefined} />

@@ -22,6 +22,8 @@ export interface PackageSearchFilters {
   canton?: string;
   license?: string;
   qtype?: string;
+  /** '1'/'true': also list variants (forks) as catalog entries. */
+  include_variants?: string | boolean;
   sort?: string;
   page?: number;
   limit?: number;
@@ -384,6 +386,17 @@ export class PackageService {
         'users.institution as author_institution',
         'users.canton as author_canton'
       );
+    // Variants (forks) are shown inside their original unless asked for; once the original is withdrawn
+    // they stand on their own again.
+    const includeVariants = filters.include_variants === true || ['1', 'true'].includes(String(filters.include_variants));
+    if (!includeVariants) {
+      query = query.where(function () {
+        this.whereNull('packages.forked_from_id')
+          .orWhereNotExists(function () {
+            this.select('*').from('packages as origin').whereRaw('origin.id = packages.forked_from_id');
+          });
+      });
+    }
 
     // Filter by subject
     if (filters.subject) {
@@ -456,6 +469,8 @@ export class PackageService {
       : [];
     const accessByPackage = new Map(accessRequests.map(request => [request.package_id, request.status]));
     const rolesByPackage = await PackageMembersService.getInstance().getRoles(packageIds, viewerId);
+    const variantCounts = new Map<string, number>();
+    for (const id of packageIds) variantCounts.set(id, await this.countVariants(id, viewerId));
 
     const data: PackageSearchResult[] = rows.map(row => {
       const pkgReleases = releases.filter(r => r.package_id === row.id);
@@ -515,6 +530,7 @@ export class PackageService {
         can_access: canAccess,
         my_role: myRole,
         forked_from_id: row.forked_from_id || null,
+        variants_count: canAccess ? variantCounts.get(row.id) || 0 : 0,
         categories: canAccess ? categoryPaths : [],
         stats: {
           question_count: canAccess ? questionCount : 0,
@@ -592,8 +608,8 @@ export class PackageService {
         exists: !!originRow,
       };
     }
-    const forkIds: string[] = await knex('packages').where({ forked_from_id: packageId }).pluck('id');
-    const forksCount = (await Promise.all(forkIds.map(f => this.canAccessPackage(f, viewerId)))).filter(Boolean).length;
+    const forksCount = await this.countVariants(packageId, viewerId);
+    const rootId = await this.rootOf(packageId);
     const openMrs = canAccess
       ? Number((await knex('merge_requests').where({ target_package_id: packageId }).whereIn('status', ['open', 'merging']).count<{ c: number }>('id as c').first())?.c || 0)
       : 0;
@@ -644,6 +660,8 @@ export class PackageService {
       github_repo: myRole === 'admin' || isHubAdmin ? row.github_repo || null : undefined,
       forked_from_id: row.forked_from_id || null,
       forked_from: forkedFrom,
+      // The original at the top of a variant chain (itself for an original); the web page shows variants there.
+      root_id: rootId,
       forks_count: forksCount,
       open_merge_requests_count: openMrs,
       stats: {
@@ -674,6 +692,35 @@ export class PackageService {
     };
 
     return result;
+  }
+
+  /** Topmost existing original of a variant chain (the package itself when it is not a variant). */
+  public async rootOf(packageId: string): Promise<string> {
+    const knex = getDatabase();
+    let current = packageId;
+    for (let i = 0; i < 20; i++) {
+      const row = await knex('packages').where({ id: current }).first('forked_from_id');
+      if (!row?.forked_from_id || !(await knex('packages').where({ id: row.forked_from_id }).first('id'))) return current;
+      current = row.forked_from_id;
+    }
+    return current;
+  }
+
+  /** Variants below a package (also variants of variants) the viewer may see. */
+  public async countVariants(packageId: string, viewerId?: string): Promise<number> {
+    const knex = getDatabase();
+    let count = 0;
+    let level = [packageId];
+    const seen = new Set(level);
+    for (let depth = 0; depth < 20 && level.length; depth++) {
+      const children: string[] = await knex('packages').whereIn('forked_from_id', level).pluck('id');
+      level = children.filter(c => !seen.has(c));
+      for (const c of level) {
+        seen.add(c);
+        if (await this.canAccessPackage(c, viewerId)) count++;
+      }
+    }
+    return count;
   }
 
   public async canAccessPackage(packageId: string, userId?: string): Promise<boolean> {
@@ -858,7 +905,7 @@ export class PackageService {
         throw new Error(`BAD_REQUEST: Unbekannte Lizenz '${patch.license}'.`);
       }
       if (pkg.forked_from_license && !compatibleForkLicenses(pkg.forked_from_license).includes(patch.license)) {
-        throw new Error(`BAD_REQUEST: Dieser Fork stammt aus einem Paket unter ${pkg.forked_from_license}; erlaubt sind nur ${compatibleForkLicenses(pkg.forked_from_license).join(', ')}.`);
+        throw new Error(`BAD_REQUEST: Diese Variante stammt aus einem Paket unter ${pkg.forked_from_license}; erlaubt sind nur ${compatibleForkLicenses(pkg.forked_from_license).join(', ')}.`);
       }
       update.license = patch.license;
     }
@@ -1040,7 +1087,7 @@ export class PackageService {
         await trx('merge_requests').where({ id: mrId }).update({ status: 'closed', closed_by: ownerId, closed_at: new Date(), updated_at: new Date() });
         await trx('merge_request_notes').insert({
           id: crypto.randomUUID(), merge_request_id: mrId, author_id: ownerId, kind: 'system',
-          body: 'hat den Änderungsvorschlag geschlossen: Der Fork wurde zurückgezogen.', created_at: new Date(), updated_at: new Date(),
+          body: 'hat den Änderungsvorschlag geschlossen: Die Variante wurde zurückgezogen.', created_at: new Date(), updated_at: new Date(),
         });
       }
       await trx('releases').where({ package_id: packageId }).del();

@@ -15,40 +15,26 @@ export const MrStatusBadge: React.FC<{ status: string }> = ({ status }) => {
   return <span className={`inline-flex items-center gap-1 text-xs border rounded-full px-2 py-0.5 ${s.cls}`}><Icon className="w-3.5 h-3.5" />{s.label}</span>;
 };
 
-/** Forks of a package the viewer can see. */
-export const ForksList: React.FC<{ pkg: any }> = ({ pkg }) => {
-  const [forks, setForks] = useState<any[] | null>(null);
-  const [error, setError] = useState('');
-  useEffect(() => {
-    api.getForks(pkg.id).then(r => setForks(r.data || [])).catch(e => setError(e.message || 'Forks nicht verfügbar.'));
-  }, [pkg.id]);
-  return (
-    <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-3">
-      <h2 className="text-base font-bold text-slate-900 flex items-center gap-2"><GitFork className="w-4 h-4" />Forks</h2>
-      <p className="text-xs text-slate-500">Kopien dieses Pakets, die andere Lehrpersonen weiterentwickeln. Verbesserungen kommen über Änderungsvorschläge zurück.</p>
-      {error && <p className="text-sm text-rose-700">{error}</p>}
-      {forks && forks.length === 0 && <p className="text-sm text-slate-500">Noch keine Forks.</p>}
-      <ul className="divide-y divide-slate-100">
-        {forks?.map(f => (
-          <li key={f.id} className="py-3 flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <Link to={`/packages/${encodeURIComponent(f.id)}`} className="font-medium text-slate-900 hover:text-red-700">{f.title}</Link>
-              <p className="text-xs text-slate-500">
-                {f.author.name}{f.author.institution ? ` · ${f.author.institution}` : ''} · v{f.latest_version} · basiert auf v{f.forked_from_version}
-                {f.visibility === 'private' ? ' · privat' : ''}
-              </p>
-            </div>
-            {f.open_merge_request && (
-              <Link to={`/packages/${encodeURIComponent(pkg.id)}/merge-requests/${f.open_merge_request}`} className="text-xs text-red-700 hover:underline">
-                Änderungsvorschlag !{f.open_merge_request}
-              </Link>
-            )}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-};
+/** Variants of an original (overview sidebar); choosing one shows it on the same page. */
+export const ForksList: React.FC<{ root: any; variants: any[]; onChoose: (id: string) => void }> = ({ root, variants, onChoose }) => (
+  <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-2">
+    <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5"><GitFork className="w-4 h-4 text-violet-700" />Varianten</h3>
+    <p className="text-xs text-slate-500">Weiterentwicklungen dieses Pakets durch andere Lehrpersonen. Verbesserungen kommen über Änderungsvorschläge ins Original.</p>
+    <ul className="divide-y divide-slate-100">
+      {variants.map(v => (
+        <li key={v.id} className="py-2">
+          <button type="button" onClick={() => onChoose(v.id)} className="text-left text-sm font-medium text-slate-900 hover:text-red-700">
+            {v.parent_id !== root.id ? '↳ ' : ''}Variante von {v.author.name}
+          </button>
+          <p className="text-xs text-slate-500">
+            v{v.latest_version} · aus Version {v.forked_from_version}{v.visibility === 'private' ? ' · privat' : ''}
+            {v.open_merge_request ? <> · <Link to={`/packages/${encodeURIComponent(v.parent_id)}/merge-requests/${v.open_merge_request}`} className="text-red-700 hover:underline">Vorschlag !{v.open_merge_request}</Link></> : null}
+          </p>
+        </li>
+      ))}
+    </ul>
+  </div>
+);
 
 /** Merge requests into a package, filterable by status. */
 export const MergeRequestList: React.FC<{ pkg: any }> = ({ pkg }) => {
@@ -73,8 +59,8 @@ export const MergeRequestList: React.FC<{ pkg: any }> = ({ pkg }) => {
         </div>
       </div>
       <p className="text-xs text-slate-500">
-        Vorschläge aus Forks dieses Pakets. Die Admins des Pakets prüfen sie Frage für Frage und übernehmen sie als neue Version.
-        Einen eigenen Vorschlag machen Sie, indem Sie das Paket forken, den Fork ändern und dort «Änderungsvorschlag erstellen» wählen.
+        Vorschläge aus Varianten dieses Pakets. Die Admins des Pakets prüfen sie Frage für Frage und übernehmen sie als neue Version.
+        Einen eigenen Vorschlag machen Sie, indem Sie eine Variante anlegen, sie ändern und dort «Änderungsvorschlag erstellen» wählen.
       </p>
       {error && <p className="text-sm text-rose-700">{error}</p>}
       {items === null && !error && <p className="text-sm text-slate-500">Lade …</p>}
@@ -87,7 +73,7 @@ export const MergeRequestList: React.FC<{ pkg: any }> = ({ pkg }) => {
                 <span className="text-slate-400 mr-1">!{m.number}</span>{m.title}
               </Link>
               <p className="text-xs text-slate-500">
-                {m.author.name} · aus <span className="font-mono">{m.source_package_id}</span> · {new Date(m.created_at).toLocaleDateString('de-CH')}
+                {m.author.name} · aus einer Variante · {new Date(m.created_at).toLocaleDateString('de-CH')}
                 {m.merged_version ? ` · als v${m.merged_version} übernommen` : ''}
               </p>
             </div>

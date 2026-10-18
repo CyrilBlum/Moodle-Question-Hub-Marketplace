@@ -45,7 +45,7 @@ export const ForkPanel: React.FC<{ pkg: any; onChanged: () => void }> = ({ pkg, 
   if (!origin.exists) {
     return (
       <div className="rounded-xl border border-slate-200 bg-white p-5 text-sm text-slate-600">
-        <GitFork className="inline w-4 h-4 mr-1" />Das ursprüngliche Paket <code>{origin.id}</code> wurde zurückgezogen. Der Fork bleibt als eigenständiges Paket bestehen.
+        <GitFork className="inline w-4 h-4 mr-1" />Das ursprüngliche Paket <code>{origin.id}</code> wurde zurückgezogen. Die Variante bleibt als eigenständiges Paket bestehen.
       </div>
     );
   }
@@ -55,9 +55,9 @@ export const ForkPanel: React.FC<{ pkg: any; onChanged: () => void }> = ({ pkg, 
     setMessage('');
     try {
       const res = await api.syncFork(pkg.id, { resolutions, release_notes: notes || undefined });
-      setMessage(res.status === 'merged' ? `Abgeglichen: Version ${res.version} des Forks enthält jetzt die Änderungen des Originals bis v${res.base_version}.`
-        : res.status === 'base_moved' ? `Der Fork ist auf dem Stand von v${res.base_version}; eine neue Version war nicht nötig.`
-          : 'Der Fork ist bereits auf dem neuesten Stand.');
+      setMessage(res.status === 'merged' ? `Abgeglichen: Version ${res.version} der Variante enthält jetzt die Änderungen des Originals bis v${res.base_version}.`
+        : res.status === 'base_moved' ? `Die Variante ist auf dem Stand von v${res.base_version}; eine neue Version war nicht nötig.`
+          : 'Die Variante ist bereits auf dem neuesten Stand.');
       setMode('none');
       setResolutions({});
       onChanged();
@@ -89,22 +89,22 @@ export const ForkPanel: React.FC<{ pkg: any; onChanged: () => void }> = ({ pkg, 
   return (
     <div className="rounded-xl border border-violet-200 bg-violet-50/40 p-5 space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-sm font-bold text-slate-900 flex items-center gap-1.5"><GitFork className="w-4 h-4" />Fork von «{origin.title}»</h2>
+        <h2 className="text-sm font-bold text-slate-900 flex items-center gap-1.5"><GitFork className="w-4 h-4" />Variante von «{origin.title}»</h2>
         <Link to={`/packages/${encodeURIComponent(origin.id)}`} className="text-xs text-red-700 hover:underline">Zum Original</Link>
       </div>
       {error && <p className="text-sm text-rose-700">{error}</p>}
       {status && (
         <div className="text-sm text-slate-700 space-y-1">
           <p>
-            {status.ahead === 0 ? 'Sie haben im Fork noch nichts geändert.' : `Sie haben im Fork ${plural(status.ahead, 'Frage', 'Fragen')} geändert, hinzugefügt oder entfernt.`}{' '}
+            {status.ahead === 0 ? 'Sie haben in der Variante noch nichts geändert.' : `Sie haben in der Variante ${plural(status.ahead, 'Frage', 'Fragen')} geändert, hinzugefügt oder entfernt.`}{' '}
             {status.behind === 0
-              ? 'Das Original hat sich seit Ihrer Kopie nicht verändert.'
-              : `Das Original hat sich seit Ihrer Kopie (Version ${status.base_version}) verändert: ${plural(status.behind, 'Frage', 'Fragen')}, aktuell Version ${status.upstream.latest_version}.`}
+              ? 'Das Original hat sich seit Ihre Variante entstand, nicht verändert.'
+              : `Das Original hat sich seit Ihre Variante entstand (Version ${status.base_version}) verändert: ${plural(status.behind, 'Frage', 'Fragen')}, aktuell Version ${status.upstream.latest_version}.`}
           </p>
           {status.conflicts > 0 && (
             <p className="text-amber-800">Bei {plural(status.conflicts, 'Frage', 'Fragen')} haben beide Seiten etwas geändert: Beim Übernehmen entscheiden Sie, welche Fassung gilt.</p>
           )}
-          {!status.base_available && <p className="text-xs text-slate-500">Die Version, auf der Ihr Fork beruht, wurde zurückgezogen; verglichen wird mit der aktuellen Version des Originals.</p>}
+          {!status.base_available && <p className="text-xs text-slate-500">Die Version, auf der Ihre Variante beruht, wurde zurückgezogen; verglichen wird mit der aktuellen Version des Originals.</p>}
         </div>
       )}
       {status?.can_sync && (
@@ -122,7 +122,7 @@ export const ForkPanel: React.FC<{ pkg: any; onChanged: () => void }> = ({ pkg, 
           ) : (
             <button type="button" disabled={status.ahead === 0} onClick={() => setMode('mr')}
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-900 text-white text-sm disabled:opacity-50"
-              title={status.ahead === 0 ? 'Der Fork enthält noch keine Änderungen.' : undefined}>
+              title={status.ahead === 0 ? 'Die Variante enthält noch keine Änderungen.' : undefined}>
               <GitPullRequest className="w-4 h-4" />Änderungsvorschlag erstellen
             </button>
           )}
@@ -134,13 +134,13 @@ export const ForkPanel: React.FC<{ pkg: any; onChanged: () => void }> = ({ pkg, 
         <div className="space-y-3 rounded-lg bg-white border border-slate-200 p-4">
           <h3 className="text-sm font-semibold">Änderungen im Original seit Version {status.base_version}</h3>
           <p className="text-xs text-slate-600">
-            Es entsteht Version {status.next_version} Ihres Forks mit diesen Änderungen; Ihre eigenen Änderungen bleiben erhalten,
+            Es entsteht Version {status.next_version} Ihrer Variante mit diesen Änderungen; Ihre eigenen Änderungen bleiben erhalten,
             das Original bleibt unverändert. Danach holen Sie die neue Version in Moodle mit «Pull».
           </p>
           {status.incoming ? (
-            <QuestionDiffList changes={status.incoming} sideLabel="Änderung im Original" otherLabel="Ihre Änderung im Fork"
+            <QuestionDiffList changes={status.incoming} sideLabel="Änderung im Original" otherLabel="Ihre Änderung in der Variante"
               resolutions={resolutions}
-              resolveOptions={[{ value: 'upstream', label: 'Fassung des Originals behalten' }, { value: 'fork', label: 'Fassung des Forks behalten' }]}
+              resolveOptions={[{ value: 'upstream', label: 'Fassung des Originals behalten' }, { value: 'fork', label: 'Fassung der Variante behalten' }]}
               onResolve={(k, v) => setResolutions(r => ({ ...r, [k]: v }))} />
           ) : <p className="text-sm text-slate-500">Lade Änderungen …</p>}
           <label className="block text-sm text-slate-700">
@@ -173,7 +173,7 @@ export const ForkPanel: React.FC<{ pkg: any; onChanged: () => void }> = ({ pkg, 
           </label>
           <p className="text-xs text-slate-500">
             Die Admins des Originals erhalten eine E-Mail und können die Änderungen Frage für Frage prüfen, kommentieren und übernehmen.
-            Neue Versionen Ihres Forks erscheinen automatisch im offenen Änderungsvorschlag.
+            Neue Versionen Ihrer Variante erscheinen automatisch im offenen Änderungsvorschlag.
           </p>
           <label className="flex items-start gap-2 text-sm text-slate-700">
             <input type="checkbox" required className="mt-1" />

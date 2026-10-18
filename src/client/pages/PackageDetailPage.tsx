@@ -54,14 +54,18 @@ const CategoryBranch: React.FC<{ nodes: CategoryNode[]; depth?: number }> = ({ n
 
 export const PackageDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  // The page belongs to an original; ?variante=<id> shows one of its variants (forks) inside it.
+  const [root, setRoot] = useState<any>(null);
   const [pkg, setPkg] = useState<any>(null);
+  const [variants, setVariants] = useState<any[]>([]);
   const [preview, setPreview] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const variantId = searchParams.get('variante') || '';
   // ?tab=anfragen / ?tab=mitwirkende are the links in the access request and membership e-mails.
-  const initialTab = ({ anfragen: 'requests', mitwirkende: 'members', merge: 'merge', forks: 'forks' } as const)[searchParams.get('tab') as 'anfragen'] || 'overview';
-  const [activeTab, setActiveTab] = useState<'overview' | 'categories' | 'preview' | 'versions' | 'members' | 'requests' | 'settings' | 'forks' | 'merge'>(initialTab);
+  const initialTab = ({ anfragen: 'requests', mitwirkende: 'members', merge: 'merge' } as const)[searchParams.get('tab') as 'anfragen'] || 'overview';
+  const [activeTab, setActiveTab] = useState<'overview' | 'categories' | 'preview' | 'versions' | 'members' | 'requests' | 'settings' | 'merge'>(initialTab);
   const [showFork, setShowFork] = useState(false);
   const [showVersions, setShowVersions] = useState(false);
   useEscapeKey(showVersions, () => setShowVersions(false));
@@ -79,7 +83,7 @@ export const PackageDetailPage: React.FC = () => {
     if (id) {
       loadData(id);
     }
-  }, [id]);
+  }, [id, variantId]);
 
   // Package admins and Hub admins manage the package; anyone with a role sees the members.
   const canManage = !!getToken() && !!pkg?.can_manage;
@@ -104,10 +108,27 @@ export const PackageDetailPage: React.FC = () => {
     if (!quiet) setLoading(true);
     try {
       const data = await api.getPackage(packageId);
-      setPkg(data);
+      // A variant's own address leads to its original's page (when the viewer may see the original).
+      if (data.root_id && data.root_id !== data.id && data.forked_from?.title) {
+        const keep = new URLSearchParams(searchParams);
+        keep.set('variante', data.id);
+        navigate(`/packages/${encodeURIComponent(data.root_id)}?${keep.toString()}`, { replace: true });
+        return;
+      }
+      setRoot(data);
+      let shown = data;
+      if (variantId) {
+        try {
+          const variant = await api.getPackage(variantId);
+          if (variant.root_id === data.id) shown = variant;
+        } catch { /* unknown or not visible: show the original */ }
+      }
+      setPkg(shown);
+      setPreview(null);
+      api.getForks(data.id).then(r => setVariants(r.data || [])).catch(() => setVariants([]));
       // Load preview (only if the author enabled it)
-      if (data.preview_enabled !== false && data.can_access !== false) {
-        const prevData = await api.getPackagePreview(packageId);
+      if (shown.preview_enabled !== false && shown.can_access !== false) {
+        const prevData = await api.getPackagePreview(shown.id);
         setPreview(prevData);
       }
     } catch (err) {
@@ -115,6 +136,16 @@ export const PackageDetailPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const reload = () => { if (id) loadData(id, true); };
+  const isVariant = !!root && !!pkg && root.id !== pkg.id;
+  const chooseVariant = (value: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (value) next.set('variante', value); else next.delete('variante');
+    next.delete('tab');
+    setActiveTab('overview');
+    setSearchParams(next);
   };
 
   const copyImportUrl = () => {
@@ -131,7 +162,7 @@ export const PackageDetailPage: React.FC = () => {
       setAccessRequestMessage(result.notification_sent === false
         ? 'Die Anfrage wurde gespeichert, aber die E-Mail an die Eigentümerschaft konnte nicht zugestellt werden.'
         : result.status === 'approved' ? 'Sie haben bereits Zugriff.' : 'Anfrage gesendet. Die Eigentümerschaft wurde per E-Mail benachrichtigt.');
-      if (result.status === 'approved') loadData(pkg.id, true);
+      if (result.status === 'approved') reload();
       else setPkg((current: any) => ({ ...current, access_status: 'pending' }));
     } catch (err: any) {
       setAccessRequestMessage(err.message || 'Die Anfrage konnte nicht gesendet werden.');
@@ -203,15 +234,15 @@ export const PackageDetailPage: React.FC = () => {
               )}
               <span className="text-xs text-slate-400 font-mono">{pkg.id}</span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">{pkg.title}</h1>
-            {pkg.forked_from && (
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">{root.title}</h1>
+            {/* A variant on its own page: its original was withdrawn or is not visible to the viewer. */}
+            {!isVariant && pkg.forked_from && (
               <p className="text-sm text-slate-600 flex items-center gap-1.5">
-                <GitFork className="w-4 h-4 text-violet-600" />Fork von{' '}
+                <GitFork className="w-4 h-4 text-violet-600" />Variante von{' '}
                 {pkg.forked_from.exists && pkg.forked_from.title
                   ? <Link to={`/packages/${encodeURIComponent(pkg.forked_from.id)}`} className="text-red-700 hover:underline">«{pkg.forked_from.title}»</Link>
-                  : <span className="font-mono">{pkg.forked_from.id}{pkg.forked_from.exists ? '' : ' (zurückgezogen)'}</span>}
+                  : <span className="font-mono">{pkg.forked_from.id}{pkg.forked_from.exists ? '' : ' (Original zurückgezogen)'}</span>}
                 {pkg.forked_from.author_name && <span>von {pkg.forked_from.author_name}</span>}
-                {pkg.forked_from.version && <span className="text-slate-400">· Basis v{pkg.forked_from.version}</span>}
               </p>
             )}
             <div className="text-sm text-slate-600 flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -264,10 +295,10 @@ export const PackageDetailPage: React.FC = () => {
             <button
               onClick={() => getToken() ? setShowFork(true) : navigate(`/login?return_to=${encodeURIComponent(window.location.pathname)}`)}
               className="inline-flex items-center space-x-1.5 px-3 py-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium transition text-sm shadow-sm"
-              title="Eigene Kopie anlegen, bearbeiten und Änderungen per Änderungsvorschlag vorschlagen"
+              title="Eigene Variante dieser Fassung anlegen, bearbeiten und Verbesserungen dem Original vorschlagen"
             >
               <GitFork className="w-4 h-4 text-slate-500" />
-              <span>Eigene Kopie (Fork)</span>
+              <span>Variante anlegen</span>
             </button>
             <button
               onClick={copyImportUrl}
@@ -309,6 +340,35 @@ export const PackageDetailPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Original and its variants: one page, the selector chooses what is shown. */}
+      {variants.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-violet-200 bg-violet-50/50 px-4 py-3">
+          <label htmlFor="variant-select" className="text-sm font-semibold text-slate-800 flex items-center gap-1.5">
+            <GitFork className="w-4 h-4 text-violet-700" />Fassung
+          </label>
+          <select id="variant-select" value={isVariant ? pkg.id : ''} onChange={e => chooseVariant(e.target.value)}
+            className="flex-1 min-w-[14rem] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">
+            <option value="">Original · {root.author?.name} · v{root.latest_version}</option>
+            {variants.map(v => (
+              <option key={v.id} value={v.id}>
+                {v.parent_id !== root.id ? '↳ ' : ''}Variante von {v.author.name} · v{v.latest_version}{v.visibility === 'private' ? ' · privat' : ''}{v.open_merge_request ? ` · Vorschlag !${v.open_merge_request}` : ''}
+              </option>
+            ))}
+          </select>
+          <span className="text-xs text-slate-500">{variants.length} {variants.length === 1 ? 'Variante' : 'Varianten'}</span>
+        </div>
+      )}
+      {isVariant && (
+        <div className="rounded-xl border border-violet-300 bg-violet-50 p-4 space-y-3">
+          <p className="text-sm text-violet-950">
+            Sie sehen die <strong>Variante von {pkg.author?.name}</strong>{!pkg.title.startsWith(root.title) ? <> («{pkg.title}»)</> : null}, Version {pkg.latest_version},
+            entstanden aus Version {pkg.forked_from?.version} des Originals. Beschreibung, Vorschau, Versionen und Download unten gehören zu dieser Variante.{' '}
+            <button type="button" onClick={() => chooseVariant('')} className="underline font-medium">Zum Original</button>
+          </p>
+          {(pkg.my_role === 'admin' || pkg.my_role === 'editor') && <ForkPanel pkg={pkg} onChanged={reload} />}
+        </div>
+      )}
+
       {/* Tabs navigation */}
       <div className="border-b border-slate-200">
         <nav className="flex gap-6 overflow-x-auto">
@@ -319,8 +379,7 @@ export const PackageDetailPage: React.FC = () => {
               ? [{ id: 'preview', label: `Vorschau (${pkg.stats?.question_count || 0})` }]
               : []),
             ...(pkg.can_access !== false ? [{ id: 'versions', label: `Versionen (${pkg.releases?.length || 0})` }] : []),
-            ...(pkg.can_access !== false ? [{ id: 'merge', label: `Änderungsvorschläge${pkg.open_merge_requests_count ? ` (${pkg.open_merge_requests_count} offen)` : ''}` }] : []),
-            ...(pkg.can_access !== false && pkg.forks_count ? [{ id: 'forks', label: `Forks (${pkg.forks_count})` }] : []),
+            ...(root.can_access !== false ? [{ id: 'merge', label: `Änderungsvorschläge${root.open_merge_requests_count ? ` (${root.open_merge_requests_count} offen)` : ''}` }] : []),
             ...(hasRole ? [{ id: 'members', label: 'Mitwirkende' }] : []),
             ...(canManage && (pkg.visibility === 'private' || accessRequests.length > 0)
               ? [{ id: 'requests', label: `Zugriffsanfragen${pendingRequests ? ` (${pendingRequests} offen)` : ''}` }]
@@ -342,11 +401,12 @@ export const PackageDetailPage: React.FC = () => {
         </nav>
       </div>
 
-      {showFork && <ForkDialog pkg={pkg} onClose={() => setShowFork(false)} />}
+      {showFork && <ForkDialog pkg={pkg} root={root} onClose={() => setShowFork(false)} />}
 
       {/* Tab Contents */}
-      {activeTab === 'overview' && pkg.forked_from && (pkg.my_role === 'admin' || pkg.my_role === 'editor') && (
-        <ForkPanel pkg={pkg} onChanged={() => loadData(pkg.id, true)} />
+      {/* A standalone variant (original withdrawn or hidden) keeps its panel in the overview. */}
+      {activeTab === 'overview' && !isVariant && pkg.forked_from && (pkg.my_role === 'admin' || pkg.my_role === 'editor') && (
+        <ForkPanel pkg={pkg} onChanged={reload} />
       )}
       {activeTab === 'overview' && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -416,6 +476,7 @@ export const PackageDetailPage: React.FC = () => {
                 )}
               </div>
             )}
+            {!isVariant && variants.length > 0 && <ForksList root={root} variants={variants} onChoose={chooseVariant} />}
             <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-4">
               <h3 className="text-sm font-bold text-slate-900">Fragetypen im Paket</h3>
               <QuestionTypeBadges breakdown={pkg.stats?.qtypes_breakdown} max={20} />
@@ -503,16 +564,14 @@ export const PackageDetailPage: React.FC = () => {
 
       {activeTab === 'members' && hasRole && <PackageMembers packageId={pkg.id} />}
 
-      {activeTab === 'merge' && pkg.can_access !== false && <MergeRequestList pkg={pkg} />}
-
-      {activeTab === 'forks' && pkg.can_access !== false && <ForksList pkg={pkg} />}
+      {activeTab === 'merge' && root.can_access !== false && <MergeRequestList pkg={root} />}
 
       {activeTab === 'requests' && canManage && (
         <AccessRequests packageId={pkg.id} requests={accessRequests} onChanged={() => loadAccessRequests(pkg.id)} />
       )}
 
       {activeTab === 'settings' && canManage && (
-        <PackageSettings key={`${pkg.updated_at}`} pkg={pkg} onChanged={() => loadData(pkg.id, true)} />
+        <PackageSettings key={`${pkg.updated_at}`} pkg={pkg} onChanged={reload} />
       )}
 
       {activeTab === 'versions' && (

@@ -141,9 +141,9 @@ export class MergeRequestService {
     const target = await this.requireAccess(targetId, userId);
     const sourceId = String(input.source_package_id || '');
     const source = await knex('packages').where({ id: sourceId }).first();
-    if (!source) throw new Error('NOT_FOUND: Fork nicht gefunden.');
-    if (source.forked_from_id !== targetId) throw new Error('BAD_REQUEST: Änderungsvorschläge gehen nur von einem Fork an sein Ursprungspaket.');
-    if (!(await this.isPackageEditor(sourceId, userId))) throw new Error('FORBIDDEN: Nur Bearbeiter/innen des Forks können einen Änderungsvorschlag stellen.');
+    if (!source) throw new Error('NOT_FOUND: Variante nicht gefunden.');
+    if (source.forked_from_id !== targetId) throw new Error('BAD_REQUEST: Änderungsvorschläge gehen nur von einer Variante an sein Ursprungspaket.');
+    if (!(await this.isPackageEditor(sourceId, userId))) throw new Error('FORBIDDEN: Nur Bearbeiter/innen der Variante können einen Änderungsvorschlag stellen.');
     const title = String(input.title || '').trim();
     if (title.length < 3 || title.length > 200) throw new Error('BAD_REQUEST: Der Titel muss 3 bis 200 Zeichen lang sein.');
     const description = String(input.description || '').trim();
@@ -154,9 +154,9 @@ export class MergeRequestService {
 
     const { entries, baseAvailable } = await this.compare(source, target);
     if (!baseAvailable) {
-      throw new Error(`CONFLICT: Version ${source.forked_from_version} des Originals, auf der der Fork beruht, wurde zurückgezogen. Ein Änderungsvorschlag lässt sich so nicht sicher übernehmen.`);
+      throw new Error(`CONFLICT: Version ${source.forked_from_version} des Originals, auf der die Variante beruht, wurde zurückgezogen. Ein Änderungsvorschlag lässt sich so nicht sicher übernehmen.`);
     }
-    if (!entries.some(e => e.source_status)) throw new Error('BAD_REQUEST: Der Fork enthält keine Änderungen gegenüber dem Original.');
+    if (!entries.some(e => e.source_status)) throw new Error('BAD_REQUEST: Die Variante enthält keine Änderungen gegenüber dem Original.');
 
     const id = crypto.randomUUID();
     let number = 0;
@@ -166,7 +166,7 @@ export class MergeRequestService {
         await trx('packages').where({ id: targetId }).forUpdate().first('id');
         const open = await trx('merge_requests').where({ target_package_id: targetId, source_package_id: sourceId })
           .whereIn('status', ['open', 'merging']).first('number');
-        if (open) throw new Error(`CONFLICT: Für diesen Fork ist Änderungsvorschlag !${open.number} bereits offen.`);
+        if (open) throw new Error(`CONFLICT: Für diese Variante ist Änderungsvorschlag !${open.number} bereits offen.`);
         const max = await trx('merge_requests').where({ target_package_id: targetId }).max<{ m: number }>('number as m').first();
         number = Number(max?.m || 0) + 1;
         const now = new Date();
@@ -188,7 +188,7 @@ export class MergeRequestService {
       to: await this.participants(mr, userId, false),
       subject: `Änderungsvorschlag !${number} für «${target.title}»: ${title}`,
       lines: [
-        `${author} schlägt Änderungen aus dem Fork «${source.title}» für Ihr Fragenpaket «${target.title}» vor.`,
+        `${author} schlägt Änderungen aus der Variante «${source.title}» für Ihr Fragenpaket «${target.title}» vor.`,
         ...(description ? ['', description.slice(0, 2000)] : []),
       ],
       url: this.url(targetId, number),
@@ -287,7 +287,7 @@ export class MergeRequestService {
       mergeability = { mergeable: false, reason: 'Der Änderungsvorschlag wird gerade übernommen.' };
     } else if (mr.status === 'open') {
       if (!source || source.forked_from_id !== targetId) {
-        mergeability = { mergeable: false, reason: 'Der Fork existiert nicht mehr.' };
+        mergeability = { mergeable: false, reason: 'Die Variante existiert nicht mehr.' };
       } else {
         try {
           const c = await this.compare(source, target);
@@ -299,8 +299,8 @@ export class MergeRequestService {
             mergeable: effective && c.baseAvailable,
             changes, conflicts,
             reason: !c.baseAvailable
-              ? `Version ${source.forked_from_version} des Originals, auf der der Fork beruht, wurde zurückgezogen. Ohne sie lassen sich die Änderungen nicht sicher übernehmen.`
-              : !effective ? 'Der Fork enthält keine Änderungen (mehr), die das Original nicht schon hat.' : null,
+              ? `Version ${source.forked_from_version} des Originals, auf der die Variante beruht, wurde zurückgezogen. Ohne sie lassen sich die Änderungen nicht sicher übernehmen.`
+              : !effective ? 'Die Variante enthält keine Änderungen (mehr), die das Original nicht schon hat.' : null,
             base_version: source.forked_from_version, base_available: c.baseAvailable,
             source_version: source.latest_version, target_version: target.latest_version,
             next_version: await PackageContent.nextVersion(targetId),
@@ -321,7 +321,7 @@ export class MergeRequestService {
       author: author ? { id: author.id, name: author.full_name, institution: author.institution } : { id: null, name: 'Gelöschtes Konto', institution: '' },
       target: { id: target.id, title: target.title, latest_version: target.latest_version, license: target.license },
       source: source
-        ? { id: source.id, title: canSeeSource ? source.title : 'Privater Fork', latest_version: canSeeSource ? source.latest_version : null, exists: true, can_access: canSeeSource }
+        ? { id: source.id, title: canSeeSource ? source.title : 'Private Variante', latest_version: canSeeSource ? source.latest_version : null, exists: true, can_access: canSeeSource }
         : { id: mr.source_package_id, title: null, latest_version: null, exists: false, can_access: false },
       merge_base_version: mr.merge_base_version, merged_source_version: mr.merged_source_version,
       merged_target_version: mr.merged_target_version, merged_version: mr.merged_version,
@@ -361,7 +361,7 @@ export class MergeRequestService {
     // The diff shows the fork's questions: only for people who may see the fork, and for the reviewers of the original.
     const sourceRow = await knex('packages').where({ id: mr.source_package_id }).first('id');
     if (!(sourceRow && await this.canAccess(sourceRow.id, viewerId)) && !(await this.isPackageEditor(targetId, viewerId))) {
-      return { available: false, reason: 'Der Fork ist privat oder existiert nicht mehr; seine Änderungen sind nur für Berechtigte sichtbar.', changes: [] };
+      return { available: false, reason: 'Die Variante ist privat oder existiert nicht mehr; seine Änderungen sind nur für Berechtigte sichtbar.', changes: [] };
     }
     if (mr.status === 'merged') {
       const c = await this.compare({ id: mr.source_package_id, forked_from_version: mr.merge_base_version }, target, {
@@ -375,7 +375,7 @@ export class MergeRequestService {
       };
     }
     const source = await knex('packages').where({ id: mr.source_package_id }).first();
-    if (!source) return { available: false, reason: 'Der Fork existiert nicht mehr.', changes: [] };
+    if (!source) return { available: false, reason: 'Die Variante existiert nicht mehr.', changes: [] };
     const c = await this.compare(source, target);
     return {
       available: true, base_version: source.forked_from_version, source_version: source.latest_version,
@@ -413,10 +413,10 @@ export class MergeRequestService {
         event = 'closed';
       } else if (patch.status === 'open' && mr.status === 'closed') {
         const fork = await knex('packages').where({ id: mr.source_package_id }).first('forked_from_id');
-        if (!fork || fork.forked_from_id !== targetId) throw new Error('CONFLICT: Der Fork existiert nicht mehr.');
+        if (!fork || fork.forked_from_id !== targetId) throw new Error('CONFLICT: Die Variante existiert nicht mehr.');
         const other = await knex('merge_requests').where({ target_package_id: targetId, source_package_id: mr.source_package_id })
           .whereIn('status', ACTIVE_STATUSES).first('number');
-        if (other) throw new Error(`CONFLICT: Für diesen Fork ist Änderungsvorschlag !${other.number} bereits offen.`);
+        if (other) throw new Error(`CONFLICT: Für diese Variante ist Änderungsvorschlag !${other.number} bereits offen.`);
         Object.assign(update, { status: 'open', closed_by: null, closed_at: null });
         event = 'reopened';
       } else {
@@ -505,7 +505,7 @@ export class MergeRequestService {
       // The approval is for the fork version reviewed now; a newer fork version makes it outdated.
       await knex('merge_request_approvals').where({ merge_request_id: mr.id, user_id: userId }).del();
       await knex('merge_request_approvals').insert({ merge_request_id: mr.id, user_id: userId, source_version: sourceVersion, created_at: new Date() });
-      await this.addNote(mr.id, userId, 'system', `hat den Änderungsvorschlag genehmigt${sourceVersion ? ` (Fork-Version ${sourceVersion})` : ''}.`);
+      await this.addNote(mr.id, userId, 'system', `hat den Änderungsvorschlag genehmigt${sourceVersion ? ` (Varianten-Version ${sourceVersion})` : ''}.`);
     } else if (!approve && existing) {
       await knex('merge_request_approvals').where({ merge_request_id: mr.id, user_id: userId }).del();
       await this.addNote(mr.id, userId, 'system', 'hat die Genehmigung zurückgenommen.');
@@ -525,13 +525,13 @@ export class MergeRequestService {
     if (mr.status !== 'open') throw new Error('CONFLICT: Dieser Änderungsvorschlag ist nicht offen.');
     if (!(await this.isPackageAdmin(targetId, userId))) throw new Error('FORBIDDEN: Nur Admins des Pakets können Änderungsvorschläge übernehmen.');
     const source = await knex('packages').where({ id: mr.source_package_id }).first();
-    if (!source || source.forked_from_id !== targetId) throw new Error('CONFLICT: Der Fork existiert nicht mehr.');
+    if (!source || source.forked_from_id !== targetId) throw new Error('CONFLICT: Die Variante existiert nicht mehr.');
     // What was reviewed must be what is merged: a newer fork or original version since the page was loaded is refused.
     if (typeof input.source_version !== 'string' || typeof input.target_version !== 'string') {
       throw new Error('BAD_REQUEST: source_version und target_version (die geprüften Versionen) sind nötig.');
     }
     if (input.source_version !== source.latest_version) {
-      throw new Error(`CONFLICT: Der Fork hat inzwischen Version ${source.latest_version}. Laden Sie die Seite neu und prüfen Sie die Änderungen erneut.`);
+      throw new Error(`CONFLICT: Die Variante hat inzwischen Version ${source.latest_version}. Laden Sie die Seite neu und prüfen Sie die Änderungen erneut.`);
     }
     if (input.target_version !== target.latest_version) {
       throw new Error(`CONFLICT: Das Paket hat inzwischen Version ${target.latest_version}. Laden Sie die Seite neu und prüfen Sie die Änderungen erneut.`);
@@ -545,11 +545,11 @@ export class MergeRequestService {
     }
     const c = await this.compare(source, target);
     if (!c.baseAvailable) {
-      throw new Error(`CONFLICT: Version ${source.forked_from_version} des Originals, auf der der Fork beruht, wurde zurückgezogen. Ohne sie lassen sich die Änderungen nicht sicher übernehmen.`);
+      throw new Error(`CONFLICT: Version ${source.forked_from_version} des Originals, auf der die Variante beruht, wurde zurückgezogen. Ohne sie lassen sich die Änderungen nicht sicher übernehmen.`);
     }
     const merged = mergeThreeWay(c.base.parsed, c.s.parsed, c.t.parsed, resolutions);
     if (merged.unresolved.length) {
-      const err = new Error(`CONFLICT: ${merged.unresolved.length} Frage(n) wurden im Fork und im Original unterschiedlich geändert. Wählen Sie für jede, welche Fassung übernommen wird.`);
+      const err = new Error(`CONFLICT: ${merged.unresolved.length} Frage(n) wurden in der Variante und im Original unterschiedlich geändert. Wählen Sie für jede, welche Fassung übernommen wird.`);
       (err as any).conflicts = merged.unresolved.map(e => e.key);
       throw err;
     }

@@ -14,7 +14,7 @@ export const Footer: React.FC = () => {
         <p className="mt-2 text-xs text-slate-500">
           Alle Fragenpakete stehen unter der beim Paket angegebenen{' '}
           <a href="https://creativecommons.org/licenses/?lang=de" target="_blank" rel="noopener noreferrer" className="underline hover:text-red-700">Creative-Commons-Lizenz</a>{' '}
-          (CC BY, CC BY-SA oder CC0). Öffentliche Pakete sind offene Bildungsmaterialien: verwenden, forken und verbessern ausdrücklich erwünscht.
+          (CC BY, CC BY-SA oder CC0). Öffentliche Pakete sind offene Bildungsmaterialien: verwenden, weiterentwickeln und verbessern ausdrücklich erwünscht.
         </p>
       </div>
     </footer>
