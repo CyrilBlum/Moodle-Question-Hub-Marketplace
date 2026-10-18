@@ -595,7 +595,7 @@ export class PackageService {
     const forkIds: string[] = await knex('packages').where({ forked_from_id: packageId }).pluck('id');
     const forksCount = (await Promise.all(forkIds.map(f => this.canAccessPackage(f, viewerId)))).filter(Boolean).length;
     const openMrs = canAccess
-      ? Number((await knex('merge_requests').where({ target_package_id: packageId, status: 'open' }).count<{ c: number }>('id as c').first())?.c || 0)
+      ? Number((await knex('merge_requests').where({ target_package_id: packageId }).whereIn('status', ['open', 'merging']).count<{ c: number }>('id as c').first())?.c || 0)
       : 0;
 
     const latestRelease = releases.find(r => r.version === row.latest_version) || releases[0];
@@ -1035,7 +1035,7 @@ export class PackageService {
       await trx('package_members').where({ package_id: packageId }).del();
       // Merge requests into the package go with it; open ones from it (a fork) are closed with a note.
       await trx('merge_requests').where({ target_package_id: packageId }).del();
-      const openFromHere = await trx('merge_requests').where({ source_package_id: packageId, status: 'open' }).pluck('id');
+      const openFromHere = await trx('merge_requests').where({ source_package_id: packageId }).whereIn('status', ['open', 'merging']).pluck('id');
       for (const mrId of openFromHere) {
         await trx('merge_requests').where({ id: mrId }).update({ status: 'closed', closed_by: ownerId, closed_at: new Date(), updated_at: new Date() });
         await trx('merge_request_notes').insert({

@@ -309,7 +309,7 @@ export const PackageDetailPage: React.FC = () => {
 
       {/* Tabs navigation */}
       <div className="border-b border-slate-200">
-        <nav className="flex space-x-8">
+        <nav className="flex gap-6 overflow-x-auto">
           {[
             { id: 'overview', label: 'Übersicht' },
             ...(pkg.can_access !== false ? [{ id: 'categories', label: `Kategorien (${pkg.categories?.length || 0})` }] : []),
@@ -328,7 +328,7 @@ export const PackageDetailPage: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`py-3 px-1 border-b-2 font-medium text-sm transition ${
+              className={`py-3 px-1 border-b-2 font-medium text-sm transition whitespace-nowrap ${
                 activeTab === tab.id
                   ? 'border-red-600 text-red-600'
                   : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'

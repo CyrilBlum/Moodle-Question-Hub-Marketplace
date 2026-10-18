@@ -1062,6 +1062,10 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
       const forked = await app.inject({ method: 'POST', url: `/api/v1/packages/${src}/forks`, headers: cAuth, payload: { id: forkId } });
       expect(forked.statusCode).toBe(201);
       expect(JSON.parse(forked.body)).toMatchObject({ package_id: forkId, version: '1.0.0', forked_from_id: src });
+      // Repeating the fork (e.g. after a timeout in Moodle) returns the same fork.
+      const again = await app.inject({ method: 'POST', url: `/api/v1/packages/${src}/forks`, headers: cAuth, payload: { id: forkId, version: '1.0.0' } });
+      expect(again.statusCode).toBe(201);
+      expect(JSON.parse(again.body).package_id).toBe(forkId);
       const forkDetail = (await get(`/api/v1/packages/${forkId}`, cAuth)).body;
       expect(forkDetail).toMatchObject({ license: 'CC-BY-SA-4.0', my_role: 'admin', forked_from: { id: src, version: '1.0.0', exists: true, title: 'Fork Quelle' } });
       expect((await app.inject({ method: 'PATCH', url: `/api/v1/packages/${forkId}`, headers: cAuth, payload: { license: 'CC0-1.0' } })).statusCode).toBe(400);
@@ -1121,11 +1125,12 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
       expect((await app.inject({ method: 'POST', url: `${mrUrl}/1/merge`, headers: cAuth, payload: {} })).statusCode).toBe(403);
 
       // The conflict needs a decision; then the fork's changes land on top of the original's.
-      const blocked = await app.inject({ method: 'POST', url: `${mrUrl}/1/merge`, headers: ownerAuth, payload: {} });
+      expect((await app.inject({ method: 'POST', url: `${mrUrl}/1/merge`, headers: ownerAuth, payload: {} })).statusCode).toBe(400);
+      const blocked = await app.inject({ method: 'POST', url: `${mrUrl}/1/merge`, headers: ownerAuth, payload: { source_version: '1.0.1', target_version: '1.1.0' } });
       expect(blocked.statusCode).toBe(409);
       expect(JSON.parse(blocked.body).conflicts).toEqual([q1]);
       // A merge pinned to an outdated fork version is refused (the reviewed content must be what is merged).
-      expect((await app.inject({ method: 'POST', url: `${mrUrl}/1/merge`, headers: ownerAuth, payload: { resolutions: { [q1]: 'source' }, source_version: '1.0.0' } })).statusCode).toBe(409);
+      expect((await app.inject({ method: 'POST', url: `${mrUrl}/1/merge`, headers: ownerAuth, payload: { resolutions: { [q1]: 'source' }, source_version: '1.0.0', target_version: '1.1.0' } })).statusCode).toBe(409);
       const merged = await app.inject({ method: 'POST', url: `${mrUrl}/1/merge`, headers: ownerAuth,
         payload: { resolutions: { [q1]: 'source' }, source_version: '1.0.1', target_version: '1.1.0' } });
       expect(merged.statusCode).toBe(200);

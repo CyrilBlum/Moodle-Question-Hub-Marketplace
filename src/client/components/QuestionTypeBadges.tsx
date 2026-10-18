@@ -35,6 +35,9 @@ const badgeDefinitions: Record<string, BadgeDefinition> = {
 
 const normalizeType = (type: string) => type.toLowerCase().replace(/[^a-z0-9]/g, '');
 
+/** German label of a Moodle question type (falls back to the raw type). */
+export const questionTypeLabel = (type: string): string => badgeDefinitions[normalizeType(type)]?.label || type;
+
 const titleFromType = (type: string) => type
   .replace(/[_-]+/g, ' ')
   .replace(/\b\w/g, char => char.toUpperCase());

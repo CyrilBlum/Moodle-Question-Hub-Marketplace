@@ -274,9 +274,14 @@ export function mergeThreeWay(
     for (let i = result.length - 1; i >= 0; i--) if (result[i].category === chosen.category) { at = i; break; }
     if (at < 0) result.push(chosen); else result.splice(at + 1, 0, chosen);
   }
-  // The target's category blocks win; categories only the source has come from the source. Not the base's:
-  // a category both sides dropped must not come back.
-  const categories = new Map([...source.categories, ...target.categories]);
+  // The target's category blocks win. From the source only categories it added or changed: one the target
+  // dropped (and the source left as it was) must not come back.
+  const categories = new Map(target.categories);
+  for (const [path, block] of source.categories) {
+    if (!categories.has(path) && base.categories.get(path) !== block) categories.set(path, block);
+  }
+  // A question the source added in a category the target no longer has keeps that category's block.
+  for (const q of result) if (!categories.has(q.category) && source.categories.has(q.category)) categories.set(q.category, source.categories.get(q.category)!);
   const changed = result.length !== target.questions.length || result.some((q, i) => q.norm !== target.questions[i].norm);
   return { xml: assemblePackage(result, categories), unresolved: [], entries, changed };
 }
@@ -383,6 +388,41 @@ export function hunks(rows: DiffRow[], context = 3): DiffHunk[] {
     current.push(row);
   });
   return result;
+}
+
+/** Direct child elements of a question block by tag name (several answers are joined). */
+function childElements(raw: string): Map<string, string> {
+  const blank = blankOpaque(raw);
+  const out = new Map<string, string>();
+  const re = /<(\/?)([a-zA-Z_][\w.-]*)([^>]*?)(\/?)>/g;
+  let depth = 0;
+  let start = -1;
+  let tag = '';
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(blank)) !== null) {
+    const [whole, closing, name, , selfClosing] = m;
+    if (!closing && !selfClosing) {
+      if (depth === 1) { start = m.index; tag = name; }
+      depth++;
+    } else if (closing) {
+      depth--;
+      if (depth === 1 && name === tag && start >= 0) {
+        const content = normalise(raw.slice(start, m.index + whole.length));
+        out.set(tag, (out.get(tag) ? out.get(tag) + '\n' : '') + content);
+        start = -1;
+      }
+    } else if (depth === 1) {
+      out.set(name, (out.get(name) || '') + normalise(raw.slice(m.index, m.index + whole.length)));
+    }
+  }
+  return out;
+}
+
+/** Tag names of the question's direct children that differ (e.g. questiontext, answer); [] when one side is missing. */
+export function changedFields(a?: QuestionBlock, b?: QuestionBlock): string[] {
+  if (!a || !b) return [];
+  const x = childElements(a.raw), y = childElements(b.raw);
+  return [...new Set([...x.keys(), ...y.keys()])].filter(k => x.get(k) !== y.get(k));
 }
 
 /** Diff between two question blocks as hunks (whole question when one side is missing). */

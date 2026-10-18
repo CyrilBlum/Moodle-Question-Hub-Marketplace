@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { GitPullRequest } from 'lucide-react';
 import { api } from '../api/client';
 import { MrStatusBadge } from './ForksAndMergeRequests';
+import { plural } from '../utils/plural';
 
 /** Dashboard: open merge requests to review (own packages) and the user's own merge requests. */
 export const MyMergeRequests: React.FC = () => {
@@ -17,7 +18,7 @@ export const MyMergeRequests: React.FC = () => {
         </Link>
         <p className="text-xs text-slate-500">
           {m.target_title} · {m.author.name} · aus <span className="font-mono">{m.source_package_id}</span> · {new Date(m.updated_at).toLocaleDateString('de-CH')}
-          {m.comments_count > 0 && ` · ${m.comments_count} Kommentar${m.comments_count === 1 ? '' : 'e'}`}
+          {m.comments_count > 0 && ` · ${plural(m.comments_count, 'Kommentar', 'Kommentare')}`}
         </p>
       </div>
       <MrStatusBadge status={m.status} />

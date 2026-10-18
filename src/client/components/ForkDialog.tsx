@@ -39,21 +39,21 @@ export const ForkDialog: React.FC<{ pkg: any; onClose: () => void }> = ({ pkg, o
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" role="dialog" aria-modal="true" aria-labelledby="fork-title">
       <form onSubmit={submit} className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl space-y-4">
         <div className="flex items-start justify-between">
-          <h2 id="fork-title" className="text-lg font-bold text-slate-900 flex items-center gap-2"><GitFork className="w-5 h-5" />Paket forken</h2>
+          <h2 id="fork-title" className="text-lg font-bold text-slate-900 flex items-center gap-2"><GitFork className="w-5 h-5" />Eigene Kopie anlegen (Fork)</h2>
           <button type="button" onClick={onClose} aria-label="Schliessen" className="text-slate-400 hover:text-slate-700"><X className="w-5 h-5" /></button>
         </div>
-        <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
-          Arbeiten Sie mit den Fragen in Moodle? Dann forken Sie besser im Moodle-Plugin (Question Hub › Kategorie › «Forken»):
-          Nur so bleibt Ihre Kategorie mit dem Fork verknüpft. Ein hier erstellter Fork muss in Moodle neu importiert werden.
-        </p>
+
         <p className="text-sm text-slate-600">
           Ein Fork ist Ihre eigene Kopie von <strong>{pkg.title}</strong> (Version {pkg.latest_version}). Sie können sie frei
           bearbeiten und neue Versionen veröffentlichen. Verbesserungen schlagen Sie dem Original später mit einem Änderungsvorschlag vor.
           Das Original bleibt unverändert.
         </p>
 
+        <p className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          Mit den Fragen in Moodle arbeiten? Legen Sie die Kopie besser im Moodle-Plugin an (Kategorie › «Forken»): Nur dann bleibt Ihre Kategorie verknüpft.
+        </p>
         <label className="block text-sm font-medium text-slate-700">
-          Technischer Name (Paket-ID, später nicht änderbar)
+          Kennung (nicht änderbar)
           <input className={`${input} font-mono`} value={id} onChange={e => setId(e.target.value)} required pattern="[a-z0-9][a-z0-9._\-]{1,98}[a-z0-9]"
             title="Kleinbuchstaben, Ziffern, Punkt, Binde- und Unterstrich" />
           <span className="block mt-0.5 text-xs font-normal text-slate-500">Nur Kleinbuchstaben, Ziffern, Punkt, Binde- und Unterstrich, z.B. {pkg.id}-meier.</span>
@@ -75,6 +75,7 @@ export const ForkDialog: React.FC<{ pkg: any; onClose: () => void }> = ({ pkg, o
             <select className={input} value={license} onChange={e => setLicense(e.target.value)} disabled={allowed.length === 1}>
               <LicenseOptions allowed={allowed} />
             </select>
+            {allowed.length === 1 && <span className="block mt-0.5 text-xs font-normal text-slate-500">Vom Original vorgegeben</span>}
           </label>
         </div>
         <p className="text-xs text-slate-500">
@@ -87,7 +88,7 @@ export const ForkDialog: React.FC<{ pkg: any; onClose: () => void }> = ({ pkg, o
         <div className="flex justify-end gap-2">
           <button type="button" onClick={onClose} className="px-4 py-2 rounded-lg border border-slate-300 text-sm">Abbrechen</button>
           <button type="submit" disabled={busy} className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 disabled:opacity-50">
-            {busy ? 'Wird erstellt …' : 'Fork erstellen'}
+            {busy ? 'Wird erstellt …' : 'Kopie anlegen'}
           </button>
         </div>
       </form>

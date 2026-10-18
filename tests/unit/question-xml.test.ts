@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  parsePackage, mergeThreeWay, compareThreeWay, sameContent, displayLines, diffLines, questionDiff, normaliseCategory,
+  parsePackage, mergeThreeWay, compareThreeWay, sameContent, displayLines, diffLines, questionDiff, normaliseCategory, changedFields,
 } from '../../src/services/question-xml.service';
 
 const tf = (name: string, text: string, idnumber = '') =>
@@ -122,5 +122,21 @@ describe('question-xml edge cases', () => {
     const xml = mergeThreeWay(base, fork, base).xml!;
     expect(xml.indexOf('Ohne')).toBeLessThan(xml.indexOf('$course$/top/K'));
     expect(xml).toContain('$course$/top/Leer');
+  });
+
+  it('names the changed parts of a question', () => {
+    const a = parsePackage(pkg(cat('K'), tf('Q', 'alt'))).questions[0];
+    const b = parsePackage(pkg(cat('K'), tf('Q', 'neu'))).questions[0];
+    expect(changedFields(a, b)).toEqual(['questiontext']);
+    expect(changedFields(a, a)).toEqual([]);
+  });
+
+  it('does not bring back a category the target dropped', () => {
+    const base = parsePackage(pkg(cat('A'), tf('A1', 'a'), cat('Alt'), tf('X', 'x')));
+    const fork = parsePackage(pkg(cat('A'), tf('A1', 'a (Fork)'), cat('Alt'), tf('X', 'x')));
+    const target = parsePackage(pkg(cat('A'), tf('A1', 'a')));
+    const xml = mergeThreeWay(base, fork, target).xml!;
+    expect(xml).not.toContain('$course$/top/Alt');
+    expect(xml).toContain('a (Fork)');
   });
 });

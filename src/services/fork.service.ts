@@ -3,11 +3,18 @@ import semver from 'semver';
 import { getDatabase } from '../database/connection';
 import { PackageService, compatibleForkLicenses } from './package.service';
 import { PackageMembersService } from './package-members.service';
+import { AdminService } from './admin.service';
 import { PackageStorageService } from './package-storage.service';
 import { PackageManifest } from '../types/package.types';
 import {
-  ParsedPackage, MergeEntry, Resolution, parsePackage, compareThreeWay, mergeThreeWay, sameContent, questionDiff,
+  ParsedPackage, MergeEntry, Resolution, parsePackage, compareThreeWay, mergeThreeWay, sameContent, questionDiff, changedFields,
 } from './question-xml.service';
+
+/** Access to a package; Hub admins see everything. */
+async function canSee(packageId: string, userId?: string): Promise<boolean> {
+  return await PackageService.getInstance().canAccessPackage(packageId, userId)
+    || (!!userId && await AdminService.getInstance().isAdmin(userId));
+}
 
 /** Package IDs a fork may get: lowercase letters, digits, dot, dash, underscore; 3–100 characters. */
 const PACKAGE_ID_RE = /^[a-z0-9][a-z0-9._-]{1,98}[a-z0-9]$/;
@@ -22,6 +29,8 @@ export interface ChangeView {
   /** What the other side changed, for conflicts. */
   other_status: 'added' | 'removed' | 'modified' | null;
   hunks: ReturnType<typeof questionDiff>;
+  /** Changed parts of a modified question (tag names, e.g. questiontext, answer). */
+  fields: string[];
   /** For conflicts: the other side's change relative to the base. */
   other_hunks?: ReturnType<typeof questionDiff>;
 }
@@ -29,7 +38,9 @@ export interface ChangeView {
 /** Parsed releases by SHA-256 (releases are immutable), least recently used dropped beyond ~200 MB of XML. */
 const contentCache = new Map<string, { xml: string; parsed: ParsedPackage }>();
 let contentCacheBytes = 0;
-const CONTENT_CACHE_MAX_BYTES = 200 * 1024 * 1024;
+const CONTENT_CACHE_MAX_BYTES = 300 * 1024 * 1024;
+/** The parsed blocks (raw + normalised copies) roughly triple the memory of the XML string. */
+const cacheWeight = (xml: string) => xml.length * 3;
 
 /** Shared helpers for forks and merge requests: release contents and comparisons. */
 export class PackageContent {
@@ -47,12 +58,15 @@ export class PackageContent {
     try {
       const xml = await fs.promises.readFile(PackageStorageService.getInstance().getReleaseFilePath(packageId, version), 'utf-8');
       const entry = { xml, parsed: parsePackage(xml) };
+      // Parallel reads of the same release may both get here: count it once.
+      const previous = contentCache.get(release.sha256);
+      if (previous) contentCacheBytes -= cacheWeight(previous.xml);
       contentCache.set(release.sha256, entry);
-      contentCacheBytes += xml.length;
+      contentCacheBytes += cacheWeight(xml);
       for (const [key, value] of contentCache) {
         if (contentCacheBytes <= CONTENT_CACHE_MAX_BYTES || contentCache.size <= 1) break;
         contentCache.delete(key);
-        contentCacheBytes -= value.xml.length;
+        contentCacheBytes -= cacheWeight(value.xml);
       }
       return entry;
     } catch {
@@ -104,6 +118,7 @@ export class PackageContent {
         conflict: e.conflict,
         other_status: e[`${other}_status`],
         hunks: questionDiff(e.base, e[side]),
+        fields: changedFields(e.base, e[side]),
         ...(e.conflict ? { other_hunks: questionDiff(e.base, e[other]) } : {}),
       }));
   }
@@ -138,7 +153,7 @@ export class ForkService {
     const knex = getDatabase();
     const packages = PackageService.getInstance();
     const source = await knex('packages').where({ id: sourceId }).first();
-    if (!source || !(await packages.canAccessPackage(sourceId, userId))) {
+    if (!source || !(await canSee(sourceId, userId))) {
       throw new Error('NOT_FOUND: Paket nicht gefunden.');
     }
     const version = options.version || source.latest_version;
@@ -150,9 +165,8 @@ export class ForkService {
       throw new Error('BAD_REQUEST: Die Paket-ID darf nur Kleinbuchstaben, Ziffern, Punkt, Binde- und Unterstrich enthalten (3 bis 100 Zeichen).');
     }
     const existing = await knex('packages').where({ id: forkId }).first();
-    // Repeating a fork (e.g. after a timeout in Moodle) returns the existing, unchanged fork.
-    if (existing && existing.owner_id === userId && existing.forked_from_id === sourceId
-        && existing.forked_from_version === version && existing.latest_version === version) {
+    // Repeating a fork (e.g. after a timeout in Moodle) returns the existing fork of that version.
+    if (existing && existing.owner_id === userId && existing.forked_from_id === sourceId && existing.forked_from_version === version) {
       return { package_id: forkId, version, forked_from_id: sourceId, forked_from_version: version };
     }
     if (existing || await packages.getWithdrawnPackage(forkId)) {
@@ -192,7 +206,7 @@ export class ForkService {
     const knex = getDatabase();
     const packages = PackageService.getInstance();
     if (!(await knex('packages').where({ id: packageId }).first('id'))) throw new Error('NOT_FOUND: Paket nicht gefunden.');
-    if (!(await packages.canAccessPackage(packageId, viewerId))) throw new Error('FORBIDDEN: Kein Zugriff auf dieses Paket.');
+    if (!(await canSee(packageId, viewerId))) throw new Error('FORBIDDEN: Kein Zugriff auf dieses Paket.');
     const rows = await knex('packages').join('users', 'packages.owner_id', 'users.id')
       .where({ 'packages.forked_from_id': packageId })
       .select('packages.id', 'packages.title', 'packages.latest_version', 'packages.forked_from_version',
@@ -200,8 +214,8 @@ export class ForkService {
       .orderBy('packages.updated_at', 'desc');
     const visible = [];
     for (const r of rows) {
-      if (!(await packages.canAccessPackage(r.id, viewerId))) continue;
-      const openMr = await knex('merge_requests').where({ source_package_id: r.id, target_package_id: packageId, status: 'open' }).first('number');
+      if (!(await canSee(r.id, viewerId))) continue;
+      const openMr = await knex('merge_requests').where({ source_package_id: r.id, target_package_id: packageId }).whereIn('status', ['open', 'merging']).first('number');
       visible.push({
         id: r.id, title: r.title, latest_version: r.latest_version, forked_from_version: r.forked_from_version,
         visibility: r.visibility === 'private' ? 'private' : 'public',
@@ -218,11 +232,11 @@ export class ForkService {
     const knex = getDatabase();
     const fork = await knex('packages').where({ id: forkId }).first();
     // A private fork stays invisible to people without access (404, not 403).
-    if (!fork || !(await PackageService.getInstance().canAccessPackage(forkId, viewerId))) throw new Error('NOT_FOUND: Paket nicht gefunden.');
+    if (!fork || !(await canSee(forkId, viewerId))) throw new Error('NOT_FOUND: Paket nicht gefunden.');
     if (!fork.forked_from_id) throw new Error('BAD_REQUEST: Dieses Paket ist kein Fork.');
     const upstream = await knex('packages').where({ id: fork.forked_from_id }).first();
     if (!upstream) throw new Error('CONFLICT: Das ursprüngliche Paket wurde zurückgezogen.');
-    if (!(await PackageService.getInstance().canAccessPackage(upstream.id, viewerId))) {
+    if (!(await canSee(upstream.id, viewerId))) {
       throw new Error('FORBIDDEN: Sie haben keinen Zugriff mehr auf das ursprüngliche Paket.');
     }
     const [forkContent, upstreamContent, baseContent] = await Promise.all([
@@ -295,7 +309,8 @@ export class ForkService {
     const version = input.version || await PackageContent.nextVersion(forkId);
     const notes = (input.release_notes || '').trim() || `Abgleich mit ${c.upstream.id} v${newBase}`;
     const manifest = await PackageContent.manifestFor(forkId, version, notes, c.fork.latest_version);
-    await PackageService.getInstance().publishPackage(userId, manifest, merged.xml!);
+    // Rights were checked above (editors of the fork and Hub admins); the fork's settings stay as they are.
+    await PackageService.getInstance().publishPackage(userId, manifest, merged.xml!, { asPackageAdmin: true });
     await knex('packages').where({ id: forkId }).update({ forked_from_version: newBase });
     return { status: 'merged', version, base_version: newBase };
   }

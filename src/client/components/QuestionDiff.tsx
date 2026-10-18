@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronRight, AlertTriangle, MessageSquare } from 'lucide-react';
 import { plural } from '../utils/plural';
+import { questionTypeLabel } from './QuestionTypeBadges';
 
 export interface DiffRow { type: 'ctx' | 'del' | 'add'; text: string; old: number | null; new: number | null }
 export interface DiffHunk { header: string; rows: DiffRow[] }
@@ -14,6 +15,21 @@ export interface QuestionChange {
   other_status: 'added' | 'removed' | 'modified' | null;
   hunks: DiffHunk[];
   other_hunks?: DiffHunk[];
+  fields?: string[];
+}
+
+const FIELD_LABELS: Record<string, string> = {
+  name: 'Name', questiontext: 'Fragetext', answer: 'Antworten', generalfeedback: 'Allgemeines Feedback',
+  correctfeedback: 'Feedback', partiallycorrectfeedback: 'Feedback', incorrectfeedback: 'Feedback',
+  defaultgrade: 'Punkte', penalty: 'Abzug', hint: 'Hinweise', tags: 'Tags', idnumber: 'ID-Nummer',
+  subquestion: 'Teilfragen', single: 'Antwortmodus', shuffleanswers: 'Reihenfolge', answernumbering: 'Nummerierung',
+  testcases: 'Testfälle', answerpreload: 'Antwortvorlage', template: 'Vorlage', unitgradingtype: 'Einheiten', units: 'Einheiten',
+};
+
+/** "Fragetext, Antworten" for the changed parts of a question. */
+function fieldSummary(fields: string[] = []): string {
+  const labels = [...new Set(fields.map(f => FIELD_LABELS[f] || 'Weitere Einstellungen'))];
+  return labels.join(', ');
 }
 
 const STATUS: Record<QuestionChange['status'], { label: string; cls: string }> = {
@@ -28,11 +44,9 @@ export const Hunks: React.FC<{ hunks: DiffHunk[] }> = ({ hunks }) => (
       <tbody>
         {hunks.map((h, i) => (
           <React.Fragment key={i}>
-            <tr><td colSpan={3} className="bg-slate-100 text-slate-500 px-2 py-0.5">{h.header}</td></tr>
+            {i > 0 && <tr><td className="text-slate-400 px-2 select-none">⋯</td></tr>}
             {h.rows.map((r, j) => (
               <tr key={j} className={r.type === 'add' ? 'bg-emerald-50' : r.type === 'del' ? 'bg-rose-50' : ''}>
-                <td className="w-10 text-right pr-1 text-slate-400 select-none align-top">{r.old ?? ''}</td>
-                <td className="w-10 text-right pr-1 text-slate-400 select-none align-top">{r.new ?? ''}</td>
                 <td className={`whitespace-pre-wrap break-all pl-2 ${r.type === 'add' ? 'text-emerald-900' : r.type === 'del' ? 'text-rose-900' : 'text-slate-700'}`}>
                   <span className="select-none text-slate-400 mr-1">{r.type === 'add' ? '+' : r.type === 'del' ? '−' : ' '}</span>{r.text}
                 </td>
@@ -95,12 +109,16 @@ export const QuestionDiffList: React.FC<{
               <span className={`text-xs border rounded px-1.5 py-0.5 ${STATUS[c.status].cls}`}>{STATUS[c.status].label}</span>
               {c.conflict && <span className="inline-flex items-center gap-1 text-xs border rounded px-1.5 py-0.5 bg-amber-100 text-amber-900 border-amber-300"><AlertTriangle className="w-3 h-3" />Konflikt</span>}
               <span className="font-medium text-slate-900">{c.name}</span>
-              <span className="text-xs text-slate-400 font-mono">{c.type}</span>
+              <span className="text-xs text-slate-500">{questionTypeLabel(c.type)}</span>
               {c.category && <span className="text-xs text-slate-500 truncate">· {c.category}</span>}
               {own.length > 0 && <span className="ml-auto inline-flex items-center gap-1 text-xs text-slate-500"><MessageSquare className="w-3.5 h-3.5" />{own.length}</span>}
             </button>
             {open[c.key] && (
               <div className="border-t border-slate-100 p-3 space-y-3">
+                {c.status === 'modified' && c.fields && c.fields.length > 0 && (
+                  <p className="text-sm text-slate-700"><span className="text-slate-500">Geändert:</span> {fieldSummary(c.fields)}</p>
+                )}
+                <p className="text-xs text-slate-500">Moodle-XML der Frage: rot = entfernt, grün = neu.</p>
                 {c.conflict ? (
                   <div className="grid gap-3 lg:grid-cols-2">
                     <div><p className="text-xs font-semibold text-slate-600 mb-1">{sideLabel}</p><Hunks hunks={c.hunks} /></div>

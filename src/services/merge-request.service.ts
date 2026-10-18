@@ -7,7 +7,11 @@ import { EmailService } from './email.service';
 import { PackageContent } from './fork.service';
 import { Resolution, compareThreeWay, mergeThreeWay, parsePackage, sameContent } from './question-xml.service';
 
-type Status = 'open' | 'merged' | 'closed';
+type Status = 'open' | 'merging' | 'merged' | 'closed';
+/** Statuses of a request that is still active ('merging' = being merged right now). */
+export const ACTIVE_STATUSES = ['open', 'merging'];
+/** A claim older than this is a crashed merge and is resolved on the next read. */
+const STALE_MERGE_MS = 10 * 60 * 1000;
 
 export interface MergeRequestNotice {
   to: string[];
@@ -61,9 +65,31 @@ export class MergeRequestService {
   }
 
   private async load(targetId: string, number: number): Promise<any> {
-    const mr = await getDatabase()('merge_requests').where({ target_package_id: targetId, number }).first();
+    const knex = getDatabase();
+    const mr = await knex('merge_requests').where({ target_package_id: targetId, number }).first();
     if (!mr) throw new Error('NOT_FOUND: Änderungsvorschlag nicht gefunden.');
+    if (mr.status === 'merging' && Date.now() - new Date(mr.updated_at).getTime() > STALE_MERGE_MS) {
+      await this.recoverClaim(mr);
+      return knex('merge_requests').where({ id: mr.id }).first();
+    }
     return mr;
+  }
+
+  /**
+   * Resolves a merge that was interrupted (crash, failed final write): merged if the target already has the
+   * version it was going to publish, else open again.
+   */
+  private async recoverClaim(mr: any): Promise<void> {
+    const knex = getDatabase();
+    const published = mr.merged_version
+      ? await knex('releases').where({ package_id: mr.target_package_id, version: mr.merged_version }).first('id')
+      : null;
+    if (published) {
+      await knex('merge_requests').where({ id: mr.id, status: 'merging' })
+        .update({ status: 'merged', closed_at: new Date(), updated_at: new Date() });
+    } else {
+      await knex('merge_requests').where({ id: mr.id, status: 'merging' }).update({ status: 'open', merged_version: null, updated_at: new Date() });
+    }
   }
 
   private url(targetId: string, number: number): string {
@@ -126,7 +152,10 @@ export class MergeRequestService {
       throw new Error(`BAD_REQUEST: Bestätigen Sie, dass Ihre Änderungen unter der Lizenz des Originals (${target.license}) stehen.`);
     }
 
-    const { entries } = await this.compare(source, target);
+    const { entries, baseAvailable } = await this.compare(source, target);
+    if (!baseAvailable) {
+      throw new Error(`CONFLICT: Version ${source.forked_from_version} des Originals, auf der der Fork beruht, wurde zurückgezogen. Ein Änderungsvorschlag lässt sich so nicht sicher übernehmen.`);
+    }
     if (!entries.some(e => e.source_status)) throw new Error('BAD_REQUEST: Der Fork enthält keine Änderungen gegenüber dem Original.');
 
     const id = crypto.randomUUID();
@@ -147,7 +176,7 @@ export class MergeRequestService {
         });
       });
     } catch (err: any) {
-      if (/unique|duplicate/i.test(String(err?.message || err?.code || ''))) {
+      if (['ER_DUP_ENTRY', 'SQLITE_CONSTRAINT', 'SQLITE_CONSTRAINT_UNIQUE'].includes(String(err?.code)) || err?.errno === 1062) {
         throw new Error('CONFLICT: Gleichzeitig wurde ein anderer Änderungsvorschlag erstellt. Bitte erneut versuchen.');
       }
       throw err;
@@ -187,7 +216,8 @@ export class MergeRequestService {
     const knex = getDatabase();
     let q = knex('merge_requests').leftJoin('users', 'merge_requests.author_id', 'users.id')
       .where({ 'merge_requests.target_package_id': targetId });
-    if (status === 'open' || status === 'merged' || status === 'closed') q = q.where({ 'merge_requests.status': status });
+    if (status === 'open') q = q.whereIn('merge_requests.status', ACTIVE_STATUSES);
+    else if (status === 'merged' || status === 'closed') q = q.where({ 'merge_requests.status': status });
     const rows = await q.select('merge_requests.*', 'users.full_name as author_name').orderBy('merge_requests.number', 'desc');
     const counts = rows.length ? await knex('merge_request_notes').whereIn('merge_request_id', rows.map(r => r.id))
       .where({ kind: 'comment' }).groupBy('merge_request_id').select('merge_request_id').count<{ merge_request_id: string; c: number }[]>('id as c') : [];
@@ -218,7 +248,7 @@ export class MergeRequestService {
       .select('merge_requests.*', 'users.full_name as author_name', 'packages.title as target_title')
       .orderBy('merge_requests.updated_at', 'desc');
     const authored = await base().where({ 'merge_requests.author_id': userId }).limit(50);
-    const toReview = await base().where({ 'merge_requests.status': 'open' })
+    const toReview = await base().whereIn('merge_requests.status', ACTIVE_STATUSES)
       .where(q => q.whereIn('merge_requests.target_package_id', owned).orWhereIn('merge_requests.target_package_id', reviewable))
       .limit(50);
     const visibleAuthored = [];
@@ -240,7 +270,7 @@ export class MergeRequestService {
     const source = await knex('packages').where({ id: mr.source_package_id }).first();
     const author = mr.author_id ? await knex('users').where({ id: mr.author_id }).first('id', 'full_name', 'institution') : null;
     const notes = await knex('merge_request_notes').leftJoin('users', 'merge_request_notes.author_id', 'users.id')
-      .where({ merge_request_id: mr.id }).orderBy('merge_request_notes.created_at', 'asc')
+      .where({ merge_request_id: mr.id }).orderBy('merge_request_notes.created_at', 'asc').orderBy('merge_request_notes.kind', 'asc')
       .select('merge_request_notes.*', 'users.full_name as author_name');
     const approvals = await knex('merge_request_approvals').join('users', 'merge_request_approvals.user_id', 'users.id')
       .where({ merge_request_id: mr.id })
@@ -281,6 +311,11 @@ export class MergeRequestService {
       }
     }
 
+    // Viewers who may not see a private fork learn neither its versions nor its size.
+    if (mergeability && !canSeeSource && !isEditor) {
+      mergeability = { mergeable: mergeability.mergeable, reason: mergeability.reason };
+    }
+
     return {
       id: mr.id, number: mr.number, title: mr.title, description: mr.description || '', status: mr.status as Status,
       author: author ? { id: author.id, name: author.full_name, institution: author.institution } : { id: null, name: 'Gelöschtes Konto', institution: '' },
@@ -302,7 +337,7 @@ export class MergeRequestService {
       // An approval belongs to the fork version it was given for; a newer fork version makes it outdated.
       approvals: approvals.map(a => ({
         user_id: a.user_id, name: a.name, created_at: new Date(a.created_at).toISOString(),
-        source_version: a.source_version || null, outdated: !!source && !!a.source_version && a.source_version !== source.latest_version,
+        source_version: a.source_version || null, outdated: !!source && a.source_version !== source.latest_version,
       })),
       mergeability,
       permissions: {
@@ -379,7 +414,8 @@ export class MergeRequestService {
       } else if (patch.status === 'open' && mr.status === 'closed') {
         const fork = await knex('packages').where({ id: mr.source_package_id }).first('forked_from_id');
         if (!fork || fork.forked_from_id !== targetId) throw new Error('CONFLICT: Der Fork existiert nicht mehr.');
-        const other = await knex('merge_requests').where({ target_package_id: targetId, source_package_id: mr.source_package_id, status: 'open' }).first('number');
+        const other = await knex('merge_requests').where({ target_package_id: targetId, source_package_id: mr.source_package_id })
+          .whereIn('status', ACTIVE_STATUSES).first('number');
         if (other) throw new Error(`CONFLICT: Für diesen Fork ist Änderungsvorschlag !${other.number} bereits offen.`);
         Object.assign(update, { status: 'open', closed_by: null, closed_at: null });
         event = 'reopened';
@@ -491,10 +527,13 @@ export class MergeRequestService {
     const source = await knex('packages').where({ id: mr.source_package_id }).first();
     if (!source || source.forked_from_id !== targetId) throw new Error('CONFLICT: Der Fork existiert nicht mehr.');
     // What was reviewed must be what is merged: a newer fork or original version since the page was loaded is refused.
-    if (typeof input.source_version === 'string' && input.source_version !== source.latest_version) {
+    if (typeof input.source_version !== 'string' || typeof input.target_version !== 'string') {
+      throw new Error('BAD_REQUEST: source_version und target_version (die geprüften Versionen) sind nötig.');
+    }
+    if (input.source_version !== source.latest_version) {
       throw new Error(`CONFLICT: Der Fork hat inzwischen Version ${source.latest_version}. Laden Sie die Seite neu und prüfen Sie die Änderungen erneut.`);
     }
-    if (typeof input.target_version === 'string' && input.target_version !== target.latest_version) {
+    if (input.target_version !== target.latest_version) {
       throw new Error(`CONFLICT: Das Paket hat inzwischen Version ${target.latest_version}. Laden Sie die Seite neu und prüfen Sie die Änderungen erneut.`);
     }
 
@@ -523,18 +562,21 @@ export class MergeRequestService {
     const manifest = await PackageContent.manifestFor(targetId, version, notes, target.latest_version);
 
     // Claim the request, so a double click or a second admin cannot publish it twice.
-    const claimed = await knex('merge_requests').where({ id: mr.id, status: 'open' }).update({ status: 'merging', updated_at: new Date() });
+    const claimed = await knex('merge_requests').where({ id: mr.id, status: 'open' })
+      .update({ status: 'merging', merged_version: version, updated_at: new Date() });
     if (claimed !== 1) throw new Error('CONFLICT: Dieser Änderungsvorschlag wird bereits übernommen.');
     let published: Awaited<ReturnType<PackageService['publishPackage']>>;
     try {
       published = await PackageService.getInstance().publishPackage(userId, manifest, merged.xml!, { asPackageAdmin: true });
     } catch (err) {
-      await knex('merge_requests').where({ id: mr.id, status: 'merging' }).update({ status: 'open' });
+      await knex('merge_requests').where({ id: mr.id, status: 'merging' }).update({ status: 'open', merged_version: null });
       throw err;
     }
 
     const now = new Date();
-    await knex.transaction(async trx => {
+    // The version is published: the request must end up merged even if this bookkeeping fails once (then the
+    // stale-claim recovery in load() finishes it).
+    const finish = () => knex.transaction(async trx => {
       await trx('merge_requests').where({ id: mr.id }).update({
         status: 'merged', merge_base_version: c.baseVersion, merged_source_version: source.latest_version,
         merged_target_version: target.latest_version, merged_version: version, closed_by: userId, closed_at: now, updated_at: now,
@@ -548,6 +590,11 @@ export class MergeRequestService {
         await trx('packages').where({ id: source.id }).update({ forked_from_version: version });
       }
     });
+    try {
+      await finish();
+    } catch {
+      await finish().catch(() => { /* recovered on the next read */ });
+    }
 
     const actor = await this.userName(userId);
     this.safeNotify({

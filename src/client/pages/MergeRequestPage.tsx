@@ -68,15 +68,21 @@ export const MergeRequestPage: React.FC = () => {
 
   const conflictKeys: string[] = (changes?.changes || []).filter((c: QuestionChange) => c.conflict).map((c: QuestionChange) => c.key);
   const unresolved = conflictKeys.filter(k => !resolutions[k]).length;
-  const questionNotes = mr.notes.filter((n: any) => n.kind === 'comment' && n.question_key);
+  // Comments belong to a question by key; a key that changed since (e.g. a now ambiguous name) falls back to the name.
+  const changeKeys = new Set((changes?.changes || []).map((c: QuestionChange) => c.key));
+  const questionNotes = mr.notes.filter((n: any) => n.kind === 'comment' && n.question_key).map((n: any) => {
+    if (changeKeys.has(n.question_key)) return n;
+    const byName = (changes?.changes || []).find((c: QuestionChange) => c.name === n.question_name);
+    return byName ? { ...n, question_key: byName.key } : n;
+  });
   const p = mr.permissions;
   const m = mr.mergeability;
 
   const merge = () => act(async () => {
     const res = await api.mergeMergeRequest(id, number, {
       version: version.trim() || undefined, release_notes: releaseNotes.trim() || undefined, resolutions,
-      // The versions reviewed on this page: the Hub refuses the merge if the fork or the package moved on meanwhile.
-      source_version: m?.source_version, target_version: m?.target_version,
+      // The versions of the changes shown on this page: the Hub refuses the merge if the fork or the package moved on.
+      source_version: changes?.source_version, target_version: changes?.target_version,
     });
     await loadChanges();
     return res;
@@ -126,7 +132,7 @@ export const MergeRequestPage: React.FC = () => {
 
       <div className="border-b border-slate-200">
         <nav className="flex gap-6 overflow-x-auto">
-          {[['overview', `Übersicht (${mr.notes.filter((n: any) => n.kind === 'comment').length})`],
+          {[['overview', `Diskussion (${mr.notes.filter((n: any) => n.kind === 'comment').length})`],
             ['changes', `Änderungen${changes?.changes ? ` (${changes.changes.length})` : ''}`]].map(([t, label]) => (
             <button key={t} onClick={() => setTab(t as any)}
               className={`py-3 px-1 border-b-2 font-medium text-sm whitespace-nowrap ${tab === t ? 'border-red-600 text-red-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
