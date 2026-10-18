@@ -97,6 +97,11 @@ export const GuidePage: React.FC = () => {
             eigenen Änderungen bleiben erhalten (bei Konflikten fragt Moodle nach). Unter
             <Ui de="Ältere Version wiederherstellen" en="Restore an older version" /> holen Sie eine frühere Version zurück.
           </p>
+          <p>
+            <Ui de="Verknüpft" en="Linked" /> heisst: keine lokalen Änderungen seit der verknüpften Version und keine neuere
+            Version im Hub. Nichts wird automatisch abgeglichen: Neue Versionen holen Sie mit <Ui de="Pull" />, eigene
+            Änderungen veröffentlichen Sie mit <Ui de="Push" />.
+          </p>
         </Step>
       </ol>
       <p className="text-xs text-slate-500 border-t border-slate-100 pt-3">
