@@ -122,7 +122,7 @@ export const MergeRequestPage: React.FC = () => {
                 ? <Link to={`/packages/${encodeURIComponent(mr.source.id)}`} className="font-mono text-red-700 hover:underline">{mr.source.id}</Link>
                 : <span className="font-mono">{mr.source.id}{mr.source.exists ? '' : ' (zurückgezogen)'}</span>}
               {' '}in <span className="font-mono">{mr.target.id}</span> übernehmen · eröffnet {when(mr.created_at)}
-              {mr.merged_version && <> · als <strong>v{mr.merged_version}</strong> übernommen</>}
+              {mr.merged_version && <> · als <strong>Version {mr.merged_version}</strong> übernommen</>}
             </p>
             <div className="text-sm text-slate-800 whitespace-pre-line">{mr.description || <span className="text-slate-400">Keine Beschreibung.</span>}</div>
             <p className="text-xs text-slate-500 flex items-center gap-2">Beiträge stehen unter der Lizenz des Pakets: <LicenseBadge license={mr.target.license} /></p>
@@ -251,7 +251,7 @@ export const MergeRequestPage: React.FC = () => {
               </p>
               <QuestionDiffList changes={changes.changes} sideLabel="Änderung in der Variante" otherLabel="Änderung im Original"
                 resolutions={resolutions}
-                resolveOptions={p.can_merge ? [{ value: 'target', label: 'Fassung des Originals behalten' }, { value: 'source', label: 'Fassung der Variante übernehmen' }] : undefined}
+                resolveOptions={p.can_merge ? [{ value: 'target', label: 'Frage wie im Original' }, { value: 'source', label: 'Frage wie in der Variante' }] : undefined}
                 onResolve={p.can_merge ? (k, v) => setResolutions(r => ({ ...r, [k]: v })) : undefined}
                 notes={questionNotes}
                 onComment={p.can_comment ? async (c, body) => { await api.commentMergeRequest(id, number, { body, question_key: c.key, question_name: c.name }); await load(); } : undefined} />

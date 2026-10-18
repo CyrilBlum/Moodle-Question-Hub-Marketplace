@@ -102,7 +102,7 @@ export const ForkPanel: React.FC<{ pkg: any; onChanged: () => void }> = ({ pkg, 
               : `Das Original hat sich seit Ihre Variante entstand (Version ${status.base_version}) verändert: ${plural(status.behind, 'Frage', 'Fragen')}, aktuell Version ${status.upstream.latest_version}.`}
           </p>
           {status.conflicts > 0 && (
-            <p className="text-amber-800">Bei {plural(status.conflicts, 'Frage', 'Fragen')} haben beide Seiten etwas geändert: Beim Übernehmen entscheiden Sie, welche Fassung gilt.</p>
+            <p className="text-amber-800">Bei {plural(status.conflicts, 'Frage', 'Fragen')} haben beide Seiten etwas geändert: Beim Übernehmen entscheiden Sie, welche Frage gilt.</p>
           )}
           {!status.base_available && <p className="text-xs text-slate-500">Die Version, auf der Ihre Variante beruht, wurde zurückgezogen; verglichen wird mit der aktuellen Version des Originals.</p>}
         </div>
@@ -140,7 +140,7 @@ export const ForkPanel: React.FC<{ pkg: any; onChanged: () => void }> = ({ pkg, 
           {status.incoming ? (
             <QuestionDiffList changes={status.incoming} sideLabel="Änderung im Original" otherLabel="Ihre Änderung in der Variante"
               resolutions={resolutions}
-              resolveOptions={[{ value: 'upstream', label: 'Fassung des Originals behalten' }, { value: 'fork', label: 'Fassung der Variante behalten' }]}
+              resolveOptions={[{ value: 'upstream', label: 'Frage wie im Original' }, { value: 'fork', label: 'Frage wie in der Variante' }]}
               onResolve={(k, v) => setResolutions(r => ({ ...r, [k]: v }))} />
           ) : <p className="text-sm text-slate-500">Lade Änderungen …</p>}
           <label className="block text-sm text-slate-700">

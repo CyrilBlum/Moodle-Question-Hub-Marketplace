@@ -549,7 +549,7 @@ export class MergeRequestService {
     }
     const merged = mergeThreeWay(c.base.parsed, c.s.parsed, c.t.parsed, resolutions);
     if (merged.unresolved.length) {
-      const err = new Error(`CONFLICT: ${merged.unresolved.length} Frage(n) wurden in der Variante und im Original unterschiedlich geändert. Wählen Sie für jede, welche Fassung übernommen wird.`);
+      const err = new Error(`CONFLICT: ${merged.unresolved.length} Frage(n) wurden in der Variante und im Original unterschiedlich geändert. Wählen Sie für jede, welche übernommen wird.`);
       (err as any).conflicts = merged.unresolved.map(e => e.key);
       throw err;
     }

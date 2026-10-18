@@ -27,7 +27,7 @@ export const ForksList: React.FC<{ root: any; variants: any[]; onChoose: (id: st
             {v.parent_id !== root.id ? '↳ ' : ''}Variante von {v.author.name}
           </button>
           <p className="text-xs text-slate-500">
-            v{v.latest_version} · aus Version {v.forked_from_version}{v.visibility === 'private' ? ' · privat' : ''}
+            Version {v.latest_version} · entstanden aus Version {v.forked_from_version}{v.visibility === 'private' ? ' · privat' : ''}
             {v.open_merge_request ? <> · <Link to={`/packages/${encodeURIComponent(v.parent_id)}/merge-requests/${v.open_merge_request}`} className="text-red-700 hover:underline">Vorschlag !{v.open_merge_request}</Link></> : null}
           </p>
         </li>
@@ -74,7 +74,7 @@ export const MergeRequestList: React.FC<{ pkg: any }> = ({ pkg }) => {
               </Link>
               <p className="text-xs text-slate-500">
                 {m.author.name} · aus einer Variante · {new Date(m.created_at).toLocaleDateString('de-CH')}
-                {m.merged_version ? ` · als v${m.merged_version} übernommen` : ''}
+                {m.merged_version ? ` · als Version ${m.merged_version} übernommen` : ''}
               </p>
             </div>
             <div className="flex items-center gap-3">

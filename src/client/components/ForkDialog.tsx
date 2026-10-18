@@ -42,7 +42,7 @@ export const ForkDialog: React.FC<{ pkg: any; root?: any; onClose: () => void }>
 
         <p className="text-sm text-slate-600">
           Eine Variante ist Ihre eigene Weiterentwicklung von <strong>{pkg.title}</strong> (Version {pkg.latest_version}). Sie
-          bearbeiten sie frei und veröffentlichen neue Versionen; sie erscheint auf der Seite des Originals unter «Fassung».
+          bearbeiten sie frei und veröffentlichen neue Versionen; sie erscheint auf der Seite des Originals.
           Verbesserungen schlagen Sie dem Original später mit einem Änderungsvorschlag vor. Das Original bleibt unverändert.
         </p>
 

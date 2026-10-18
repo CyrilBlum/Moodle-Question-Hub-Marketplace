@@ -217,7 +217,7 @@ export const GuidePage: React.FC = () => {
       <h2 className="text-lg font-bold text-slate-900">Varianten und Änderungsvorschläge</h2>
       <p className="text-sm text-slate-700">
         Sie möchten Fragen eines fremden Pakets verbessern oder ergänzen? Legen Sie eine Variante an: Sie erhalten eine eigene
-        Fassung, die Sie frei bearbeiten. Varianten erscheinen auf der Seite des Originals unter «Fassung», nicht als eigene Pakete
+        Weiterentwicklung, die Sie frei bearbeiten. Varianten erscheinen auf der Seite des Originals unter «Original oder Variante», nicht als eigene Pakete
         im Katalog (dort zeigt sie der Filter «Varianten einbeziehen»). Gute Änderungen schlagen Sie dem Original mit einem
         Änderungsvorschlag (englisch «Merge Request») vor. Die Admins des Originals entscheiden, was übernommen wird.
       </p>
@@ -249,7 +249,7 @@ export const GuidePage: React.FC = () => {
             Im Reiter <Ui de="Änderungen" /> sehen alle mit Zugriff jede geänderte Frage und können sie kommentieren; Diskussionen
             lassen sich als erledigt markieren. Bearbeiter/innen und Admins des Originals können genehmigen. Admins übernehmen den
             Vorschlag: Der Hub veröffentlicht die Änderungen als neue Version des Originals. Haben Variante und Original dieselbe
-            Frage unterschiedlich geändert (Konflikt), entscheiden sie je Frage, welche Fassung gilt.
+            Frage unterschiedlich geändert (Konflikt), entscheiden sie je Frage, welche gilt.
           </p>
         </Step>
       </ol>

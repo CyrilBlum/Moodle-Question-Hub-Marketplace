@@ -163,6 +163,9 @@ Lint PHP on the server (`php8.2 -l`); there is no PHP on the usual dev laptop.
 - Destructive production actions (deleting packages/accounts, DB writes, restarting shared services) need a dry run and a count first.
 - Git: work directly on `main` (no feature branches, for simplicity): small commits, push; CI (GitHub Actions) must be green. Do not commit secrets, `real_dataset`, or generated `dist/`.
 - Swiss Standard German in student/teacher-facing text: «ss» never «ß»; formal «Sie».
+- UI terms (Hub and plugin, German): «Original» (package a variant comes from), «Variante» (fork), «Version» (numbered
+  release, also «Version 1.2.0» in running text). Not «Fassung»; question states read «Frage wie im Hub / in diesem Moodle /
+  in der verknüpften Version»; «Änderungsvorschlag» for merge requests.
 
 ## 8. Known open items (as of 2026-10-14)
 - Whole-category publish is a list on the Question Hub page: Moodle's category `…` menu has no plugin hook in 4.5/5.0.

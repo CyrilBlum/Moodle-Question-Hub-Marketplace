@@ -308,7 +308,7 @@ export class ForkService {
     // the original's current version gives the synced fork.
     const merged = mergeThreeWay(c.base.parsed, c.forkContent.parsed, c.upstreamContent.parsed, flip(input.resolutions || {}));
     if (merged.unresolved.length) {
-      const err = new Error(`CONFLICT: ${merged.unresolved.length} Frage(n) wurden in der Variante und im Original unterschiedlich geändert. Wählen Sie für jede, welche Fassung gilt.`);
+      const err = new Error(`CONFLICT: ${merged.unresolved.length} Frage(n) wurden in der Variante und im Original unterschiedlich geändert. Wählen Sie für jede, welche gilt.`);
       (err as any).conflicts = merged.unresolved.map(e => e.key);
       throw err;
     }

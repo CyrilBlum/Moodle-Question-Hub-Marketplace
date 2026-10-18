@@ -295,7 +295,7 @@ export const PackageDetailPage: React.FC = () => {
             <button
               onClick={() => getToken() ? setShowFork(true) : navigate(`/login?return_to=${encodeURIComponent(window.location.pathname)}`)}
               className="inline-flex items-center space-x-1.5 px-3 py-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium transition text-sm shadow-sm"
-              title="Eigene Variante dieser Fassung anlegen, bearbeiten und Verbesserungen dem Original vorschlagen"
+              title="Eigene Variante anlegen, bearbeiten und Verbesserungen dem Original vorschlagen"
             >
               <GitFork className="w-4 h-4 text-slate-500" />
               <span>Variante anlegen</span>
@@ -344,14 +344,14 @@ export const PackageDetailPage: React.FC = () => {
       {variants.length > 0 && (
         <div className="flex flex-wrap items-center gap-3 rounded-xl border border-violet-200 bg-violet-50/50 px-4 py-3">
           <label htmlFor="variant-select" className="text-sm font-semibold text-slate-800 flex items-center gap-1.5">
-            <GitFork className="w-4 h-4 text-violet-700" />Fassung
+            <GitFork className="w-4 h-4 text-violet-700" />Original oder Variante
           </label>
           <select id="variant-select" value={isVariant ? pkg.id : ''} onChange={e => chooseVariant(e.target.value)}
             className="flex-1 min-w-[14rem] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">
-            <option value="">Original · {root.author?.name} · v{root.latest_version}</option>
+            <option value="">Original · {root.author?.name} · Version {root.latest_version}</option>
             {variants.map(v => (
               <option key={v.id} value={v.id}>
-                {v.parent_id !== root.id ? '↳ ' : ''}Variante von {v.author.name} · v{v.latest_version}{v.visibility === 'private' ? ' · privat' : ''}{v.open_merge_request ? ` · Vorschlag !${v.open_merge_request}` : ''}
+                {v.parent_id !== root.id ? '↳ ' : ''}Variante von {v.author.name} · Version {v.latest_version}{v.visibility === 'private' ? ' · privat' : ''}{v.open_merge_request ? ` · Vorschlag !${v.open_merge_request}` : ''}
               </option>
             ))}
           </select>

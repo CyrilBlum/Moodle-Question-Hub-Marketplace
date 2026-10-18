@@ -96,7 +96,7 @@ export const QuestionDiffList: React.FC<{
       {conflictCount > 0 && (
         <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
           <strong>{plural(conflictCount, 'Konflikt', 'Konflikte')}:</strong> Original und Variante haben dieselbe Frage unterschiedlich verändert.
-          {onResolve ? ' Entscheiden Sie bei jeder markierten Frage, welche Fassung gelten soll.' : ' Wer übernimmt, entscheidet, welche Fassung gilt.'}
+          {onResolve ? ' Entscheiden Sie bei jeder markierten Frage, welche gilt.' : ' Wer übernimmt, entscheidet, welche Frage gilt.'}
         </p>
       )}
       {changes.map(c => {
@@ -127,8 +127,8 @@ export const QuestionDiffList: React.FC<{
                 ) : <Hunks hunks={c.hunks} />}
                 {c.conflict && onResolve && resolveOptions && (
                   <fieldset className="flex flex-wrap gap-4 text-sm rounded bg-amber-50 border border-amber-200 p-2">
-                    <legend className="sr-only">Welche Fassung gilt?</legend>
-                    <span className="text-amber-900 font-medium">Welche Fassung gilt?</span>
+                    <legend className="sr-only">Welche Frage gilt?</legend>
+                    <span className="text-amber-900 font-medium">Welche Frage gilt?</span>
                     {resolveOptions.map(o => (
                       <label key={o.value} className="inline-flex items-center gap-1.5">
                         <input type="radio" name={`res-${c.key}`} checked={resolutions?.[c.key] === o.value} onChange={() => onResolve(c.key, o.value)} />
