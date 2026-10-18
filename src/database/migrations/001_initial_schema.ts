@@ -216,9 +216,73 @@ export async function up(knex: Knex): Promise<void> {
       table.text('github_error').nullable();
     });
   }
+
+  // Forks: the package a fork was copied from, the version of the original its content is based on
+  // (moves on with every sync and fully merged merge request) and the original's licence at fork time.
+  if (!(await knex.schema.hasColumn('packages', 'forked_from_id'))) {
+    await knex.schema.alterTable('packages', table => {
+      table.string('forked_from_id', 100).nullable();
+      table.string('forked_from_version', 30).nullable();
+      table.string('forked_from_license', 50).nullable();
+      table.index(['forked_from_id'], 'idx_packages_forked_from');
+    });
+  }
+
+  // Merge requests from a fork into its original (numbered per target package), with comments,
+  // system notes (merged, closed, ...) and approvals.
+  if (!(await knex.schema.hasTable('merge_requests'))) {
+    await knex.schema.createTable('merge_requests', table => {
+      table.string('id', 36).primary();
+      table.string('target_package_id', 100).notNullable().references('id').inTable('packages').onDelete('CASCADE');
+      table.integer('number').notNullable();
+      table.string('source_package_id', 100).notNullable();
+      table.string('author_id', 36).nullable().references('id').inTable('users').onDelete('SET NULL');
+      table.string('title', 200).notNullable();
+      table.text('description').nullable();
+      table.string('status', 10).notNullable().defaultTo('open');
+      // Filled when merged: what was compared and the resulting version of the target.
+      table.string('merge_base_version', 30).nullable();
+      table.string('merged_source_version', 30).nullable();
+      table.string('merged_target_version', 30).nullable();
+      table.string('merged_version', 30).nullable();
+      table.string('closed_by', 36).nullable();
+      table.timestamp('closed_at').nullable();
+      table.timestamp('created_at').notNullable().defaultTo(knex.fn.now());
+      table.timestamp('updated_at').notNullable().defaultTo(knex.fn.now());
+      table.unique(['target_package_id', 'number'], { indexName: 'uq_mr_target_number' });
+      table.index(['source_package_id'], 'idx_mr_source');
+      table.index(['author_id'], 'idx_mr_author');
+    });
+  }
+  if (!(await knex.schema.hasTable('merge_request_notes'))) {
+    await knex.schema.createTable('merge_request_notes', table => {
+      table.string('id', 36).primary();
+      table.string('merge_request_id', 36).notNullable().references('id').inTable('merge_requests').onDelete('CASCADE');
+      table.string('author_id', 36).nullable().references('id').inTable('users').onDelete('SET NULL');
+      table.string('kind', 10).notNullable().defaultTo('comment');
+      table.text('body').notNullable();
+      table.string('question_key', 64).nullable();
+      table.string('question_name', 255).nullable();
+      table.boolean('resolved').notNullable().defaultTo(false);
+      table.timestamp('created_at').notNullable().defaultTo(knex.fn.now());
+      table.timestamp('updated_at').notNullable().defaultTo(knex.fn.now());
+      table.index(['merge_request_id', 'created_at'], 'idx_mr_notes');
+    });
+  }
+  if (!(await knex.schema.hasTable('merge_request_approvals'))) {
+    await knex.schema.createTable('merge_request_approvals', table => {
+      table.string('merge_request_id', 36).notNullable().references('id').inTable('merge_requests').onDelete('CASCADE');
+      table.string('user_id', 36).notNullable().references('id').inTable('users').onDelete('CASCADE');
+      table.timestamp('created_at').notNullable().defaultTo(knex.fn.now());
+      table.primary(['merge_request_id', 'user_id']);
+    });
+  }
 }
 
 export async function down(knex: Knex): Promise<void> {
+  await knex.schema.dropTableIfExists('merge_request_approvals');
+  await knex.schema.dropTableIfExists('merge_request_notes');
+  await knex.schema.dropTableIfExists('merge_requests');
   await knex.schema.dropTableIfExists('package_members');
   await knex.schema.dropTableIfExists('withdrawn_packages');
   await knex.schema.dropTableIfExists('package_access_requests');

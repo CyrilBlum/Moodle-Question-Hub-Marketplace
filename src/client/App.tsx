@@ -11,6 +11,7 @@ import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { AdminPage } from './pages/AdminPage';
 import { GuidePage } from './pages/GuidePage';
+import { MergeRequestPage } from './pages/MergeRequestPage';
 
 export const App: React.FC = () => {
   return (
@@ -20,6 +21,7 @@ export const App: React.FC = () => {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/packages/:id" element={<PackageDetailPage />} />
+          <Route path="/packages/:id/merge-requests/:number" element={<MergeRequestPage />} />
           <Route path="/upload" element={<UploadPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/login" element={<LoginPage />} />

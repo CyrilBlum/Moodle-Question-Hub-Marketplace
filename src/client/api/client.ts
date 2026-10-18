@@ -214,6 +214,33 @@ export const api = {
     request(`/packages/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   withdrawRelease: (id: string, version: string) =>
     request(`/packages/${encodeURIComponent(id)}/releases/${encodeURIComponent(version)}`, { method: 'DELETE' }),
+  // Forks and merge requests
+  forkPackage: (id: string, data: { id?: string; title?: string; version?: string; visibility?: string; license?: string }) =>
+    request(`/packages/${encodeURIComponent(id)}/forks`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
+  getForks: (id: string) => request(`/packages/${encodeURIComponent(id)}/forks`),
+  suggestForkId: (id: string) => request(`/packages/${encodeURIComponent(id)}/fork-id-suggestion`),
+  getForkStatus: (id: string, details = false) => request(`/packages/${encodeURIComponent(id)}/fork-status${details ? '?details=1' : ''}`),
+  syncFork: (id: string, data: { version?: string; release_notes?: string; resolutions?: Record<string, string> }) =>
+    request(`/packages/${encodeURIComponent(id)}/sync-upstream`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
+  getMergeRequests: (id: string, status = 'open') => request(`/packages/${encodeURIComponent(id)}/merge-requests?status=${status}`),
+  getMyMergeRequests: () => request('/account/merge-requests'),
+  createMergeRequest: (id: string, data: { source_package_id: string; title: string; description?: string }) =>
+    request(`/packages/${encodeURIComponent(id)}/merge-requests`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
+  getMergeRequest: (id: string, n: number | string) => request(`/packages/${encodeURIComponent(id)}/merge-requests/${n}`),
+  getMergeRequestChanges: (id: string, n: number | string) => request(`/packages/${encodeURIComponent(id)}/merge-requests/${n}/changes`),
+  updateMergeRequest: (id: string, n: number | string, patch: Record<string, unknown>) =>
+    request(`/packages/${encodeURIComponent(id)}/merge-requests/${n}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch) }),
+  commentMergeRequest: (id: string, n: number | string, data: { body: string; question_key?: string; question_name?: string }) =>
+    request(`/packages/${encodeURIComponent(id)}/merge-requests/${n}/notes`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
+  updateMergeRequestNote: (id: string, n: number | string, noteId: string, patch: { body?: string; resolved?: boolean }) =>
+    request(`/packages/${encodeURIComponent(id)}/merge-requests/${n}/notes/${noteId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch) }),
+  deleteMergeRequestNote: (id: string, n: number | string, noteId: string) =>
+    request(`/packages/${encodeURIComponent(id)}/merge-requests/${n}/notes/${noteId}`, { method: 'DELETE' }),
+  setMergeRequestApproval: (id: string, n: number | string, approve: boolean) =>
+    request(`/packages/${encodeURIComponent(id)}/merge-requests/${n}/approval`, { method: approve ? 'PUT' : 'DELETE' }),
+  mergeMergeRequest: (id: string, n: number | string, data: { version?: string; release_notes?: string; resolutions?: Record<string, string> }) =>
+    request(`/packages/${encodeURIComponent(id)}/merge-requests/${n}/merge`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
+
   oauthAuthorize: (params: Record<string, string>) =>
     request(`/oauth/authorize?${new URLSearchParams(params).toString()}`, {
       headers: { Accept: 'application/json' },

@@ -17,6 +17,7 @@ import { tokenRoutes } from './routes/tokens.route';
 import { githubRoutes } from './routes/github.route';
 import { adminRoutes } from './routes/admin.route';
 import { oauthRoutes } from './routes/oauth.route';
+import { collaborationRoutes } from './routes/collaboration.route';
 
 export async function buildServer(): Promise<FastifyInstance> {
   const config = getConfig();
@@ -67,6 +68,7 @@ export async function buildServer(): Promise<FastifyInstance> {
     async (apiV1) => {
       await apiV1.register(healthRoutes);
       await apiV1.register(packageRoutes);
+      await apiV1.register(collaborationRoutes);
       await apiV1.register(taxonomyRoutes);
       await apiV1.register(authRoutes);
       await apiV1.register(tokenRoutes);

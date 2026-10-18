@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Download, Upload } from 'lucide-react';
+import { Download, GitFork, Scale, Upload } from 'lucide-react';
 
 /** A button or menu label in Moodle: German, with the English label (Moodles without the German language pack). */
 const Ui: React.FC<{ de: string; en?: string }> = ({ de, en }) => (
@@ -46,6 +46,12 @@ export const GuidePage: React.FC = () => {
         </a>
         <a href="#veroeffentlichen" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:border-red-300">
           <Upload className="w-4 h-4 text-red-600" />Paket veröffentlichen
+        </a>
+        <a href="#forken" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:border-red-300">
+          <GitFork className="w-4 h-4 text-red-600" />Forken und Merge Requests
+        </a>
+        <a href="#lizenz" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:border-red-300">
+          <Scale className="w-4 h-4 text-red-600" />Lizenz
         </a>
       </nav>
     </div>
@@ -204,6 +210,70 @@ export const GuidePage: React.FC = () => {
         Ohne Plugin: Exportieren Sie die Fragen in Moodle als Moodle-XML und laden Sie die Datei unter{' '}
         <Link to="/upload" className="text-red-600 hover:underline">Paket hochladen</Link> hoch. Neue Versionen müssen Sie dann
         jeweils von Hand exportieren und hochladen.
+      </p>
+    </section>
+
+    <section id="forken" className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-5 scroll-mt-20">
+      <h2 className="text-lg font-bold text-slate-900">Forken und Merge Requests</h2>
+      <p className="text-sm text-slate-700">
+        Sie möchten Fragen eines fremden Pakets verbessern oder ergänzen? Forken Sie es: Sie erhalten eine eigene Kopie, die Sie
+        frei bearbeiten. Gute Änderungen schlagen Sie dem Original mit einem Merge Request vor. Wie bei GitLab oder GitHub
+        entscheiden die Admins des Originals, was übernommen wird.
+      </p>
+      <ol className="space-y-5">
+        <Step n={1} title="Paket forken">
+          <p>
+            In Moodle: Bei der mit dem Paket verknüpften Kategorie <Ui de="Forken" en="Fork" /> klicken, Paket-ID und Titel
+            prüfen und bestätigen. Der Hub legt den Fork in Ihrem Konto an, und Ihre Kategorie ist danach mit dem Fork statt
+            mit dem Original verknüpft. Lokale Änderungen bleiben erhalten.
+          </p>
+          <p>Im Hub: Auf der Paketseite <Ui de="Forken" /> wählen. Den Fork holen Sie dann wie jedes Paket in Moodle.</p>
+        </Step>
+        <Step n={2} title="Fork bearbeiten">
+          <p>
+            Ändern Sie die Fragen in Moodle wie gewohnt und veröffentlichen Sie sie mit <Ui de="Push" /> als neue Version des
+            Forks. Ändert sich das Original inzwischen, wählen Sie auf der Seite Ihres Forks im Hub <Ui de="Mit Original abgleichen" />:
+            Die Änderungen des Originals kommen als neue Fork-Version dazu, Ihre eigenen bleiben. In Moodle holen Sie sie mit <Ui de="Pull v…" />.
+          </p>
+        </Step>
+        <Step n={3} title="Merge Request stellen">
+          <p>
+            Auf der Seite Ihres Forks im Hub (oder in Moodle über <Ui de="Merge Request" />) <Ui de="Merge Request erstellen" />
+            wählen, Titel und Beschreibung angeben. Die Admins des Originals erhalten eine E-Mail. Spätere Versionen Ihres Forks
+            erscheinen automatisch im offenen Merge Request.
+          </p>
+        </Step>
+        <Step n={4} title="Prüfen, diskutieren, übernehmen">
+          <p>
+            Im Reiter <Ui de="Änderungen" /> sehen alle mit Zugriff jede geänderte Frage als Zeilenvergleich und können sie
+            kommentieren; Diskussionen lassen sich als erledigt markieren. Bearbeiter/innen und Admins des Originals können
+            genehmigen. Admins übernehmen den Merge Request: Der Hub veröffentlicht die Änderungen als neue Version des Originals.
+            Haben Fork und Original dieselbe Frage unterschiedlich geändert (Konflikt), wählen sie je Frage, welche Fassung gilt.
+          </p>
+        </Step>
+      </ol>
+      <p className="text-xs text-slate-500 border-t border-slate-100 pt-3">
+        Fragen werden über Kategoriepfad und ID-Nummer erkannt, ohne ID-Nummer über Fragetyp und Namen. Eine umbenannte Frage
+        ohne ID-Nummer erscheint deshalb als entfernt und neu. Ein Fork eines privaten Pakets bleibt privat.
+      </p>
+    </section>
+
+    <section id="lizenz" className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-3 scroll-mt-20">
+      <h2 className="text-lg font-bold text-slate-900">Lizenz: offene Bildungsmaterialien</h2>
+      <p className="text-sm text-slate-700">
+        Jedes Paket steht unter einer Creative-Commons-Lizenz, die Sie beim Veröffentlichen wählen. Mit der Veröffentlichung
+        eines öffentlichen Pakets werden die Fragen zu offenen Bildungsmaterialien (OER): Alle dürfen sie verwenden, forken,
+        verändern und weitergeben.
+      </p>
+      <ul className="list-disc pl-5 text-sm text-slate-700 space-y-1">
+        <li><strong>CC BY 4.0</strong> (Standard): Weiterverwendung mit Nennung der Urheberschaft.</li>
+        <li><strong>CC BY-SA 4.0</strong>: zusätzlich müssen Bearbeitungen, auch Forks, unter derselben Lizenz stehen.</li>
+        <li><strong>CC0 1.0</strong>: gemeinfrei, ohne Bedingungen.</li>
+      </ul>
+      <p className="text-sm text-slate-700">
+        Private Pakete tragen die Lizenz ebenfalls, sind aber nur für freigegebene Personen sichtbar. Mit einem Merge Request
+        stellen Sie Ihre Änderungen unter die Lizenz des Originals. Veröffentlichen Sie nur Inhalte, an denen Sie die Rechte haben
+        (z.B. keine Bilder aus Lehrmitteln ohne Erlaubnis).
       </p>
     </section>
   </div>

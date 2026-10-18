@@ -1,0 +1,181 @@
+import React, { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { GitFork, GitPullRequest, RefreshCw } from 'lucide-react';
+import { api } from '../api/client';
+import { QuestionDiffList } from './QuestionDiff';
+
+/**
+ * Status of a fork against its original for its editors: ahead/behind, "sync with the original"
+ * (with conflict resolution) and "create merge request".
+ */
+export const ForkPanel: React.FC<{ pkg: any; onChanged: () => void }> = ({ pkg, onChanged }) => {
+  const navigate = useNavigate();
+  const [status, setStatus] = useState<any>(null);
+  const [error, setError] = useState('');
+  const [mode, setMode] = useState<'none' | 'sync' | 'mr'>('none');
+  const [resolutions, setResolutions] = useState<Record<string, string>>({});
+  const [notes, setNotes] = useState('');
+  const [mrTitle, setMrTitle] = useState('');
+  const [mrDescription, setMrDescription] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState('');
+  const [openMr, setOpenMr] = useState<number | null>(null);
+  const origin = pkg.forked_from;
+
+  const load = async (details = false) => {
+    setError('');
+    try {
+      setStatus(await api.getForkStatus(pkg.id, details));
+    } catch (err: any) {
+      setError(err.message || 'Der Stand gegenüber dem Original ist nicht verfügbar.');
+    }
+    if (origin?.exists) {
+      try {
+        const list = await api.getMergeRequests(origin.id, 'open');
+        setOpenMr((list.data || []).find((m: any) => m.source_package_id === pkg.id)?.number ?? null);
+      } catch { /* no access */ }
+    }
+  };
+
+  useEffect(() => { load(); }, [pkg.id, pkg.latest_version]);
+
+  if (!origin) return null;
+  if (!origin.exists) {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-5 text-sm text-slate-600">
+        <GitFork className="inline w-4 h-4 mr-1" />Das ursprüngliche Paket <code>{origin.id}</code> wurde zurückgezogen. Der Fork bleibt als eigenständiges Paket bestehen.
+      </div>
+    );
+  }
+
+  const sync = async () => {
+    setBusy(true);
+    setMessage('');
+    try {
+      const res = await api.syncFork(pkg.id, { resolutions, release_notes: notes || undefined });
+      setMessage(res.status === 'merged' ? `Abgeglichen: Version ${res.version} des Forks enthält jetzt die Änderungen des Originals bis v${res.base_version}.`
+        : res.status === 'base_moved' ? `Der Fork ist auf dem Stand von v${res.base_version}; eine neue Version war nicht nötig.`
+          : 'Der Fork ist bereits auf dem neuesten Stand.');
+      setMode('none');
+      setResolutions({});
+      onChanged();
+      load();
+    } catch (err: any) {
+      setMessage(err.message || 'Abgleich fehlgeschlagen.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const createMr = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    setMessage('');
+    try {
+      const res = await api.createMergeRequest(origin.id, { source_package_id: pkg.id, title: mrTitle.trim(), description: mrDescription.trim() || undefined });
+      navigate(`/packages/${encodeURIComponent(origin.id)}/merge-requests/${res.number}`);
+    } catch (err: any) {
+      setMessage(err.message || 'Der Merge Request konnte nicht erstellt werden.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const conflicts = (status?.incoming || []).filter((c: any) => c.conflict);
+  const unresolved = conflicts.filter((c: any) => !resolutions[c.key]).length;
+
+  return (
+    <div className="rounded-xl border border-violet-200 bg-violet-50/40 p-5 space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-sm font-bold text-slate-900 flex items-center gap-1.5"><GitFork className="w-4 h-4" />Fork von «{origin.title}»</h2>
+        <Link to={`/packages/${encodeURIComponent(origin.id)}`} className="text-xs text-red-700 hover:underline">Zum Original</Link>
+      </div>
+      {error && <p className="text-sm text-rose-700">{error}</p>}
+      {status && (
+        <p className="text-sm text-slate-700">
+          Basis: Original v{status.base_version}{!status.base_available && ' (nicht mehr verfügbar, verglichen wird mit der aktuellen Version)'} ·
+          Original aktuell: v{status.upstream.latest_version} ·{' '}
+          <strong>{status.ahead}</strong> Frage(n) im Fork geändert · <strong>{status.behind}</strong> im Original geändert
+          {status.conflicts > 0 && <> · <span className="text-amber-800 font-semibold">{status.conflicts} Konflikt(e)</span></>}
+        </p>
+      )}
+      {status?.can_sync && (
+        <div className="flex flex-wrap gap-2">
+          <button type="button" disabled={status.behind === 0 && status.base_version === status.upstream.latest_version}
+            onClick={() => { setMode('sync'); load(true); }}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm hover:bg-slate-50 disabled:opacity-50">
+            <RefreshCw className="w-4 h-4" />Mit Original abgleichen
+          </button>
+          {openMr ? (
+            <Link to={`/packages/${encodeURIComponent(origin.id)}/merge-requests/${openMr}`}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-900 text-white text-sm">
+              <GitPullRequest className="w-4 h-4" />Offener Merge Request !{openMr}
+            </Link>
+          ) : (
+            <button type="button" disabled={status.ahead === 0} onClick={() => setMode('mr')}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-900 text-white text-sm disabled:opacity-50"
+              title={status.ahead === 0 ? 'Der Fork enthält noch keine Änderungen.' : undefined}>
+              <GitPullRequest className="w-4 h-4" />Merge Request erstellen
+            </button>
+          )}
+        </div>
+      )}
+      {message && <p role="status" className="text-sm text-slate-700">{message}</p>}
+
+      {mode === 'sync' && status && (
+        <div className="space-y-3 rounded-lg bg-white border border-slate-200 p-4">
+          <h3 className="text-sm font-semibold">Änderungen im Original seit v{status.base_version}</h3>
+          <p className="text-xs text-slate-600">
+            Der Abgleich übernimmt diese Änderungen in eine neue Version des Forks ({status.next_version}). Ihre eigenen Änderungen
+            bleiben erhalten. Haben beide Seiten dieselbe Frage unterschiedlich geändert, wählen Sie, welche Fassung gilt.
+            Danach holen Sie die neue Version in Moodle mit «Pull».
+          </p>
+          {status.incoming ? (
+            <QuestionDiffList changes={status.incoming} sideLabel="Original" otherLabel="Ihr Fork"
+              resolutions={resolutions} resolveOptions={['upstream', 'fork']}
+              onResolve={(k, v) => setResolutions(r => ({ ...r, [k]: v }))} />
+          ) : <p className="text-sm text-slate-500">Lade Änderungen …</p>}
+          <label className="block text-sm text-slate-700">
+            Versionshinweis (optional)
+            <input value={notes} onChange={e => setNotes(e.target.value)} className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              placeholder={`Abgleich mit ${origin.id} v${status.upstream.latest_version}`} />
+          </label>
+          <div className="flex gap-2 justify-end">
+            <button type="button" onClick={() => setMode('none')} className="px-3 py-2 rounded-lg border border-slate-300 text-sm">Abbrechen</button>
+            <button type="button" onClick={sync} disabled={busy || unresolved > 0}
+              className="px-3 py-2 rounded-lg bg-red-600 text-white text-sm font-medium disabled:opacity-50">
+              {unresolved > 0 ? `${unresolved} Konflikt(e) offen` : busy ? 'Wird abgeglichen …' : 'Abgleichen'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {mode === 'mr' && (
+        <form onSubmit={createMr} className="space-y-3 rounded-lg bg-white border border-slate-200 p-4">
+          <h3 className="text-sm font-semibold">Merge Request an «{origin.title}»</h3>
+          <label className="block text-sm text-slate-700">
+            Titel
+            <input value={mrTitle} onChange={e => setMrTitle(e.target.value)} required minLength={3} maxLength={200}
+              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="z.B. Fehler in K2-Fragen korrigiert" />
+          </label>
+          <label className="block text-sm text-slate-700">
+            Beschreibung
+            <textarea value={mrDescription} onChange={e => setMrDescription(e.target.value)} rows={5} maxLength={20000}
+              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" placeholder="Was haben Sie geändert und warum?" />
+          </label>
+          <p className="text-xs text-slate-500">
+            Die Admins des Originals erhalten eine E-Mail und können die Änderungen Frage für Frage prüfen, kommentieren und übernehmen.
+            Mit dem Merge Request stellen Sie Ihre Änderungen unter die Lizenz des Originals ({origin.license || 'siehe Original'}).
+            Neue Versionen Ihres Forks erscheinen automatisch im offenen Merge Request.
+          </p>
+          <div className="flex gap-2 justify-end">
+            <button type="button" onClick={() => setMode('none')} className="px-3 py-2 rounded-lg border border-slate-300 text-sm">Abbrechen</button>
+            <button type="submit" disabled={busy} className="px-3 py-2 rounded-lg bg-red-600 text-white text-sm font-medium disabled:opacity-50">
+              Merge Request erstellen
+            </button>
+          </div>
+        </form>
+      )}
+    </div>
+  );
+};

@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import renderMathInElement from 'katex/contrib/auto-render';
 import 'katex/dist/katex.min.css';
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Download, Copy, Check, Eye, Layers, ShieldCheck, Calendar, BookOpen, ArrowLeft, ChevronDown } from 'lucide-react';
+import { Download, Copy, Check, Eye, Layers, ShieldCheck, Calendar, BookOpen, ArrowLeft, ChevronDown, GitFork, Scale } from 'lucide-react';
 import { api, getToken } from '../api/client';
 import { PackageSettings } from '../components/PackageSettings';
 import { AccessRequests } from '../components/AccessRequests';
@@ -10,6 +10,10 @@ import { PackageMembers } from '../components/PackageMembers';
 import { QuestionTypeBadges } from '../components/QuestionTypeBadges';
 import { sanitizeQuestionHtml } from '../utils/sanitize';
 import { buildCategoryTree, CategoryNode } from '../utils/categoryTree';
+import { LicenseBadge, LICENSES } from '../components/License';
+import { ForkDialog } from '../components/ForkDialog';
+import { ForkPanel } from '../components/ForkPanel';
+import { ForksList, MergeRequestList } from '../components/ForksAndMergeRequests';
 
 const QuestionHtml: React.FC<{ html: string; className?: string }> = ({ html, className }) => {
   const elementRef = useRef<HTMLDivElement>(null);
@@ -55,8 +59,9 @@ export const PackageDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   // ?tab=anfragen / ?tab=mitwirkende are the links in the access request and membership e-mails.
-  const [activeTab, setActiveTab] = useState<'overview' | 'categories' | 'preview' | 'versions' | 'members' | 'requests' | 'settings'>(
-    searchParams.get('tab') === 'anfragen' ? 'requests' : searchParams.get('tab') === 'mitwirkende' ? 'members' : 'overview');
+  const initialTab = ({ anfragen: 'requests', mitwirkende: 'members', merge: 'merge', forks: 'forks' } as const)[searchParams.get('tab') as 'anfragen'] || 'overview';
+  const [activeTab, setActiveTab] = useState<'overview' | 'categories' | 'preview' | 'versions' | 'members' | 'requests' | 'settings' | 'forks' | 'merge'>(initialTab);
+  const [showFork, setShowFork] = useState(false);
   const [showVersions, setShowVersions] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [accessRequestMessage, setAccessRequestMessage] = useState('');
@@ -188,9 +193,7 @@ export const PackageDetailPage: React.FC = () => {
               <span className="text-xs font-mono font-semibold bg-slate-100 text-slate-800 px-2 py-0.5 rounded">
                 {pkg.can_access === false ? 'Privat' : `v${pkg.latest_version}`}
               </span>
-              <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded">
-                {pkg.license}
-              </span>
+              <LicenseBadge license={pkg.license} />
               {pkg.preview_enabled !== false && (
                 <span className="text-xs bg-sky-50 text-sky-700 border border-sky-200 px-2 py-0.5 rounded">
                   Vorschau
@@ -199,6 +202,16 @@ export const PackageDetailPage: React.FC = () => {
               <span className="text-xs text-slate-400 font-mono">{pkg.id}</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">{pkg.title}</h1>
+            {pkg.forked_from && (
+              <p className="text-sm text-slate-600 flex items-center gap-1.5">
+                <GitFork className="w-4 h-4 text-violet-600" />Fork von{' '}
+                {pkg.forked_from.exists && pkg.forked_from.title
+                  ? <Link to={`/packages/${encodeURIComponent(pkg.forked_from.id)}`} className="text-red-700 hover:underline">«{pkg.forked_from.title}»</Link>
+                  : <span className="font-mono">{pkg.forked_from.id}{pkg.forked_from.exists ? '' : ' (zurückgezogen)'}</span>}
+                {pkg.forked_from.author_name && <span>von {pkg.forked_from.author_name}</span>}
+                {pkg.forked_from.version && <span className="text-slate-400">· Basis v{pkg.forked_from.version}</span>}
+              </p>
+            )}
             <div className="text-sm text-slate-600 flex flex-wrap items-center gap-x-3 gap-y-1">
               <span className="font-medium text-slate-800">{pkg.author?.name}</span>
               {pkg.author?.institution && <span>• {pkg.author.institution}</span>}
@@ -246,6 +259,14 @@ export const PackageDetailPage: React.FC = () => {
                 </div>
               )}
             </div>
+            <button
+              onClick={() => getToken() ? setShowFork(true) : navigate(`/login?return_to=${encodeURIComponent(window.location.pathname)}`)}
+              className="inline-flex items-center space-x-1.5 px-3 py-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium transition text-sm shadow-sm"
+              title="Eigene Kopie anlegen, bearbeiten und Änderungen per Merge Request vorschlagen"
+            >
+              <GitFork className="w-4 h-4 text-slate-500" />
+              <span>Forken{pkg.forks_count ? ` (${pkg.forks_count})` : ''}</span>
+            </button>
             <button
               onClick={copyImportUrl}
               className="inline-flex items-center space-x-1.5 px-3 py-2.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium transition text-sm shadow-sm"
@@ -296,6 +317,8 @@ export const PackageDetailPage: React.FC = () => {
               ? [{ id: 'preview', label: `Vorschau (${pkg.stats?.question_count || 0})` }]
               : []),
             ...(pkg.can_access !== false ? [{ id: 'versions', label: `Versionen (${pkg.releases?.length || 0})` }] : []),
+            ...(pkg.can_access !== false ? [{ id: 'merge', label: `Merge Requests${pkg.open_merge_requests_count ? ` (${pkg.open_merge_requests_count} offen)` : ''}` }] : []),
+            ...(pkg.can_access !== false && pkg.forks_count ? [{ id: 'forks', label: `Forks (${pkg.forks_count})` }] : []),
             ...(hasRole ? [{ id: 'members', label: 'Mitwirkende' }] : []),
             ...(canManage && (pkg.visibility === 'private' || accessRequests.length > 0)
               ? [{ id: 'requests', label: `Zugriffsanfragen${pendingRequests ? ` (${pendingRequests} offen)` : ''}` }]
@@ -317,7 +340,12 @@ export const PackageDetailPage: React.FC = () => {
         </nav>
       </div>
 
+      {showFork && <ForkDialog pkg={pkg} onClose={() => setShowFork(false)} />}
+
       {/* Tab Contents */}
+      {activeTab === 'overview' && pkg.forked_from && (pkg.my_role === 'admin' || pkg.my_role === 'editor') && (
+        <ForkPanel pkg={pkg} onChanged={() => loadData(pkg.id, true)} />
+      )}
       {activeTab === 'overview' && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="md:col-span-2 bg-white rounded-xl border border-slate-200 p-6 shadow-sm space-y-4">
@@ -365,6 +393,27 @@ export const PackageDetailPage: React.FC = () => {
           </div>
 
           <div className="space-y-6">
+            {pkg.can_access !== false && pkg.license && (
+              <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-2">
+                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5"><Scale className="w-4 h-4 text-emerald-600" />Lizenz & Weiterverwendung</h3>
+                <p className="text-xs text-slate-600">
+                  {pkg.visibility === 'private' ? 'Dieses private Paket steht' : 'Dieses Paket ist offenes Bildungsmaterial (OER) und steht'} unter{' '}
+                  {LICENSES[pkg.license]
+                    ? <a href={LICENSES[pkg.license].url} target="_blank" rel="noopener noreferrer license" className="text-red-700 hover:underline">Creative Commons {LICENSES[pkg.license].short}</a>
+                    : pkg.license}.
+                  {pkg.license !== 'CC0-1.0' && ' Bei Weiterverwendung nennen Sie die Urheberschaft'}
+                  {pkg.license === 'CC-BY-SA-4.0' && ' und geben Bearbeitungen unter derselben Lizenz weiter'}
+                  {pkg.license !== 'CC0-1.0' && '.'}
+                </p>
+                {pkg.license !== 'CC0-1.0' && (
+                  <p className="text-xs text-slate-500 bg-slate-50 rounded p-2">
+                    Namensnennung: «{pkg.title}» von {pkg.author?.name}
+                    {pkg.forked_from?.title ? `, Bearbeitung von «${pkg.forked_from.title}» von ${pkg.forked_from.author_name}` : ''},{' '}
+                    {LICENSES[pkg.license]?.short || pkg.license}, {window.location.origin}/packages/{pkg.id}
+                  </p>
+                )}
+              </div>
+            )}
             <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-4">
               <h3 className="text-sm font-bold text-slate-900">Fragetypen im Paket</h3>
               <QuestionTypeBadges breakdown={pkg.stats?.qtypes_breakdown} max={20} />
@@ -451,6 +500,10 @@ export const PackageDetailPage: React.FC = () => {
       )}
 
       {activeTab === 'members' && hasRole && <PackageMembers packageId={pkg.id} />}
+
+      {activeTab === 'merge' && pkg.can_access !== false && <MergeRequestList pkg={pkg} />}
+
+      {activeTab === 'forks' && pkg.can_access !== false && <ForksList pkg={pkg} />}
 
       {activeTab === 'requests' && canManage && (
         <AccessRequests packageId={pkg.id} requests={accessRequests} onChanged={() => loadAccessRequests(pkg.id)} />

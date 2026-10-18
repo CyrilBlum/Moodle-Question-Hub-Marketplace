@@ -86,6 +86,19 @@ and an obsolete `tests/` folder (old copy with credentials: delete, never reuse)
   challenge from `GET /auth/captcha`, valid 10 min, each solution once). API clients solve it like the E2E helper
   `HubClient.captcha()` in `e2e/conftest.py`. `CAPTCHA_ENABLED=false` switches it off; the HMAC key defaults to one
   derived from `JWT_SECRET` (`CAPTCHA_HMAC_KEY` overrides it).
+- **Forks and merge requests** (`fork.service.ts`, `merge-request.service.ts`, routes in `collaboration.route.ts`, engine
+  `question-xml.service.ts`): `POST /packages/:id/forks` copies a release into a new package of the user (same version,
+  `packages.forked_from_id/_version/_license`; private stays private; licence: BY-SA stays BY-SA, BY -> BY or BY-SA).
+  `forked_from_version` is the merge base and moves on with `POST /packages/:id/sync-upstream` and with a merge whose
+  result equals the fork. Questions are matched by category path + idnumber, else type + name (like the plugin's
+  `source_key`); comparison is three-way per question, conflicts need a resolution (`source`/`target`). Merge requests
+  (`/packages/:id/merge-requests[/:n[/changes|/notes|/approval|/merge]]`, tables `merge_requests`, `_notes`, `_approvals`)
+  go only from a direct fork to its original; one open request per fork; merging (package admins, Hub admins) publishes a
+  new version of the original via `publishPackage(..., { asPackageAdmin: true })`. E-mails to participants are best effort.
+  Plugin: «Forken» on an imported category calls the fork API and re-links the category to the fork
+  (`publication_tracker::relink_to_fork`, copies snapshot and tracking rows), so Push goes to the fork.
+- **Licences**: every package has a CC licence (`CC-BY-4.0` default, `CC-BY-SA-4.0`, `CC0-1.0`); web and plugin show the
+  open-content notice when publishing (public packages are OER, private ones carry the licence but stay restricted).
 
 ## 4. Build and deploy
 Hub (this repo):

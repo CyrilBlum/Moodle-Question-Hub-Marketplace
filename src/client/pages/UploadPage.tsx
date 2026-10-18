@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { UploadCloud, CheckCircle2, AlertTriangle, XCircle, FileText, ArrowRight, BookOpen } from 'lucide-react';
 import { api, getToken } from '../api/client';
+import { LicenseOptions, OpenContentNotice } from '../components/License';
 
 export const UploadPage: React.FC = () => {
   const navigate = useNavigate();
@@ -511,6 +512,13 @@ export const UploadPage: React.FC = () => {
                 <option value="private">Privat – nur mit Freigabe</option>
               </select>
               <span className="block mt-1 text-xs font-normal text-slate-500">Private Pakete erscheinen mit begrenzten Angaben in der Suche. Andere Hub-Konten können Zugriff anfragen.</span>
+            </label>
+            <label className="md:col-span-2 block text-sm font-medium text-slate-700">
+              Lizenz
+              <select value={license} onChange={e => setLicense(e.target.value)} className="mt-1 w-full text-sm border-slate-300 rounded-lg p-2.5 bg-slate-50 border">
+                <LicenseOptions />
+              </select>
+              <OpenContentNotice className="mt-1 font-normal" />
             </label>
             <label className="md:col-span-2 block text-sm font-medium text-slate-700">
               Versionshinweise

@@ -1019,4 +1019,138 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
       await getDatabase()('users').where({ id: me.id }).update({ role: 'teacher' });
     }
   });
+  it('forks and merge requests: fork, diverge, review, merge with conflict resolution, sync the fork', async () => {
+    const ownerAuth = { authorization: `Bearer ${teacherJwtToken}` };
+    const stamp = Date.now();
+    const src = `ch.gym.inf.fork-src-${stamp}`;
+    const forkId = `${src}-c`;
+    const tf = (name: string, text: string) =>
+      `<question type="truefalse"><name><text>${name}</text></name><questiontext format="html"><text><![CDATA[<p>${text}</p>]]></text></questiontext>` +
+      '<answer fraction="100" format="moodle_auto_format"><text>true</text></answer><answer fraction="0" format="moodle_auto_format"><text>false</text></answer></question>';
+    const xml = (...qs: string[]) => `<?xml version="1.0" encoding="UTF-8"?>\n<quiz><question type="category"><category><text>$course$/top/Fork Test</text></category></question>${qs.join('\n')}</quiz>`;
+    const publish = (id: string, version: string, body: string, auth: object, extra: object = {}) => app.inject({
+      method: 'POST', url: '/api/v1/packages', headers: auth,
+      payload: {
+        metadata: {
+          id, version, title: 'Fork Quelle', summary: 'Paket fuer Fork-Tests.', language: 'de-CH', license: 'CC-BY-SA-4.0',
+          taxonomy: { subject: 'Informatik', subject_category: 'SF' }, ...extra,
+        },
+        xml: body,
+      },
+    });
+    const register = async (name: string) => JSON.parse((await app.inject({
+      method: 'POST', url: '/api/v1/auth/register',
+      payload: { altcha: await captcha(), email: `${name}-${stamp}@example.ch`, password: 'Fork-Pass-123!', full_name: `Person ${name}`, institution: 'Kanti F', canton: 'BE' },
+    })).body);
+    const get = async (url: string, auth: object = {}) => {
+      const res = await app.inject({ method: 'GET', url, headers: auth });
+      return { status: res.statusCode, body: JSON.parse(res.body || 'null') };
+    };
+
+    expect((await publish(src, '1.0.0', xml(tf('Q1', 'eins'), tf('Q2', 'zwei'), tf('Q3', 'drei')), ownerAuth)).statusCode).toBe(201);
+    const contributor = await register('contrib');
+    const stranger = await register('stranger');
+    const cAuth = { authorization: `Bearer ${contributor.token}` };
+    const sAuth = { authorization: `Bearer ${stranger.token}` };
+    const mrUrl = `/api/v1/packages/${src}/merge-requests`;
+    try {
+      // Fork: needs a login, a valid free ID and a licence compatible with the original (BY-SA stays BY-SA).
+      expect((await app.inject({ method: 'POST', url: `/api/v1/packages/${src}/forks`, payload: {} })).statusCode).toBe(401);
+      expect((await app.inject({ method: 'POST', url: `/api/v1/packages/${src}/forks`, headers: cAuth, payload: { id: 'Bad ID!' } })).statusCode).toBe(400);
+      expect((await app.inject({ method: 'POST', url: `/api/v1/packages/${src}/forks`, headers: cAuth, payload: { id: src } })).statusCode).toBe(409);
+      expect((await app.inject({ method: 'POST', url: `/api/v1/packages/${src}/forks`, headers: cAuth, payload: { id: forkId, license: 'CC-BY-4.0' } })).statusCode).toBe(400);
+      const forked = await app.inject({ method: 'POST', url: `/api/v1/packages/${src}/forks`, headers: cAuth, payload: { id: forkId } });
+      expect(forked.statusCode).toBe(201);
+      expect(JSON.parse(forked.body)).toMatchObject({ package_id: forkId, version: '1.0.0', forked_from_id: src });
+      const forkDetail = (await get(`/api/v1/packages/${forkId}`, cAuth)).body;
+      expect(forkDetail).toMatchObject({ license: 'CC-BY-SA-4.0', my_role: 'admin', forked_from: { id: src, version: '1.0.0', exists: true, title: 'Fork Quelle' } });
+      expect((await app.inject({ method: 'PATCH', url: `/api/v1/packages/${forkId}`, headers: cAuth, payload: { license: 'CC0-1.0' } })).statusCode).toBe(400);
+      expect((await get(`/api/v1/packages/${src}/forks`)).body.data.map((f: any) => f.id)).toEqual([forkId]);
+      expect((await get(`/api/v1/packages/${src}`)).body.forks_count).toBe(1);
+      const own = (await get('/api/v1/account/packages', cAuth)).body.data.find((p: any) => p.id === forkId);
+      expect(own).toMatchObject({ forked_from_id: src, forked_from_version: '1.0.0', my_role: 'admin' });
+
+      // Without changes there is nothing to propose.
+      expect((await app.inject({ method: 'POST', url: mrUrl, headers: cAuth, payload: { source_package_id: forkId, title: 'Leer' } })).statusCode).toBe(400);
+
+      // Fork: edits Q1, removes Q3, adds Q4. Original: edits Q2 and Q1 differently.
+      expect((await publish(forkId, '1.0.1', xml(tf('Q1', 'eins (Fork)'), tf('Q2', 'zwei'), tf('Q4', 'vier')), cAuth, { base_version: '1.0.0' })).statusCode).toBe(201);
+      expect((await publish(src, '1.1.0', xml(tf('Q1', 'eins (Original)'), tf('Q2', 'zwei (Original)'), tf('Q3', 'drei')), ownerAuth)).statusCode).toBe(201);
+      expect((await get(`/api/v1/packages/${forkId}/fork-status`, cAuth)).body).toMatchObject({ ahead: 3, behind: 2, conflicts: 1, base_version: '1.0.0', can_sync: true });
+
+      // Only editors of the fork propose it; one open request per fork.
+      expect((await app.inject({ method: 'POST', url: mrUrl, headers: sAuth, payload: { source_package_id: forkId, title: 'Fremd' } })).statusCode).toBe(403);
+      const created = await app.inject({ method: 'POST', url: mrUrl, headers: cAuth,
+        payload: { source_package_id: forkId, title: 'Verbesserungen', description: 'Q1 präzisiert, Q4 neu.' } });
+      expect(created.statusCode).toBe(201);
+      expect(JSON.parse(created.body).number).toBe(1);
+      expect((await app.inject({ method: 'POST', url: mrUrl, headers: cAuth, payload: { source_package_id: forkId, title: 'Doppelt' } })).statusCode).toBe(409);
+      expect((await get(`/api/v1/packages/${src}`)).body.open_merge_requests_count).toBe(1);
+      expect((await get(mrUrl)).body.data.map((m: any) => m.number)).toEqual([1]);
+
+      // Changes: three questions, Q1 in conflict; anyone with access may comment on a question.
+      const changes = (await get(`${mrUrl}/1/changes`)).body;
+      expect(changes.changes.map((c: any) => [c.name, c.status, c.conflict])).toEqual([
+        ['Q1', 'modified', true], ['Q4', 'added', false], ['Q3', 'removed', false],
+      ]);
+      const q1 = changes.changes[0].key;
+      expect((await app.inject({ method: 'POST', url: `${mrUrl}/1/notes`, payload: { body: 'anonym' } })).statusCode).toBe(401);
+      const note = await app.inject({ method: 'POST', url: `${mrUrl}/1/notes`, headers: sAuth, payload: { body: 'Gute Idee.', question_key: q1, question_name: 'Q1' } });
+      expect(note.statusCode).toBe(201);
+      const noteId = JSON.parse(note.body).id;
+      expect((await app.inject({ method: 'PATCH', url: `${mrUrl}/1/notes/${noteId}`, headers: cAuth, payload: { body: 'fremd' } })).statusCode).toBe(403);
+      expect((await app.inject({ method: 'PATCH', url: `${mrUrl}/1/notes/${noteId}`, headers: cAuth, payload: { resolved: true } })).statusCode).toBe(204);
+
+      // Approvals by editors/admins of the original only; merging by its admins only.
+      expect((await app.inject({ method: 'PUT', url: `${mrUrl}/1/approval`, headers: sAuth })).statusCode).toBe(403);
+      expect((await app.inject({ method: 'PUT', url: `${mrUrl}/1/approval`, headers: ownerAuth })).statusCode).toBe(204);
+      const detail = (await get(`${mrUrl}/1`, ownerAuth)).body;
+      expect(detail).toMatchObject({ status: 'open', author: { id: contributor.user.id }, mergeability: { mergeable: true, changes: 3, conflicts: 1 } });
+      expect(detail.permissions).toMatchObject({ can_merge: true, approved_by_me: true });
+      expect(detail.notes.find((n: any) => n.id === noteId)).toMatchObject({ question_key: q1, resolved: true });
+      expect((await get(`${mrUrl}/1`, cAuth)).body.permissions).toMatchObject({ can_merge: false, can_close: true });
+      expect((await app.inject({ method: 'POST', url: `${mrUrl}/1/merge`, headers: cAuth, payload: {} })).statusCode).toBe(403);
+
+      // The conflict needs a decision; then the fork's changes land on top of the original's.
+      const blocked = await app.inject({ method: 'POST', url: `${mrUrl}/1/merge`, headers: ownerAuth, payload: {} });
+      expect(blocked.statusCode).toBe(409);
+      expect(JSON.parse(blocked.body).conflicts).toEqual([q1]);
+      const merged = await app.inject({ method: 'POST', url: `${mrUrl}/1/merge`, headers: ownerAuth, payload: { resolutions: { [q1]: 'source' } } });
+      expect(merged.statusCode).toBe(200);
+      expect(JSON.parse(merged.body).version).toBe('1.1.1');
+      const download = await app.inject({ method: 'GET', url: `/api/v1/packages/${src}/releases/1.1.1/download` });
+      expect(download.body).toContain('eins (Fork)');
+      expect(download.body).toContain('zwei (Original)');
+      expect(download.body).toContain('vier');
+      expect(download.body).not.toContain('drei');
+      const after = (await get(`${mrUrl}/1`, ownerAuth)).body;
+      expect(after).toMatchObject({ status: 'merged', merged_version: '1.1.1' });
+      expect(after.notes.some((n: any) => n.kind === 'system' && n.body.includes('1.1.1'))).toBe(true);
+      expect((await get(`/api/v1/packages/${src}`)).body.releases[0].release_notes).toContain('Merge Request !1');
+      expect((await get(`${mrUrl}/1/changes`)).body.changes).toHaveLength(3);
+      expect((await get('/api/v1/account/merge-requests', cAuth)).body.authored.map((m: any) => m.number)).toEqual([1]);
+
+      // Sync: the fork takes the original's other changes and is level again.
+      const synced = await app.inject({ method: 'POST', url: `/api/v1/packages/${forkId}/sync-upstream`, headers: cAuth, payload: {} });
+      expect(synced.statusCode).toBe(200);
+      expect(JSON.parse(synced.body)).toMatchObject({ status: 'merged', version: '1.0.2', base_version: '1.1.1' });
+      expect((await get(`/api/v1/packages/${forkId}/fork-status`, cAuth)).body).toMatchObject({ ahead: 0, behind: 0 });
+      expect(JSON.parse((await app.inject({ method: 'POST', url: `/api/v1/packages/${forkId}/sync-upstream`, headers: cAuth, payload: {} })).body).status).toBe('up_to_date');
+      expect((await app.inject({ method: 'POST', url: `/api/v1/packages/${forkId}/sync-upstream`, headers: sAuth, payload: {} })).statusCode).toBe(403);
+
+      // A second request can be closed by its author and reopened; withdrawing the fork closes it.
+      expect((await publish(forkId, '1.0.3', xml(tf('Q1', 'eins (Fork)'), tf('Q2', 'zwei (Original)'), tf('Q4', 'vier'), tf('Q5', 'fünf')), cAuth, { base_version: '1.0.2' })).statusCode).toBe(201);
+      expect((await app.inject({ method: 'POST', url: mrUrl, headers: cAuth, payload: { source_package_id: forkId, title: 'Q5' } })).statusCode).toBe(201);
+      expect((await app.inject({ method: 'PATCH', url: `${mrUrl}/2`, headers: sAuth, payload: { status: 'closed' } })).statusCode).toBe(403);
+      expect((await app.inject({ method: 'PATCH', url: `${mrUrl}/2`, headers: cAuth, payload: { status: 'closed' } })).statusCode).toBe(200);
+      expect((await app.inject({ method: 'PATCH', url: `${mrUrl}/2`, headers: cAuth, payload: { status: 'open' } })).statusCode).toBe(200);
+      expect((await app.inject({ method: 'DELETE', url: `/api/v1/packages/${forkId}`, headers: cAuth })).statusCode).toBe(204);
+      expect((await get(`${mrUrl}/2`, ownerAuth)).body).toMatchObject({ status: 'closed', source: { exists: false } });
+      expect((await get(`/api/v1/packages/${src}`)).body.forks_count).toBe(0);
+    } finally {
+      await app.inject({ method: 'DELETE', url: `/api/v1/packages/${forkId}`, headers: cAuth });
+      await app.inject({ method: 'DELETE', url: `/api/v1/packages/${src}`, headers: ownerAuth });
+      await getDatabase()('users').whereIn('id', [contributor.user.id, stranger.user.id]).del();
+    }
+  });
 });

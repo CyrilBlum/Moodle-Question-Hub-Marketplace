@@ -97,6 +97,8 @@ export interface PackageSearchResult {
     response_message: string | null;
     share_contact: boolean;
   }>;
+  /** Package this one was forked from (also when that package was withdrawn since). */
+  forked_from_id?: string | null;
   /** Category paths of the latest release, e.g. $course$/top/Informatik/Bäume. */
   categories?: string[];
   stats: {
@@ -115,6 +117,18 @@ export interface PackageSearchResult {
 
 export interface PackageDetailResult extends PackageSearchResult {
   categories: string[];
+  /** Origin of a fork: the original (null title when it was withdrawn or is not visible to the viewer). */
+  forked_from?: {
+    id: string;
+    version: string | null;
+    license: string | null;
+    title: string | null;
+    author_name: string | null;
+    exists: boolean;
+  } | null;
+  /** Forks the viewer can see. */
+  forks_count?: number;
+  open_merge_requests_count?: number;
   releases: Array<{
     version: string;
     sha256: string;

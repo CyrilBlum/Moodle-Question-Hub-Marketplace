@@ -4,6 +4,7 @@ import { Key, Plus, Trash2, Copy, Check, AlertCircle, Shield, User } from 'lucid
 import { api, getToken, getStoredUser, setStoredUser } from '../api/client';
 import { PackageEditForm } from '../components/PackageEditForm';
 import { GitHubConnection } from '../components/GitHubConnection';
+import { MyMergeRequests } from '../components/MyMergeRequests';
 
 export const CANTONS = [
   ['AG', 'Aargau'], ['AI', 'Appenzell Innerrhoden'], ['AR', 'Appenzell Ausserrhoden'],
@@ -191,6 +192,7 @@ export const DashboardPage: React.FC = () => {
                     {pkg.id} • v{pkg.latest_version} • {pkg.downloads_count} Downloads •{' '}
                     {pkg.preview_enabled ? 'mit Vorschau' : 'ohne Vorschau'}
                     {!pkg.is_creator && <> • {pkg.my_role === 'admin' ? 'Admin' : 'Bearbeiter/in'}</>}
+                    {pkg.forked_from_id && <> • Fork von {pkg.forked_from_id}</>}
                   </div>
                 </div>
                 {pkg.my_role === 'admin' && <div className="flex gap-2">
@@ -212,6 +214,8 @@ export const DashboardPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      <MyMergeRequests />
 
       {editing && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">

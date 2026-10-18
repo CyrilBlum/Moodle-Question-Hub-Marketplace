@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { AlertCircle, Check, Save } from 'lucide-react';
 import { api } from '../api/client';
+import { LicenseOptions, OpenContentNotice, forkLicenses } from './License';
 
 interface Props {
   pkg: any;
@@ -92,10 +93,11 @@ export const PackageEditForm: React.FC<Props> = ({ pkg, onSaved, onCancel, showH
         <label className="block text-xs font-semibold text-slate-700">
           Lizenz
           <select className={inputCls} value={license} onChange={e => setLicense(e.target.value)}>
-            <option value="CC-BY-4.0">CC-BY-4.0 (Namensnennung)</option>
-            <option value="CC-BY-SA-4.0">CC-BY-SA-4.0 (Weitergabe unter gleichen Bedingungen)</option>
-            <option value="CC0-1.0">CC0-1.0 (Gemeinfrei)</option>
+            <LicenseOptions allowed={pkg.forked_from ? forkLicenses(pkg.forked_from.license) : undefined} />
           </select>
+          {pkg.forked_from?.license && (
+            <span className="block mt-1 font-normal text-slate-500">Fork eines Pakets unter {pkg.forked_from.license}: nur kompatible Lizenzen.</span>
+          )}
         </label>
 
         <label className="block text-xs font-semibold text-slate-700">
@@ -179,6 +181,8 @@ export const PackageEditForm: React.FC<Props> = ({ pkg, onSaved, onCancel, showH
           Ihr Konto eine GitHub-Verbindung (Dashboard, Abschnitt «GitHub-Verbindung») mit Schreibrecht auf das Repository. Leeren Sie das Feld, um die Verbindung zu lösen.
         </span>
       </label>
+
+      <OpenContentNotice />
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
         <p className="text-xs text-slate-500">

@@ -110,9 +110,33 @@ export class EmailService {
     });
   }
 
+  public static baseUrl(): string {
+    return getConfig().PUBLIC_BASE_URL.replace(/\/$/, '');
+  }
+
   private static packageUrl(packageId: string, tab?: string): string {
-    const base = getConfig().PUBLIC_BASE_URL.replace(/\/$/, '');
-    return `${base}/packages/${encodeURIComponent(packageId)}${tab ? `?tab=${tab}` : ''}`;
+    return `${this.baseUrl()}/packages/${encodeURIComponent(packageId)}${tab ? `?tab=${tab}` : ''}`;
+  }
+
+  /** Merge request events (new request, comment, merged, closed) for the participants. */
+  public static async sendMergeRequestNotice(data: { to: string[]; subject: string; lines: string[]; url: string }): Promise<void> {
+    const transporter = this.transporter();
+    await transporter.sendMail({
+      from: getConfig().SMTP_FROM,
+      // Participants do not see each other's addresses.
+      to: getConfig().SMTP_FROM,
+      bcc: data.to,
+      subject: data.subject,
+      text: [
+        'Guten Tag',
+        '',
+        ...data.lines,
+        '',
+        `Zum Merge Request: ${data.url}`,
+        '',
+        'Diese Nachricht wurde automatisch vom Moodle Question Hub versendet.',
+      ].join('\n'),
+    });
   }
 
   public static async sendAccessRequest(data: AccessRequestEmailData): Promise<void> {

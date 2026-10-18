@@ -33,6 +33,16 @@ export type GitHubSyncResult =
   | { status: 'error'; message: string }
   | null;
 
+/**
+ * Licences a fork may use, given the original's licence: CC BY-SA requires the same licence (share-alike),
+ * CC BY allows CC BY or CC BY-SA (attribution stays), CC0 allows any.
+ */
+export function compatibleForkLicenses(original: string): string[] {
+  if (original === 'CC-BY-SA-4.0') return ['CC-BY-SA-4.0'];
+  if (original === 'CC-BY-4.0') return ['CC-BY-4.0', 'CC-BY-SA-4.0'];
+  return ['CC-BY-4.0', 'CC-BY-SA-4.0', 'CC0-1.0'];
+}
+
 /** Decodes HTML entities in plain-text metadata (older plugin versions sent "Computer &amp; X"). */
 export function decodeEntities(text: string): string {
   return text
@@ -68,7 +78,9 @@ export class PackageService {
   public async publishPackage(
     ownerId: string,
     manifest: PackageManifest,
-    rawXml: string
+    rawXml: string,
+    /** Set by callers that already checked package-admin rights (merging a merge request as a Hub admin). */
+    opts: { asPackageAdmin?: boolean } = {}
   ): Promise<{
     package_id: string;
     version: string;
@@ -120,7 +132,7 @@ export class PackageService {
           `CONFLICT: Version ${manifest.version} existiert bereits oder ist nicht höher als die aktuelle Version ${existingPackage.latest_version} (zurückgezogene Versionen bleiben gesperrt).`
         );
       }
-      publisherRole = await PackageMembersService.getInstance().getRole(manifest.id, ownerId);
+      publisherRole = opts.asPackageAdmin ? 'admin' : await PackageMembersService.getInstance().getRole(manifest.id, ownerId);
       if (!PackageMembersService.atLeast(publisherRole, 'editor')) {
         throw new Error('FORBIDDEN: Sie sind nicht berechtigt, neue Versionen dieses Pakets zu veröffentlichen.');
       }
@@ -486,6 +498,7 @@ export class PackageService {
         access_status: accessStatus,
         can_access: canAccess,
         my_role: myRole,
+        forked_from_id: row.forked_from_id || null,
         categories: canAccess ? categoryPaths : [],
         stats: {
           question_count: canAccess ? questionCount : 0,
@@ -548,6 +561,25 @@ export class PackageService {
     const tags = await knex('package_tags').where({ package_id: packageId });
     const grades = await knex('package_grades').where({ package_id: packageId });
 
+    let forkedFrom: PackageDetailResult['forked_from'] = null;
+    if (row.forked_from_id) {
+      const origin = await knex('packages').join('users', 'packages.owner_id', 'users.id')
+        .where({ 'packages.id': row.forked_from_id }).first('packages.title', 'packages.visibility', 'users.full_name');
+      forkedFrom = {
+        id: row.forked_from_id,
+        version: row.forked_from_version || null,
+        license: row.forked_from_license || null,
+        title: origin ? origin.title : null,
+        author_name: origin ? origin.full_name : null,
+        exists: !!origin,
+      };
+    }
+    const forkIds: string[] = await knex('packages').where({ forked_from_id: packageId }).pluck('id');
+    const forksCount = (await Promise.all(forkIds.map(f => this.canAccessPackage(f, viewerId)))).filter(Boolean).length;
+    const openMrs = canAccess
+      ? Number((await knex('merge_requests').where({ target_package_id: packageId, status: 'open' }).count<{ c: number }>('id as c').first())?.c || 0)
+      : 0;
+
     const latestRelease = releases.find(r => r.version === row.latest_version) || releases[0];
     let categories: string[] = [];
     let qtypesBreakdown: Record<string, number> = {};
@@ -592,6 +624,10 @@ export class PackageService {
       my_role: myRole,
       can_manage: myRole === 'admin' || isHubAdmin,
       github_repo: myRole === 'admin' || isHubAdmin ? row.github_repo || null : undefined,
+      forked_from_id: row.forked_from_id || null,
+      forked_from: forkedFrom,
+      forks_count: forksCount,
+      open_merge_requests_count: openMrs,
       stats: {
         question_count: canAccess && latestRelease ? latestRelease.question_count : 0,
         categories_count: canAccess ? categories.length : 0,
@@ -803,6 +839,9 @@ export class PackageService {
       if (!['CC-BY-4.0', 'CC-BY-SA-4.0', 'CC0-1.0'].includes(patch.license)) {
         throw new Error(`BAD_REQUEST: Unbekannte Lizenz '${patch.license}'.`);
       }
+      if (pkg.forked_from_license && !compatibleForkLicenses(pkg.forked_from_license).includes(patch.license)) {
+        throw new Error(`BAD_REQUEST: Dieser Fork stammt aus einem Paket unter ${pkg.forked_from_license}; erlaubt sind nur ${compatibleForkLicenses(pkg.forked_from_license).join(', ')}.`);
+      }
       update.license = patch.license;
     }
     if (patch.preview_enabled !== undefined) update.preview_enabled = !!patch.preview_enabled;
@@ -880,6 +919,8 @@ export class PackageService {
     latest_version: string; versions: string[];
     preview_enabled: boolean; downloads_count: number; updated_at: string; my_role: PackageRole; is_creator: boolean;
     github_repo: string | null; github_linked: boolean;
+    forked_from_id: string | null; forked_from_version: string | null;
+    forked_from: { id: string; version: string | null; license: string | null } | null;
   }>> {
     const knex = getDatabase();
     const rows = await knex('packages')
@@ -914,6 +955,9 @@ export class PackageService {
       github_repo: roles.get(r.id) === 'admin' ? r.github_repo || null : null,
       // Editors only learn that new versions also go to GitHub, not where.
       github_linked: !!r.github_repo,
+      forked_from_id: r.forked_from_id || null,
+      forked_from_version: r.forked_from_version || null,
+      forked_from: r.forked_from_id ? { id: r.forked_from_id, version: r.forked_from_version || null, license: r.forked_from_license || null } : null,
     }));
   }
 
@@ -971,6 +1015,16 @@ export class PackageService {
       await trx('package_grades').where({ package_id: packageId }).del();
       await trx('package_tags').where({ package_id: packageId }).del();
       await trx('package_members').where({ package_id: packageId }).del();
+      // Merge requests into the package go with it; open ones from it (a fork) are closed with a note.
+      await trx('merge_requests').where({ target_package_id: packageId }).del();
+      const openFromHere = await trx('merge_requests').where({ source_package_id: packageId, status: 'open' }).pluck('id');
+      for (const mrId of openFromHere) {
+        await trx('merge_requests').where({ id: mrId }).update({ status: 'closed', closed_by: ownerId, closed_at: new Date(), updated_at: new Date() });
+        await trx('merge_request_notes').insert({
+          id: crypto.randomUUID(), merge_request_id: mrId, author_id: ownerId, kind: 'system',
+          body: 'hat den Merge Request geschlossen: Der Fork wurde zurückgezogen.', created_at: new Date(), updated_at: new Date(),
+        });
+      }
       await trx('releases').where({ package_id: packageId }).del();
       await trx('packages').where({ id: packageId }).del();
     });
