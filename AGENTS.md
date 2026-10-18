@@ -104,7 +104,9 @@ and an obsolete `tests/` folder (old copy with credentials: delete, never reuse)
   (`GET /packages` hides packages whose original exists unless `include_variants=1`; results carry `variants_count`);
   the original's page shows them via `?variante=<id>` (a variant's own URL redirects there, `root_id` in the detail),
   `GET /packages/:id/forks` lists all variants below an original (also variants of variants, `parent_id`). The plugin's
-  import dialog offers the original or a visible variant (`api_client::get_variants`). E-mails to participants (with access) are best effort.
+  import dialog offers the original or a visible variant (`api_client::get_variants`).
+  «Variante wechseln» on a linked category copies the question tracking to the chosen family member
+  (`publication_tracker::copy_tracking`) and continues as a pull preview; importing it moves the link. E-mails to participants (with access) are best effort.
   Plugin: «Forken» on an imported category calls the fork API and re-links the category to the fork
   (`publication_tracker::relink_to_fork`, copies snapshot and tracking rows), so Push goes to the fork.
 - **Licences**: every package has a CC licence (`CC-BY-4.0` default, `CC-BY-SA-4.0`, `CC0-1.0`); web and plugin show the
