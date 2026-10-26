@@ -7,7 +7,7 @@ No secrets are stored here: passwords come from environment variables or the own
 Teachers publish Moodle question collections from one Moodle to a shared **Hub** and import them into
 another Moodle. Three parts:
 
-| Part | Repo (GitHub, private) | Tech | Where it runs |
+| Part | Repo (GitHub; plugin and Hub public, qbase private) | Tech | Where it runs |
 |---|---|---|---|
 | Moodle plugin `qbank_questionhub` | `CyrilBlum/Moodle-Question-Hub` | PHP, Moodle question-bank subplugin, Mustache | `question/bank/questionhub` on both test Moodles |
 | Hub / marketplace (API + web) | `CyrilBlum/Moodle-Question-Hub-Marketplace` (this repo) | Node, TypeScript, Fastify, React/Vite, MariaDB | https://hub.cblum.ch, systemd `moodle-question-hub.service`, nginx -> port 8090 |
@@ -176,3 +176,7 @@ Lint PHP on the server (`php8.2 -l`); there is no PHP on the usual dev laptop.
 - MariaDB `tmpdir` is on the small `/tmp` loop mount; moving it needs a MariaDB restart (not done).
 - Plugin settings editor, import/preview button fix, entity decoding, private package access, and question type badges are merged into main.
 - Drawing and `oumultiresponse` question types are unsupported by the importer (warning `WARN_UNSUPPORTED_QUESTION_TYPE`).
+- Security review 2026-10-26 (for school IT): plugin v1.0.33 fixes 7 findings; report in Claude Docs
+  "Sicherheitsprüfung Moodle-Plugin Question Hub". Plugin CI runs moodle-plugin-ci (4.5, 5.0) and Semgrep; phpcs style
+  findings (512, 417 auto-fixable with phpcbf) and Mustache lint warnings are reported but not yet a gate.
+  Setting `stripactivecontent` purifies imported HTML; `allowteacherlinking` now really disables linked accounts.
