@@ -45,6 +45,12 @@ and an obsolete `tests/` folder (old copy with credentials: delete, never reuse)
 - **Auth for the plugin**: either OAuth-linked token or a Personal Access Token (`mqh_pat_...`) pasted in the plugin page.
 - **XML safety**: DOCTYPE/ENTITY/XInclude are rejected (also UTF-16 with/without BOM via `decodeUpload`), 50 MB package limit.
   Cloze validation only inspects `{n:TYPE:...}` tokens; other braces (LaTeX) are literal.
+- **Category paths in packages**: Moodle exports them as CDATA with a context prefix (`$module$` on 5.0, `$cat1$` for a
+  4.5 course-category bank, `$course$`). Plugin (`package_exporter::normalize_xml()`, since v1.0.38) and Hub (`publishPackage`
+  -> `canonicalizeCategoryPaths`) rewrite them to `$course$/top/...`; every parser must strip any `$...$` prefix incl. digits.
+- **Pull compares content** (plugin v1.0.39): a question unchanged on the Hub since the last pull but with other local content
+  (name ignored, numbers by value, `package_importer::same_question_content()`) is a conflict, not «unchanged». The library's
+  «Mit Hub abgleichen …» list includes the linked version to run this check without a newer release.
 - **Moodle 5.0 vs 4.5**: on 5.0 questions live in a `mod_qbank` module (default system bank, via
   `question_bank_helper::get_default_open_instance_system_type($course, true)`); on 4.5 they live in the course context.
   Quiz API differs (`process_submit` only on 5.0). CLI scripts need `require_once($CFG->libdir.'/questionlib.php')`.
