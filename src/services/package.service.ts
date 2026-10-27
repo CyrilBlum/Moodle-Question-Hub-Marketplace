@@ -8,6 +8,7 @@ import { SafeXmlValidatorService } from './xml-validator.service';
 import { PackageStorageService } from './package-storage.service';
 import { TaxonomyService } from './taxonomy.service';
 import { GitHubService } from './github.service';
+import { canonicalizeCategoryPaths } from './question-xml.service';
 import {
   PackageManifest,
   PackageSearchResult,
@@ -98,6 +99,9 @@ export class PackageService {
     github: GitHubSyncResult;
   }> {
     const knex = getDatabase();
+
+    // Releases from Moodle 4.5 and 5.0 use different context prefixes; older plugins do not normalize them.
+    rawXml = canonicalizeCategoryPaths(rawXml);
 
     // 1. Validate XML package
     const report = SafeXmlValidatorService.validatePackage(rawXml);

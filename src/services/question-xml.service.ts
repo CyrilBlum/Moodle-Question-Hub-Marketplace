@@ -73,6 +73,31 @@ export function normaliseCategory(path: string): string {
   return p.split('/').map(s => s.trim()).filter(Boolean).join('/');
 }
 
+/**
+ * "$cat1$/top/A", "$module$/top/A", "$course$/A" -> "$course$/top/A" (same as the plugin's
+ * package_exporter::normalize_category_path()). Paths without a context prefix stay as they are.
+ */
+export function canonicalCategoryPath(path: string): string {
+  const m = /^\$(?:module|course|system|cat\d+|)\$(?:\/([\s\S]*))?$/i.exec(path);
+  if (!m) return path;
+  const rest = (m[1] ?? '').replace(/^\/+/, '');
+  if (rest === 'top' || rest.startsWith('top/')) return `$course$/${rest}`;
+  return `$course$/top${rest ? `/${rest}` : ''}`;
+}
+
+/**
+ * Rewrites every category path of a Moodle XML package to the canonical $course$/top prefix, so releases
+ * published from Moodle 4.5 ($cat1$, $course$) and 5.0 ($module$) differ only in their questions.
+ * Moodle writes the paths as CDATA; plain text paths are handled as well.
+ */
+export function canonicalizeCategoryPaths(xml: string): string {
+  return xml.replace(
+    /(<category>\s*<text>)(<!\[CDATA\[)?([\s\S]*?)(\]\]>)?(<\/text>)/g,
+    (_all, open: string, cdata: string | undefined, path: string, cdataEnd: string | undefined, close: string) =>
+      open + (cdata ?? '') + canonicalCategoryPath(path) + (cdataEnd ?? '') + close
+  );
+}
+
 /** First `<tag>…</tag>` directly searchable in the blanked block, returned from the raw block. */
 function element(raw: string, blank: string, tag: string): string | null {
   const re = new RegExp(`<${tag}(\\s[^>]*)?>([\\s\\S]*?)</${tag}>`);

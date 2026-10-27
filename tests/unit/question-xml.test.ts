@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   parsePackage, mergeThreeWay, compareThreeWay, sameContent, displayLines, diffLines, questionDiff, normaliseCategory, changedFields,
+  canonicalCategoryPath, canonicalizeCategoryPaths,
 } from '../../src/services/question-xml.service';
 
 const tf = (name: string, text: string, idnumber = '') =>
@@ -138,5 +139,17 @@ describe('question-xml edge cases', () => {
     const xml = mergeThreeWay(base, fork, target).xml!;
     expect(xml).not.toContain('$course$/top/Alt');
     expect(xml).toContain('a (Fork)');
+  });
+
+  it('gives category paths from Moodle 4.5 and 5.0 the same $course$/top prefix', () => {
+    for (const prefix of ['$module$', '$cat1$', '$course$', '$system$']) {
+      const xml = `<quiz><question type="category">\n    <category>\n      <text><![CDATA[${prefix}/top/Computer & Kodierungen/HW]]></text>\n    </category>\n  </question></quiz>`;
+      expect(canonicalizeCategoryPaths(xml)).toContain('<text><![CDATA[$course$/top/Computer & Kodierungen/HW]]></text>');
+    }
+    expect(canonicalizeCategoryPaths(cat('A'))).toBe(cat('A'));
+    expect(canonicalCategoryPath('$cat12$/top')).toBe('$course$/top');
+    expect(canonicalCategoryPath('$course$/A')).toBe('$course$/top/A');
+    expect(canonicalCategoryPath('$course$/topics')).toBe('$course$/top/topics');
+    expect(canonicalCategoryPath('Informatik/K1')).toBe('Informatik/K1');
   });
 });
