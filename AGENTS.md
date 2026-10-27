@@ -59,7 +59,7 @@ and an obsolete `tests/` folder (old copy with credentials: delete, never reuse)
   `GET /account/packages` lists packages the user created or edits, with `my_role`; the plugin shows Push only for
   those and package settings/withdrawal only for `my_role = admin`. Hub admins pass every package-admin check.
 - **GitHub mirror (optional)**: a user stores a GitHub token via `PUT/GET/DELETE /account/github` (dashboard section
-  «GitHub-Verbindung»; checked with `GET /user`, stored AES-256-GCM-encrypted in `users.github_token_enc` with a key derived
+  «GitHub-Verbindung»; checked with `GET /user`, «Verbindung testen» = `POST /account/github/test` re-checks the stored token and its expiry, stored AES-256-GCM-encrypted in `users.github_token_enc` with a key derived
   from `JWT_SECRET`, or `GITHUB_TOKEN_KEY`; changing that key invalidates stored tokens). A package admin links a package with
   `github_repo` (SSH or HTTPS URL, in the publish manifest or `PATCH /packages/:id`, `''` unlinks; write access is checked;
   a repository the token cannot see is created private with `auto_init` in the own account or the named org, which needs a token

@@ -184,6 +184,7 @@ export const api = {
   connectGitHub: (token: string) => request('/account/github', {
     method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }),
   }),
+  testGitHub: () => request('/account/github/test', { method: 'POST' }),
   disconnectGitHub: () => request('/account/github', { method: 'DELETE' }),
   getPackageMembers: (id: string) => request(`/packages/${encodeURIComponent(id)}/members`),
   addPackageMember: (id: string, email: string, role: 'member' | 'editor' | 'admin') =>

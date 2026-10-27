@@ -30,6 +30,22 @@ export async function githubRoutes(app: FastifyInstance): Promise<void> {
     }
   });
 
+  // POST /api/v1/account/github/test (checks the stored token against GitHub)
+  app.post('/account/github/test', {
+    preHandler: [app.authenticate],
+    config: { rateLimit: { max: 30, timeWindow: '1 hour' } },
+  }, async (req, reply) => {
+    try {
+      return reply.status(200).send(await github.test((req as any).user.id));
+    } catch (err: any) {
+      const msg: string = err.message || '';
+      if (msg.startsWith('BAD_REQUEST:')) {
+        return reply.status(400).send({ statusCode: 400, error: 'Bad Request', message: msg.replace('BAD_REQUEST: ', '') });
+      }
+      return reply.status(502).send({ statusCode: 502, error: 'Bad Gateway', message: msg });
+    }
+  });
+
   // POST /api/v1/account/github/repos (create a private repository in the own GitHub account)
   app.post('/account/github/repos', {
     preHandler: [app.authenticate],

@@ -73,7 +73,7 @@ export class GitHubService {
     }
   }
 
-  private async call(token: string, method: string, path: string, body?: unknown): Promise<{ status: number; data: any }> {
+  private async call(token: string, method: string, path: string, body?: unknown): Promise<{ status: number; data: any; headers?: Headers }> {
     let res: Response;
     try {
       res = await fetch(`${getConfig().GITHUB_API_URL}${path}`, {
@@ -95,7 +95,7 @@ export class GitHubService {
     try {
       data = await res.json();
     } catch {}
-    return { status: res.status, data };
+    return { status: res.status, data, headers: res.headers };
   }
 
   private static apiError(action: string, res: { status: number; data: any }): Error {
@@ -125,6 +125,24 @@ export class GitHubService {
       github_connected_at: new Date(),
     });
     return { connected: true, login: res.data.login };
+  }
+
+  /** Checks the stored token against GitHub without changing it; ok is false when GitHub rejects it. */
+  public async test(userId: string): Promise<{ ok: boolean; login: string | null; expires_at: string | null; message: string | null }> {
+    let token: string;
+    try {
+      token = await this.tokenOf(userId);
+    } catch (err: any) {
+      throw new Error(`BAD_REQUEST: ${err.message}`);
+    }
+    const res = await this.call(token, 'GET', '/user');
+    if (res.status !== 200 || !res.data?.login) {
+      return { ok: false, login: null, expires_at: null, message: GitHubService.apiError('Anmeldung bei GitHub', res).message };
+    }
+    // GitHub sends the expiry of personal access tokens in this header (absent for tokens without expiry).
+    const expiry = res.headers?.get('github-authentication-token-expiration');
+    const expiresAt = expiry && !Number.isNaN(Date.parse(expiry)) ? new Date(expiry).toISOString() : null;
+    return { ok: true, login: String(res.data.login), expires_at: expiresAt, message: null };
   }
 
   public async disconnect(userId: string): Promise<void> {

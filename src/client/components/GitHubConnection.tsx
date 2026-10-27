@@ -28,6 +28,24 @@ export const GitHubConnection: React.FC = () => {
     }
   };
 
+  const test = async () => {
+    setBusy(true);
+    setMessage(null);
+    try {
+      const res = await api.testGitHub();
+      if (res.ok) {
+        const expiry = res.expires_at ? ` Der Token läuft am ${new Date(res.expires_at).toLocaleDateString('de-CH')} ab.` : '';
+        setMessage({ ok: true, text: `Verbindung funktioniert: GitHub erkennt den Token als ${res.login}.${expiry}` });
+      } else {
+        setMessage({ ok: false, text: `${res.message} Lösen Sie die Verbindung und hinterlegen Sie einen neuen Token.` });
+      }
+    } catch (err: any) {
+      setMessage({ ok: false, text: err.message || 'Test fehlgeschlagen.' });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const disconnect = async () => {
     if (!confirm('GitHub-Verbindung lösen? Pakete, die Sie mit GitHub verknüpft haben, werden danach nicht mehr committet.')) return;
     try {
@@ -67,9 +85,14 @@ export const GitHubConnection: React.FC = () => {
             Verbunden als <span className="font-mono font-semibold">{connection.login}</span>
             {connection.connected_at && <> seit {new Date(connection.connected_at).toLocaleDateString('de-CH')}</>}.
           </p>
-          <button onClick={disconnect} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-red-200 text-red-700 hover:bg-red-50">
-            Verbindung lösen
-          </button>
+          <div className="flex gap-2">
+            <button onClick={test} disabled={busy} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+              {busy ? 'Teste…' : 'Verbindung testen'}
+            </button>
+            <button onClick={disconnect} className="px-3 py-1.5 text-xs font-medium rounded-lg border border-red-200 text-red-700 hover:bg-red-50">
+              Verbindung lösen
+            </button>
+          </div>
         </div>
       ) : (
         <form onSubmit={connect} className="space-y-2">

@@ -879,6 +879,9 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
       const stored = await getDatabase()('users').where({ id: me.id }).first('github_token_enc');
       expect(stored.github_token_enc).not.toContain(ghToken);
       expect(JSON.stringify(me)).not.toContain('github_token');
+      const tested = await app.inject({ method: 'POST', url: '/api/v1/account/github/test', headers: auth });
+      expect(tested.statusCode).toBe(200);
+      expect(JSON.parse(tested.body)).toMatchObject({ ok: true, login: 'octo' });
 
       expect((await publish('1.0.0', { github_repo: 'https://gitlab.com/octo/questions' })).statusCode).toBe(400);
       calls.length = 0;
@@ -954,6 +957,7 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
       expect((await app.inject({ method: 'DELETE', url: '/api/v1/account/github', headers: auth })).statusCode).toBe(204);
       expect(JSON.parse((await app.inject({ method: 'GET', url: '/api/v1/account/github', headers: auth })).body).connected).toBe(false);
       expect((await createRepo('fragen-ohne-token')).statusCode).toBe(400);
+      expect((await app.inject({ method: 'POST', url: '/api/v1/account/github/test', headers: auth })).statusCode).toBe(400);
     } finally {
       fetchMock.mockRestore();
       await app.inject({ method: 'DELETE', url: `/api/v1/packages/${id}`, headers: auth });
