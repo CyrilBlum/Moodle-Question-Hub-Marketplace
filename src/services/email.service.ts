@@ -56,7 +56,7 @@ export class EmailService {
         data.text,
         '',
         '--',
-        `Nachricht${data.senderName ? ` von ${data.senderName}` : ''} über die Administration des Moodle Question Hub.`,
+        `Nachricht${data.senderName ? ` von ${data.senderName}` : ''} über die Administration des Question Hub.`,
       ].join('\n'),
     });
   }
@@ -75,7 +75,7 @@ export class EmailService {
       text: [
         'Guten Tag',
         '',
-        'Im Moodle Question Hub wurde ein neues Konto registriert:',
+        'Im Question Hub wurde ein neues Konto registriert:',
         '',
         `Name: ${data.full_name}`,
         `E-Mail: ${data.email}`,
@@ -84,7 +84,7 @@ export class EmailService {
         '',
         `Alle Konten verwalten: ${base}/admin`,
         '',
-        'Diese Nachricht wurde automatisch vom Moodle Question Hub versendet.',
+        'Diese Nachricht wurde automatisch vom Question Hub versendet.',
       ].join('\n'),
     });
   }
@@ -101,11 +101,11 @@ export class EmailService {
       text: [
         'Guten Tag',
         '',
-        `${data.actorName} hat Sie im Moodle Question Hub zum Fragenpaket «${data.packageTitle}» hinzugefügt (Rolle: ${data.role}).`,
+        `${data.actorName} hat Sie im Question Hub zum Fragenpaket «${data.packageTitle}» hinzugefügt (Rolle: ${data.role}).`,
         '',
         `Zum Paket: ${this.packageUrl(data.packageId, 'mitwirkende')}`,
         '',
-        'Diese Nachricht wurde automatisch vom Moodle Question Hub versendet.',
+        'Diese Nachricht wurde automatisch vom Question Hub versendet.',
       ].join('\n'),
     });
   }
@@ -124,18 +124,18 @@ export class EmailService {
     await transporter.sendMail({
       from: getConfig().SMTP_FROM,
       to: data.to,
-      subject: 'Passwort für den Moodle Question Hub zurücksetzen',
+      subject: 'Passwort für den Question Hub zurücksetzen',
       text: [
         `Guten Tag ${data.name}`,
         '',
-        'Sie haben einen Link zum Zurücksetzen Ihres Passworts im Moodle Question Hub angefordert.',
+        'Sie haben einen Link zum Zurücksetzen Ihres Passworts im Question Hub angefordert.',
         'Über diesen Link legen Sie ein neues Passwort fest. Er ist eine Stunde lang gültig und funktioniert nur einmal:',
         '',
         `${this.baseUrl()}/passwort-zuruecksetzen?token=${encodeURIComponent(data.token)}`,
         '',
         'Haben Sie keinen Link angefordert, ignorieren Sie diese Nachricht; Ihr Passwort bleibt unverändert.',
         '',
-        'Diese Nachricht wurde automatisch vom Moodle Question Hub versendet.',
+        'Diese Nachricht wurde automatisch vom Question Hub versendet.',
       ].join('\n'),
     });
   }
@@ -156,7 +156,7 @@ export class EmailService {
         '',
         `Zum Änderungsvorschlag: ${data.url}`,
         '',
-        'Diese Nachricht wurde automatisch vom Moodle Question Hub versendet.',
+        'Diese Nachricht wurde automatisch vom Question Hub versendet.',
       ].join('\n'),
     });
   }
@@ -179,7 +179,7 @@ export class EmailService {
         '',
         `Anfrage im Hub annehmen oder ablehnen: ${this.packageUrl(data.packageId, 'anfragen')}`,
         '',
-        'Diese Nachricht wurde automatisch vom Moodle Question Hub versendet.',
+        'Diese Nachricht wurde automatisch vom Question Hub versendet.',
       ].join('\n'),
     });
   }
@@ -201,7 +201,7 @@ export class EmailService {
         ...(data.message ? ['', `Nachricht von ${data.ownerName}:`, data.message] : []),
         ...(approved ? ['', `Zum Paket: ${this.packageUrl(data.packageId)}`] : []),
         '',
-        'Diese Nachricht wurde automatisch vom Moodle Question Hub versendet.',
+        'Diese Nachricht wurde automatisch vom Question Hub versendet.',
       ].join('\n'),
     });
   }

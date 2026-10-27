@@ -38,7 +38,7 @@ export const Navbar: React.FC = () => {
             <Link to="/" className="flex items-center space-x-3">
               <img src="/logo.svg" alt="" className="w-10 h-10" />
               <div>
-                <span className="font-bold text-lg text-slate-900 tracking-tight block">Moodle Question Hub</span>
+                <span className="font-bold text-lg text-slate-900 tracking-tight block">Question Hub <span className="text-xs font-medium text-slate-500 tracking-normal">for Moodle</span></span>
                 <span className="text-xs text-slate-500 block -mt-1">Schweizer Gymnasium Fragekatalog</span>
               </div>
             </Link>

@@ -72,7 +72,7 @@ export const HomePage: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <header className="border-b border-slate-200 pb-8 mb-8">
-        <p className="text-sm font-semibold text-red-700">Moodle Question Hub · Schweizer Mittelschulen</p>
+        <p className="text-sm font-semibold text-red-700">Question Hub for Moodle · Schweizer Mittelschulen</p>
         <div className="mt-3 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-3xl">
             <h1 className="text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">Fragensammlungen finden und in Moodle importieren</h1>

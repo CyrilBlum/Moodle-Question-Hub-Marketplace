@@ -29,7 +29,7 @@ async function main(): Promise<void> {
       port: config.PORT,
       host: config.HOST,
     });
-    console.log(`Moodle Question Hub Marketplace läuft auf http://${config.HOST}:${config.PORT}`);
+    console.log(`Question Hub läuft auf http://${config.HOST}:${config.PORT}`);
   } catch (err) {
     app.log.error(err);
     process.exit(1);

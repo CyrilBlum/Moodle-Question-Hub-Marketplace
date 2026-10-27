@@ -42,7 +42,7 @@ export const LoginPage: React.FC = () => {
             <LogIn className="w-6 h-6" />
           </div>
           <h1 className="text-2xl font-bold text-slate-900">Lehrperson-Anmeldung</h1>
-          <p className="text-xs text-slate-500">Moodle Question Hub für gymnasiale Lehrpersonen</p>
+          <p className="text-xs text-slate-500">Question Hub für gymnasiale Lehrpersonen</p>
         </div>
 
         {errorMsg && (

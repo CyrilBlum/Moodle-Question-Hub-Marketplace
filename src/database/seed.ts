@@ -32,7 +32,7 @@ export async function runSeeds(): Promise<void> {
     await knex('oauth_clients').insert({
       client_id: 'moodle-plugin-client',
       client_secret: null, // Public PKCE client
-      name: 'Moodle Question Hub Plugin',
+      name: 'Question Hub Plugin',
       redirect_uris: JSON.stringify([
         'https://moodle-one.in-form-atik.ch/question/bank/questionhub/callback.php',
         'https://moodle-two.in-form-atik.ch/question/bank/questionhub/callback.php',

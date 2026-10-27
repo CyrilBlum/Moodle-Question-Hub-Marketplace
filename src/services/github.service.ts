@@ -171,7 +171,7 @@ export class GitHubService {
       name: ref.repo,
       private: true,
       auto_init: true,
-      description: 'Fragenpaket aus dem Moodle Question Hub',
+      description: 'Fragenpaket aus dem Question Hub',
     });
     if (created.status === 201) return { created: true };
     if (created.status === 422) {
@@ -202,7 +202,7 @@ export class GitHubService {
       name,
       private: true,
       auto_init: true,
-      description: 'Fragenpaket aus dem Moodle Question Hub',
+      description: 'Fragenpaket aus dem Question Hub',
     });
     if (created.status === 422) {
       throw new Error(`CONFLICT: Ein Repository mit dem Namen ${name} existiert in Ihrem GitHub-Konto bereits.`);
