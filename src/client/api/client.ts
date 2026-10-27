@@ -55,7 +55,12 @@ async function request(path: string, options: RequestInit = {}): Promise<any> {
     try {
       errorData = await res.json();
     } catch {
-      errorData = { message: res.statusText };
+      // Proxy errors (e.g. nginx 413) are HTML, and HTTP/2 has no status text.
+      errorData = {
+        message: res.status === 413
+          ? 'Das Paket ist zu gross. Ein Paket darf höchstens 50 MB umfassen.'
+          : res.statusText || `HTTP ${res.status}`,
+      };
     }
     const err: any = new Error(errorData.message || 'Netzwerkfehler');
     err.status = res.status;
