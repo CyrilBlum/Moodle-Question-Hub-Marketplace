@@ -371,7 +371,7 @@ export const PackageDetailPage: React.FC = () => {
 
       {/* Tabs navigation */}
       <div className="border-b border-slate-200">
-        <nav className="flex gap-6 overflow-x-auto">
+        <nav className="flex flex-wrap gap-x-6">
           {[
             { id: 'overview', label: 'Übersicht' },
             ...(pkg.can_access !== false ? [{ id: 'categories', label: `Kategorien (${pkg.categories?.length || 0})` }] : []),
@@ -468,7 +468,7 @@ export const PackageDetailPage: React.FC = () => {
                   {pkg.license !== 'CC0-1.0' && '.'}
                 </p>
                 {pkg.license !== 'CC0-1.0' && (
-                  <p className="text-xs text-slate-500 bg-slate-50 rounded p-2">
+                  <p className="text-xs text-slate-500 bg-slate-50 rounded p-2 [overflow-wrap:anywhere]">
                     Namensnennung: «{pkg.title}» von {pkg.author?.name}
                     {pkg.forked_from?.title ? `, Bearbeitung von «${pkg.forked_from.title}» von ${pkg.forked_from.author_name}` : ''},{' '}
                     {LICENSES[pkg.license]?.short || pkg.license}, {window.location.origin}/packages/{pkg.id}
