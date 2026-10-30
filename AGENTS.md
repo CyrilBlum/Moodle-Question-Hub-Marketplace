@@ -9,7 +9,7 @@ another Moodle. Three parts:
 
 | Part | Repo (GitHub; plugin and Hub public, qbase private) | Tech | Where it runs |
 |---|---|---|---|
-| Moodle plugin `qbank_questionhub` | `CyrilBlum/Moodle-Question-Hub` | PHP, Moodle question-bank subplugin, Mustache | `question/bank/questionhub` on both test Moodles |
+| Moodle plugin `qbank_questionhub` | `CyrilBlum/moodle-qbank_questionhub` | PHP, Moodle question-bank subplugin, Mustache | `question/bank/questionhub` on both test Moodles |
 | Hub / marketplace (API + web) | `CyrilBlum/Moodle-Question-Hub-Marketplace` (this repo) | Node, TypeScript, Fastify, React/Vite, MariaDB | https://hub.cblum.ch, systemd `moodle-question-hub.service`, nginx -> port 8090 |
 | Two test Moodles | not in git | Moodle 5.0.11 (php8.2) and 4.5.15 LTS (php8.1) | https://moodle-one.in-form-atik.ch and https://moodle-two.in-form-atik.ch |
 
