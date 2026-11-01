@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { OAuthService } from '../services/oauth.service';
@@ -109,6 +110,22 @@ export async function oauthRoutes(app: FastifyInstance): Promise<void> {
     return reply.redirect(redirectUrl.toString(), 302);
   });
 
+  // POST /oauth/revoke (RFC 7009): always 200, also for tokens that are invalid or cannot be revoked
+  app.post('/revoke', async (req, reply) => {
+    const token = (req.body as { token?: unknown } | undefined)?.token;
+    if (typeof token === 'string') {
+      try {
+        const payload = app.jwt.verify<{ jti?: string; exp?: number }>(token);
+        if (payload.jti && payload.exp) {
+          await oauthService.revokeToken(payload.jti, new Date(payload.exp * 1000));
+        }
+      } catch {
+        // Invalid or expired: nothing to revoke.
+      }
+    }
+    return reply.status(200).send({});
+  });
+
   // POST /oauth/token
   app.post('/token', async (req, reply) => {
     const parseResult = TokenExchangeSchema.safeParse(req.body);
@@ -128,6 +145,7 @@ export async function oauthRoutes(app: FastifyInstance): Promise<void> {
       });
 
       const accessToken = app.jwt.sign({
+        jti: crypto.randomUUID(),
         id: user.id,
         email: user.email,
         full_name: user.full_name,

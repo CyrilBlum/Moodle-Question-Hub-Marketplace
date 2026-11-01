@@ -2,6 +2,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import fp from 'fastify-plugin';
 import fastifyJwt from '@fastify/jwt';
 import { getConfig } from '../config';
+import { OAuthService } from '../services/oauth.service';
 import { TokenService } from '../services/token.service';
 import { UserPublicProfile } from '../types/user.types';
 
@@ -64,6 +65,10 @@ async function authPluginAsync(fastify: FastifyInstance): Promise<void> {
 
       // 2. Otherwise verify JWT
       await request.jwtVerify();
+      const { jti } = request.user as { jti?: string };
+      if (jti && await OAuthService.getInstance().isRevoked(jti)) {
+        throw new Error('Token revoked');
+      }
     } catch (err: any) {
       return reply.status(401).send({
         statusCode: 401,

@@ -329,6 +329,13 @@ export async function up(knex: Knex): Promise<void> {
         .update({ redirect_uris: JSON.stringify(uris.filter(uri => !moved.includes(uri))) });
     }
   }
+  // OAuth tokens revoked before they expire (a linked Moodle was disconnected).
+  if (!(await knex.schema.hasTable('oauth_revoked_tokens'))) {
+    await knex.schema.createTable('oauth_revoked_tokens', table => {
+      table.string('jti', 36).primary();
+      table.dateTime('expires_at').notNullable();
+    });
+  }
   // The fork version an approval was given for (a newer fork version makes it outdated).
   if (!(await knex.schema.hasColumn('merge_request_approvals', 'source_version'))) {
     await knex.schema.alterTable('merge_request_approvals', table => {
@@ -347,6 +354,7 @@ export async function up(knex: Knex): Promise<void> {
 }
 
 export async function down(knex: Knex): Promise<void> {
+  await knex.schema.dropTableIfExists('oauth_revoked_tokens');
   await knex.schema.dropTableIfExists('oauth_moodles');
   await knex.schema.dropTableIfExists('password_resets');
   await knex.schema.dropTableIfExists('merge_request_approvals');

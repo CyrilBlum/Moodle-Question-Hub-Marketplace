@@ -484,6 +484,25 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
     expect(tokenBody.access_token).toBeDefined();
     expect(tokenBody.token_type).toBe('Bearer');
     expect(tokenBody.user).toBeDefined();
+
+    // Disconnecting a Moodle revokes the token on the Hub; other tokens keep working.
+    const me = (authorization: string) => app.inject({ method: 'GET', url: '/api/v1/auth/me', headers: { authorization } });
+    const bearer = `Bearer ${tokenBody.access_token}`;
+    expect((await me(bearer)).statusCode).toBe(200);
+    const revoke = (token: string) => app.inject({ method: 'POST', url: '/api/v1/oauth/revoke', payload: { token } });
+    expect((await revoke(tokenBody.access_token)).statusCode).toBe(200);
+    expect((await revoke(tokenBody.access_token)).statusCode).toBe(200);
+    expect((await revoke('kein-token')).statusCode).toBe(200);
+    expect((await me(bearer)).statusCode).toBe(401);
+    expect((await me(`Bearer ${teacherJwtToken}`)).statusCode).toBe(200);
+  });
+
+  it('sends a Content-Security-Policy without inline scripts and no CORS credentials', async () => {
+    const res = await app.inject({ method: 'GET', url: '/api/v1/health', headers: { origin: 'https://elsewhere.example.ch' } });
+    const csp = String(res.headers['content-security-policy']);
+    expect(csp).toContain("script-src 'self'");
+    expect(csp).not.toContain("script-src 'self' 'unsafe-inline'");
+    expect(res.headers['access-control-allow-credentials']).toBeUndefined();
   });
 
   // 15. OAuth requires a real login (no fallback user)

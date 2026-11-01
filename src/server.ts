@@ -25,7 +25,13 @@ export async function buildServer(): Promise<FastifyInstance> {
   const app = Fastify({
     logger: config.NODE_ENV === 'test' ? false : {
       level: config.NODE_ENV === 'production' ? 'info' : 'debug',
+      // No client IP and no query string in the journal: URLs can carry one-time tokens.
+      serializers: {
+        req: request => ({ method: request.method, url: request.url.split('?')[0], hostname: request.hostname }),
+      },
     },
+    // nginx on the same host: request.ip is the real client, which the rate limit counts by.
+    trustProxy: '127.0.0.1',
     disableRequestLogging: config.NODE_ENV === 'test',
     // JSON publish bodies carry the whole XML package (base64 media included). Fastify's default
     // is 1 MiB; keep this in line with nginx client_max_body_size (64M) and the 50 MB XML limit.
@@ -35,14 +41,30 @@ export async function buildServer(): Promise<FastifyInstance> {
   // 1. Core security & HTTP plugins
   await app.register(fastifyCors, {
     origin: true,
-    credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'If-None-Match'],
     exposedHeaders: ['ETag', 'Content-Disposition', 'X-Package-Sha256'],
   });
 
   await app.register(fastifyHelmet, {
-    contentSecurityPolicy: false, // Allows inline KaTeX styles and Vite assets
+    // Second line of defence for question HTML from packages. KaTeX needs inline styles,
+    // the captcha widget a blob worker, and question images are embedded as data: URIs.
+    contentSecurityPolicy: {
+      useDefaults: false,
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:'],
+        fontSrc: ["'self'", 'data:'],
+        connectSrc: ["'self'"],
+        workerSrc: ["'self'", 'blob:'],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'"],
+        frameAncestors: ["'self'"],
+      },
+    },
   });
 
   await app.register(fastifyMultipart, {

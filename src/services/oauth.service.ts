@@ -35,6 +35,17 @@ export class OAuthService {
     }
   }
 
+  /** Blocks an OAuth token until it would expire anyway; expired rows are removed on the way. */
+  public async revokeToken(jti: string, expiresAt: Date): Promise<void> {
+    const knex = getDatabase();
+    await knex('oauth_revoked_tokens').where('expires_at', '<', new Date()).del();
+    await knex('oauth_revoked_tokens').insert({ jti, expires_at: expiresAt }).onConflict('jti').ignore();
+  }
+
+  public async isRevoked(jti: string): Promise<boolean> {
+    return !!(await getDatabase()('oauth_revoked_tokens').where({ jti }).first());
+  }
+
   public async createAuthCode(data: {
     clientId: string;
     userId: string;
