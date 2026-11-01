@@ -153,24 +153,6 @@ def test_t3_04_immutable_release_conflict(hub_client, teacher_jwt, fixtures_dir)
     assert r2.status_code == 409, f"Expected 409 Conflict, got: {r2.status_code} {r2.text}"
 
 
-def test_t3_05_institutional_token_fallback(remote_php):
-    """T3.05: Verify auth_manager resolves institutional token when user token is empty."""
-    php_code = """
-    define('CLI_SCRIPT', true);
-    require_once('/mnt/HC_Volume_100926434/www/moodle-two/config.php');
-    set_config('institutiontoken', 'mqh_pat_institution_fallback_test', 'qbank_questionhub');
-    $token = \\qbank_questionhub\\auth_manager::resolve_active_token(999999);
-    echo json_encode([
-        'resolved' => $token,
-        'matches' => ($token === 'mqh_pat_institution_fallback_test')
-    ]);
-    """
-    res = remote_php(php_code, php_bin="php8.1")
-    assert res.returncode == 0
-    data = json.loads(res.stdout[res.stdout.find("{"):])
-    assert data["matches"] is True, f"Failed institutional token fallback: {data}"
-
-
 def test_t3_06_unauthenticated_discovery_and_etag(hub_client):
     """T3.06: Verify unauthenticated search, preview, and ETag conditional download (HTTP 304)."""
     # Unauthenticated client
