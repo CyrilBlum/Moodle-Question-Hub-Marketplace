@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { Knex } from 'knex';
 
 export async function up(knex: Knex): Promise<void> {
@@ -307,6 +308,27 @@ export async function up(knex: Knex): Promise<void> {
       table.index(['user_id'], 'idx_password_resets_user');
     });
   }
+  // Moodle sites allowed to link accounts by OAuth, managed on the admin page. Only when the table is created,
+  // the existing plugin callbacks move here from oauth_clients; later runs must not bring removed sites back.
+  if (!(await knex.schema.hasTable('oauth_moodles'))) {
+    await knex.schema.createTable('oauth_moodles', table => {
+      table.string('id', 36).primary();
+      table.string('name', 100).notNullable();
+      table.string('base_url', 255).notNullable().unique();
+      table.timestamp('created_at').notNullable().defaultTo(knex.fn.now());
+    });
+    const client = await knex('oauth_clients').where({ client_id: 'moodle-plugin-client' }).first();
+    if (client) {
+      const callback = '/question/bank/questionhub/oauth_callback.php';
+      const uris: string[] = JSON.parse(client.redirect_uris);
+      const moved = uris.filter(uri => uri.endsWith(callback));
+      for (const uri of moved) {
+        await knex('oauth_moodles').insert({ id: crypto.randomUUID(), name: new URL(uri).hostname, base_url: uri.slice(0, -callback.length) });
+      }
+      await knex('oauth_clients').where({ client_id: 'moodle-plugin-client' })
+        .update({ redirect_uris: JSON.stringify(uris.filter(uri => !moved.includes(uri))) });
+    }
+  }
   // The fork version an approval was given for (a newer fork version makes it outdated).
   if (!(await knex.schema.hasColumn('merge_request_approvals', 'source_version'))) {
     await knex.schema.alterTable('merge_request_approvals', table => {
@@ -325,6 +347,7 @@ export async function up(knex: Knex): Promise<void> {
 }
 
 export async function down(knex: Knex): Promise<void> {
+  await knex.schema.dropTableIfExists('oauth_moodles');
   await knex.schema.dropTableIfExists('password_resets');
   await knex.schema.dropTableIfExists('merge_request_approvals');
   await knex.schema.dropTableIfExists('merge_request_notes');

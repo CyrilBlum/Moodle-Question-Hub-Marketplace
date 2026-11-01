@@ -210,6 +210,10 @@ export const api = {
   // Administration (admins only)
   getAdminOverview: () => request('/admin/overview'),
   purgeWithdrawnPackage: (id: string) => request(`/admin/withdrawn/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  addMoodle: (name: string, baseUrl: string) => request('/admin/moodles', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, base_url: baseUrl }),
+  }),
+  removeMoodle: (id: string) => request(`/admin/moodles/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   createUser: (data: Record<string, string>) => request('/admin/users', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data),
   }),

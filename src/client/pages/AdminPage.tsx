@@ -8,7 +8,7 @@ const formatDate = (iso: string) => new Date(iso).toLocaleDateString('de-CH');
 
 export const AdminPage: React.FC = () => {
   const navigate = useNavigate();
-  const [data, setData] = useState<{ users: any[]; withdrawn: any[]; email_enabled: boolean } | null>(null);
+  const [data, setData] = useState<{ users: any[]; withdrawn: any[]; moodles: any[]; email_enabled: boolean } | null>(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [composeFor, setComposeFor] = useState('');
@@ -20,6 +20,8 @@ export const AdminPage: React.FC = () => {
   const [account, setAccount] = useState<Record<string, string>>(emptyAccount);
   const [initialPassword, setInitialPassword] = useState<{ email: string; password: string } | null>(null);
   const [query, setQuery] = useState('');
+  const [moodleName, setMoodleName] = useState('');
+  const [moodleUrl, setMoodleUrl] = useState('');
   const [busy, setBusy] = useState('');
 
   const load = async () => {
@@ -105,6 +107,36 @@ export const AdminPage: React.FC = () => {
       setInitialPassword(res.initial_password ? { email: res.user.email, password: res.initial_password } : null);
       setAccount(emptyAccount);
       setCreating(false);
+      await load();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const addMoodle = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setBusy('moodle');
+    setError('');
+    try {
+      const res = await api.addMoodle(moodleName, moodleUrl);
+      setNotice(`${res.base_url} ist freigegeben.`);
+      setMoodleName('');
+      setMoodleUrl('');
+      await load();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setBusy('');
+    }
+  };
+
+  const removeMoodle = async (m: any) => {
+    if (!window.confirm(`Freigabe für ${m.name} (${m.base_url}) entfernen? Neue Verbindungen per Anmeldung schlagen dann fehl. Bestehende Verbindungen laufen bis zu 30 Tage weiter, Personal Access Tokens funktionieren weiterhin.`)) return;
+    setBusy(m.id);
+    try {
+      await api.removeMoodle(m.id);
       await load();
     } catch (err: any) {
       setError(err.message);
@@ -276,6 +308,40 @@ export const AdminPage: React.FC = () => {
               ))}
               {users.length === 0 && <li className="p-4 text-sm text-slate-500">Keine Treffer.</li>}
             </ul>
+          </section>
+
+          <section className="bg-white rounded-xl border border-slate-200 shadow-sm">
+            <div className="p-4 border-b border-slate-200">
+              <h2 className="text-lg font-semibold text-slate-900">Freigegebene Moodles</h2>
+              <p className="text-sm text-slate-600 mt-1">
+                Nur diese Moodles können sich per Anmeldung mit dem Hub verbinden. Personal Access Tokens funktionieren auf jedem Moodle.
+              </p>
+            </div>
+            <form onSubmit={addMoodle} className="p-4 border-b border-slate-200 bg-slate-50 flex flex-wrap gap-2 text-sm">
+              <input required minLength={2} maxLength={100} value={moodleName} onChange={e => setMoodleName(e.target.value)}
+                     placeholder="Bezeichnung, z.B. Name der Schule" className="border rounded-md px-2 py-1.5 flex-1 min-w-48" />
+              <input required type="url" value={moodleUrl} onChange={e => setMoodleUrl(e.target.value)}
+                     placeholder="https://moodle.schule.ch" className="border rounded-md px-2 py-1.5 flex-1 min-w-48" />
+              <button type="submit" disabled={busy === 'moodle'}
+                      className="text-xs px-3 py-1.5 rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-50">Freigeben</button>
+            </form>
+            {data.moodles.length === 0 ? (
+              <p className="p-4 text-sm text-slate-500">Keine Moodles freigegeben.</p>
+            ) : (
+              <ul className="divide-y divide-slate-100">
+                {data.moodles.map(m => (
+                  <li key={m.id} className="p-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                    <span className="font-medium text-slate-900">{m.name}</span>
+                    <span className="font-mono text-xs text-slate-600 break-all">{m.base_url}</span>
+                    <span className="text-xs text-slate-500">seit {formatDate(m.created_at)}</span>
+                    <button onClick={() => removeMoodle(m)} disabled={busy === m.id}
+                            className="ml-auto inline-flex items-center gap-1 text-xs border border-slate-300 rounded px-2 py-1 hover:border-red-400 hover:text-red-700 disabled:opacity-50">
+                      <Trash2 className="w-3.5 h-3.5" />Entfernen
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
 
           <section className="bg-white rounded-xl border border-slate-200 shadow-sm">

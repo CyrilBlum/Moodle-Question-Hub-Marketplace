@@ -3,6 +3,10 @@ import { getDatabase } from '../database/connection';
 import { CryptoService } from './crypto.service';
 import { UserPublicProfile } from '../types/user.types';
 
+/** The public client of the Moodle plugin and the path of its callback below a Moodle's address. */
+export const PLUGIN_CLIENT_ID = 'moodle-plugin-client';
+export const MOODLE_CALLBACK_PATH = '/question/bank/questionhub/oauth_callback.php';
+
 export class OAuthService {
   private static instance: OAuthService | null = null;
 
@@ -17,6 +21,11 @@ export class OAuthService {
     const knex = getDatabase();
     const client = await knex('oauth_clients').where({ client_id: clientId }).first();
     if (!client) return false;
+
+    if (clientId === PLUGIN_CLIENT_ID && redirectUri.endsWith(MOODLE_CALLBACK_PATH)) {
+      const baseUrl = redirectUri.slice(0, -MOODLE_CALLBACK_PATH.length);
+      if (await knex('oauth_moodles').where({ base_url: baseUrl }).first()) return true;
+    }
 
     try {
       const allowedUris: string[] = JSON.parse(client.redirect_uris);

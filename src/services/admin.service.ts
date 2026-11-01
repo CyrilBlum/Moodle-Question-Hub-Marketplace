@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { getDatabase } from '../database/connection';
 import { AuthService } from './auth.service';
+import { MOODLE_CALLBACK_PATH } from './oauth.service';
 import { EmailService } from './email.service';
 import { PackageStorageService } from './package-storage.service';
 import { PackageMembersService } from './package-members.service';
@@ -40,6 +41,13 @@ export interface AdminUserSummary {
   withdrawn: AdminWithdrawnPackage[];
 }
 
+export interface AdminMoodle {
+  id: string;
+  name: string;
+  base_url: string;
+  created_at: string;
+}
+
 /** Read-mostly administration: every user with their packages, and final deletion of withdrawn packages. */
 export class AdminService {
   private static instance: AdminService;
@@ -57,7 +65,7 @@ export class AdminService {
     return row?.role === 'admin';
   }
 
-  public async overview(): Promise<{ users: AdminUserSummary[]; withdrawn: AdminWithdrawnPackage[]; email_enabled: boolean }> {
+  public async overview(): Promise<{ users: AdminUserSummary[]; withdrawn: AdminWithdrawnPackage[]; moodles: AdminMoodle[]; email_enabled: boolean }> {
     const knex = getDatabase();
     const users = await knex('users')
       .select('id', 'email', 'full_name', 'institution', 'canton', 'role', 'created_at')
@@ -65,6 +73,7 @@ export class AdminService {
     const packages = await knex('packages').orderBy('title');
     const releases = await knex('releases').select('package_id', 'is_yanked');
     const tombstones = await knex('withdrawn_packages').orderBy('withdrawn_at', 'desc');
+    const moodles = await knex('oauth_moodles').orderBy('name');
     const emails = new Map(users.map(u => [u.id, u.email]));
     const roleCounts = await PackageMembersService.getInstance().counts();
 
@@ -106,6 +115,7 @@ export class AdminService {
         withdrawn: withdrawn.filter(w => w.owner_id === u.id),
       })),
       withdrawn,
+      moodles: moodles.map(m => ({ id: m.id, name: m.name, base_url: m.base_url, created_at: new Date(m.created_at).toISOString() })),
       email_enabled: EmailService.isConfigured(),
     };
   }
@@ -127,6 +137,37 @@ export class AdminService {
     }
     const user = (await this.overview()).users.find(u => u.id === userId) as AdminUserSummary;
     return { user, ...(generated ? { initial_password: generated } : {}) };
+  }
+
+  /** Allows a Moodle to link accounts by OAuth. Accepts its address, also when the callback URL is pasted. */
+  public async addMoodle(name: string, address: string): Promise<AdminMoodle> {
+    let url: URL;
+    try {
+      url = new URL(address.trim());
+    } catch {
+      throw new Error('BAD_REQUEST: Bitte die vollständige Adresse angeben, z.B. https://moodle.schule.ch.');
+    }
+    if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash) {
+      throw new Error('BAD_REQUEST: Die Adresse muss mit https:// beginnen und darf keine Parameter enthalten.');
+    }
+    let path = url.pathname.replace(/\/+$/, '');
+    if (path.endsWith(MOODLE_CALLBACK_PATH)) path = path.slice(0, -MOODLE_CALLBACK_PATH.length);
+    const baseUrl = url.origin + path;
+
+    const knex = getDatabase();
+    if (await knex('oauth_moodles').where({ base_url: baseUrl }).first()) {
+      throw new Error('CONFLICT: Dieses Moodle ist bereits freigegeben.');
+    }
+    const row = { id: crypto.randomUUID(), name, base_url: baseUrl, created_at: new Date() };
+    await knex('oauth_moodles').insert(row);
+    return { ...row, created_at: row.created_at.toISOString() };
+  }
+
+  /** Stops new OAuth connections; tokens already issued stay valid until they expire. */
+  public async removeMoodle(id: string): Promise<void> {
+    if ((await getDatabase()('oauth_moodles').where({ id }).del()) === 0) {
+      throw new Error('NOT_FOUND: Moodle nicht gefunden.');
+    }
   }
 
   /** E-mails every admin about a self-registered account. Without SMTP this is a no-op. */

@@ -16,6 +16,11 @@ const EmailSchema = z.object({
   message: z.string().trim().min(1, 'Nachricht fehlt.').max(10000),
 });
 
+const MoodleSchema = z.object({
+  name: z.string().trim().min(2, 'Bezeichnung fehlt.').max(100),
+  base_url: z.string().trim().min(1, 'Adresse fehlt.').max(200),
+});
+
 export async function adminRoutes(app: FastifyInstance): Promise<void> {
   const adminService = AdminService.getInstance();
 
@@ -27,14 +32,14 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
   };
   const guard = { preHandler: [app.authenticate, requireAdmin] };
 
-  /** Maps service errors (NOT_FOUND:, CONFLICT:, SMTP_NOT_CONFIGURED) to HTTP answers. */
+  /** Maps service errors (BAD_REQUEST:, NOT_FOUND:, CONFLICT:, SMTP_NOT_CONFIGURED) to HTTP answers. */
   const sendError = (err: any, reply: FastifyReply) => {
     const msg: string = err.message || '';
     if (msg === 'SMTP_NOT_CONFIGURED') {
       return reply.status(503).send({ statusCode: 503, error: 'Service Unavailable', code: 'SMTP_NOT_CONFIGURED',
         message: 'Der Hub hat keinen E-Mail-Versand (SMTP) konfiguriert.' });
     }
-    for (const [prefix, code, name] of [['NOT_FOUND:', 404, 'Not Found'], ['CONFLICT:', 409, 'Conflict']] as const) {
+    for (const [prefix, code, name] of [['BAD_REQUEST:', 400, 'Bad Request'], ['NOT_FOUND:', 404, 'Not Found'], ['CONFLICT:', 409, 'Conflict']] as const) {
       if (msg.startsWith(prefix)) {
         return reply.status(code).send({ statusCode: code, error: name, message: msg.slice(prefix.length).trim() });
       }
@@ -52,6 +57,30 @@ export async function adminRoutes(app: FastifyInstance): Promise<void> {
     const { id } = req.params as { id: string };
     try {
       await adminService.purgeWithdrawnPackage(id);
+      return reply.status(204).send();
+    } catch (err: any) {
+      return sendError(err, reply);
+    }
+  });
+
+  // POST /api/v1/admin/moodles: allow a Moodle to link accounts by OAuth
+  app.post('/admin/moodles', guard, async (req, reply) => {
+    const parsed = MoodleSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return reply.status(400).send({ statusCode: 400, error: 'Bad Request', message: parsed.error.issues[0]?.message || 'Ungültige Eingabe.' });
+    }
+    try {
+      return reply.status(201).send(await adminService.addMoodle(parsed.data.name, parsed.data.base_url));
+    } catch (err: any) {
+      return sendError(err, reply);
+    }
+  });
+
+  // DELETE /api/v1/admin/moodles/:id: stop new OAuth connections from a Moodle
+  app.delete('/admin/moodles/:id', guard, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    try {
+      await adminService.removeMoodle(id);
       return reply.status(204).send();
     } catch (err: any) {
       return sendError(err, reply);

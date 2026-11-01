@@ -1020,6 +1020,30 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
       expect((await app.inject({ method: 'POST', url: '/api/v1/admin/users', headers: auth,
         payload: { email: 'kein-mail', full_name: 'X Y', institution: 'Kanti Y', canton: 'ZH' } })).statusCode).toBe(400);
       await app.inject({ method: 'DELETE', url: `/api/v1/admin/users/${createdBody.user.id}`, headers: auth });
+
+      // Allowed Moodles: only listed sites pass the OAuth check, and a removed one stops passing.
+      const stamp = Date.now();
+      const base = `https://moodle-${stamp}.example.ch/schule`;
+      const callback = `${base}/question/bank/questionhub/oauth_callback.php`;
+      const authorize = () => app.inject({ method: 'GET', headers: auth,
+        url: `/oauth/authorize?client_id=moodle-plugin-client&redirect_uri=${encodeURIComponent(callback)}&response_type=code&code_challenge=x&code_challenge_method=S256&state=s` });
+      const addMoodle = (base_url: string) => app.inject({ method: 'POST', url: '/api/v1/admin/moodles', headers: auth,
+        payload: { name: 'Testschule', base_url } });
+      expect((await authorize()).statusCode).toBe(400);
+      for (const bad of [`http://moodle-${stamp}.example.ch`, 'moodle.example.ch', `${base}?x=1`]) {
+        expect((await addMoodle(bad)).statusCode).toBe(400);
+      }
+      const moodle = await addMoodle(`${callback}`);
+      expect(moodle.statusCode).toBe(201);
+      const moodleBody = JSON.parse(moodle.body);
+      expect(moodleBody.base_url).toBe(base);
+      expect((await addMoodle(`${base}/`)).statusCode).toBe(409);
+      expect(JSON.parse((await app.inject({ method: 'GET', url: '/api/v1/admin/overview', headers: auth })).body)
+        .moodles.some((m: any) => m.base_url === base)).toBe(true);
+      expect((await authorize()).statusCode).toBe(302);
+      expect((await app.inject({ method: 'DELETE', url: `/api/v1/admin/moodles/${moodleBody.id}`, headers: auth })).statusCode).toBe(204);
+      expect((await app.inject({ method: 'DELETE', url: `/api/v1/admin/moodles/${moodleBody.id}`, headers: auth })).statusCode).toBe(404);
+      expect((await authorize()).statusCode).toBe(400);
     } finally {
       await getDatabase()('users').where({ id: me.id }).update({ role: 'teacher' });
     }
