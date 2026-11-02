@@ -5,6 +5,7 @@ import { api, getToken, getStoredUser, setStoredUser } from '../api/client';
 import { PackageEditForm } from '../components/PackageEditForm';
 import { GitHubConnection } from '../components/GitHubConnection';
 import { MyMergeRequests } from '../components/MyMergeRequests';
+import { DeleteAccount } from '../components/DeleteAccount';
 import { useEscapeKey } from '../utils/useEscapeKey';
 
 export const CANTONS = [
@@ -324,6 +325,8 @@ export const DashboardPage: React.FC = () => {
       </div>
 
       <GitHubConnection />
+
+      <DeleteAccount />
 
       {/* New Token Modal */}
       {modalOpen && (

@@ -1277,4 +1277,60 @@ describe('Marketplace REST API Endpoints Integration Tests', () => {
       await getDatabase()('users').where({ id: reg.user.id }).del();
     }
   });
+
+  it('DELETE /api/v1/account deletes the own account: packages pass to a co-admin or are withdrawn', async () => {
+    const stamp = Date.now();
+    const register = async (name: string) => JSON.parse((await app.inject({
+      method: 'POST', url: '/api/v1/auth/register',
+      payload: { altcha: await captcha(), email: `${name}-${stamp}@example.ch`, password: 'Delete-Pass-123!', full_name: `Person ${name}`, institution: 'Kanti D', canton: 'ZH' },
+    })).body);
+    const publish = (id: string, token: string) => app.inject({
+      method: 'POST', url: '/api/v1/packages', headers: { authorization: `Bearer ${token}` },
+      payload: {
+        metadata: {
+          id, version: '1.0.0', title: `Loeschtest ${id.slice(-4)}`, summary: 'Paket fuer den Loeschtest.', language: 'de-CH', license: 'CC-BY-4.0',
+          taxonomy: { subject: 'Informatik', subject_category: 'SF' }, visibility: 'private',
+        },
+        xml: validXml,
+      },
+    });
+    const leaver = await register('leaver');
+    const heir = await register('heir');
+    const leaverAuth = { authorization: `Bearer ${leaver.token}` };
+    const heirAuth = { authorization: `Bearer ${heir.token}` };
+    const alone = `ch.gym.inf.delete-alone-${stamp}`;
+    const shared = `ch.gym.inf.delete-shared-${stamp}`;
+    try {
+      expect((await publish(alone, leaver.token)).statusCode).toBe(201);
+      expect((await publish(shared, leaver.token)).statusCode).toBe(201);
+      expect((await app.inject({ method: 'POST', url: `/api/v1/packages/${shared}/members`, headers: leaverAuth, payload: { email: heir.user.email, role: 'admin' } })).statusCode).toBe(201);
+
+      const plan = JSON.parse((await app.inject({ method: 'GET', url: '/api/v1/account/deletion', headers: leaverAuth })).body);
+      expect(plan.withdraw.map((p: any) => p.id)).toEqual([alone]);
+      expect(plan.transfer.map((p: any) => [p.id, p.new_owner_name])).toEqual([[shared, 'Person heir']]);
+      expect(plan.blocked_reason).toBeNull();
+
+      expect((await app.inject({ method: 'DELETE', url: '/api/v1/account', headers: leaverAuth, payload: {} })).statusCode).toBe(400);
+      expect((await app.inject({ method: 'DELETE', url: '/api/v1/account', headers: leaverAuth, payload: { password: 'falsch' } })).statusCode).toBe(403);
+      expect((await app.inject({ method: 'DELETE', url: '/api/v1/account', headers: leaverAuth, payload: { password: 'Delete-Pass-123!' } })).statusCode).toBe(204);
+
+      // The account, its JWT and its data are gone.
+      const knex = getDatabase();
+      expect(await knex('users').where({ id: leaver.user.id }).first()).toBeUndefined();
+      expect((await app.inject({ method: 'GET', url: '/api/v1/auth/me', headers: leaverAuth })).statusCode).toBe(401);
+      expect(await knex('package_members').where({ user_id: leaver.user.id }).first()).toBeUndefined();
+
+      // The shared package now belongs to the co-admin; the other one is withdrawn and its ID stays reserved.
+      expect((await knex('packages').where({ id: shared }).first('owner_id')).owner_id).toBe(heir.user.id);
+      expect((await app.inject({ method: 'GET', url: `/api/v1/packages/${alone}` })).statusCode).toBe(410);
+      expect((await knex('withdrawn_packages').where({ id: alone }).first('owner_id')).owner_id).toBe('deleted');
+      expect((await publish(alone, heir.token)).statusCode).not.toBe(201);
+    } finally {
+      await app.inject({ method: 'DELETE', url: `/api/v1/packages/${shared}`, headers: heirAuth });
+      const knex = getDatabase();
+      await knex('withdrawn_packages').whereIn('id', [alone, shared]).del();
+      await knex('releases').whereIn('package_id', [alone, shared]).del();
+      await knex('users').whereIn('id', [leaver.user.id, heir.user.id]).del();
+    }
+  });
 });

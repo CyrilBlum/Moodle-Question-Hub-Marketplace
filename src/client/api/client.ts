@@ -173,6 +173,8 @@ export const api = {
   resetPassword: (token: string, password: string) => request('/auth/password/reset', {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, password }),
   }),
+  getAccountDeletionPlan: () => request('/account/deletion'),
+  deleteAccount: (password: string) => request('/account', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password }) }),
   updateProfile: (data: Record<string, string>) => request('/auth/me', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
 
   // Tokens

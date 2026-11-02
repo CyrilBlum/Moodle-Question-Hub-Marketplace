@@ -81,6 +81,11 @@ and an obsolete `tests/` folder (old copy with credentials: delete, never reuse)
   tombstone and frees the ID; Moodles then get 404 instead of 410), `DELETE users/:id` (refused for the own account and for
   accounts that still own active packages; tokens and access requests cascade), `POST users/:id/email` (needs `SMTP_*` in the
   env file, otherwise 503 and the page falls back to a mailto link).
+- **Account self-deletion**: `GET /account/deletion` (plan), `DELETE /account` with `{password}` (`account.service.ts`, dashboard
+  section «Konto löschen»). Own packages pass to the longest-standing other package admin, else they are withdrawn; tokens,
+  memberships, access requests, approvals and the GitHub token go with the account (cascade), merge requests and notes stay
+  without author, GitHub links made by the account are removed. Tombstones keep the ID reserved with `owner_id = 'deleted'`.
+  The last Hub admin is refused. `app.authenticate` rejects JWTs whose account no longer exists.
 - **Mail**: production sends through Proton SMTP submission as `hub@cblum.ch` (`smtp.protonmail.ch:587`, STARTTLS,
   `SMTP_SECURE=false`; the password is a Proton SMTP token for that address, only in the env file). `cblum.ch` allows only
   Proton in SPF and has DMARC `p=quarantine`, so other senders for `@cblum.ch` would land in spam. After changing the env file:

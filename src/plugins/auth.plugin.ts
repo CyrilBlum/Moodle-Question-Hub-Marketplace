@@ -2,6 +2,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import fp from 'fastify-plugin';
 import fastifyJwt from '@fastify/jwt';
 import { getConfig } from '../config';
+import { getDatabase } from '../database/connection';
 import { OAuthService } from '../services/oauth.service';
 import { TokenService } from '../services/token.service';
 import { UserPublicProfile } from '../types/user.types';
@@ -68,6 +69,10 @@ async function authPluginAsync(fastify: FastifyInstance): Promise<void> {
       const { jti } = request.user as { jti?: string };
       if (jti && await OAuthService.getInstance().isRevoked(jti)) {
         throw new Error('Token revoked');
+      }
+      // A JWT outlives a deleted account; it must not act for it until it expires.
+      if (!(await getDatabase()('users').where({ id: (request.user as any).id }).first('id'))) {
+        throw new Error('Account deleted');
       }
     } catch (err: any) {
       return reply.status(401).send({

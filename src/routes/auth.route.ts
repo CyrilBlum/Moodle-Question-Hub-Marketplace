@@ -5,6 +5,7 @@ import { AdminService } from '../services/admin.service';
 import { CaptchaService } from '../services/captcha.service';
 import { PasswordResetService } from '../services/password-reset.service';
 import { EmailService } from '../services/email.service';
+import { AccountService } from '../services/account.service';
 
 const RegisterSchema = z.object({
   email: z.string().email(),
@@ -23,6 +24,7 @@ const ResetSchema = z.object({
   token: z.string().min(20).max(200),
   password: z.string().min(8, 'Passwort muss mindestens 8 Zeichen lang sein.'),
 });
+const DeleteAccountSchema = z.object({ password: z.string().min(1) });
 const ProfileSchema = z.object({ email: z.string().email(), full_name: z.string().min(2), institution: z.string().min(2), canton: z.string().length(2), profile_role: z.string().max(100).optional(), password: z.string().min(8).optional().or(z.literal('')) });
 
 export async function authRoutes(app: FastifyInstance): Promise<void> {
@@ -210,6 +212,31 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       return reply.send(await authService.updateProfile((req as any).user.id, parsed.data));
     } catch (err: any) {
       return reply.status(err.message?.startsWith('CONFLICT:') ? 409 : 500).send({ message: err.message?.replace('CONFLICT: ', '') || 'Profil konnte nicht gespeichert werden.' });
+    }
+  });
+
+  // GET /api/v1/account/deletion: what deleting the own account would do with the own packages.
+  app.get('/account/deletion', { preHandler: [app.authenticate] }, async (req, reply) => {
+    return reply.send(await AccountService.getInstance().deletionPlan((req as any).user.id));
+  });
+
+  // DELETE /api/v1/account: deletes the own account and its data after checking the password.
+  app.delete('/account', { preHandler: [app.authenticate], config: { rateLimit: { max: 10, timeWindow: '15 minutes' } } }, async (req, reply) => {
+    const parsed = DeleteAccountSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return reply.status(400).send({ statusCode: 400, error: 'Bad Request', message: 'Bitte bestätigen Sie mit Ihrem Passwort.' });
+    }
+    try {
+      await AccountService.getInstance().deleteAccount((req as any).user.id, parsed.data.password);
+      return reply.status(204).send();
+    } catch (err: any) {
+      const msg: string = err.message || '';
+      for (const [prefix, code, name] of [['UNAUTHORIZED:', 403, 'Forbidden'], ['NOT_FOUND:', 404, 'Not Found'], ['CONFLICT:', 409, 'Conflict']] as const) {
+        if (msg.startsWith(prefix)) {
+          return reply.status(code).send({ statusCode: code, error: name, message: msg.slice(prefix.length).trim() });
+        }
+      }
+      throw err;
     }
   });
 }
